@@ -18,11 +18,11 @@ jobs:
     - name: Format
       run: cargo fmt --all -- --check
     - name: Lint
-      run: cargo clippy --all-targets -- -D warnings
+      run: cargo clippy --locked --all-targets --all-features -- -D warnings
     - name: Test
-      run: cargo test
+      run: cargo test --locked --all-targets --all-features
     - name: Build
-      run: cargo build --release --target x86_64-unknown-linux-gnu
+      run: cargo build --locked --release --all-features --target x86_64-unknown-linux-gnu
     - name: Upload release binary
       uses: actions/upload-artifact@v7
       with:
@@ -43,13 +43,13 @@ jobs:
     - name: Format
       run: cargo fmt --all -- --check
     - name: Lint
-      run: cargo clippy --all-targets -- -D warnings
+      run: cargo clippy --locked --all-targets --all-features -- -D warnings
     - name: Test
-      run: cargo test
+      run: cargo test --locked --all-targets --all-features
     - name: Build
       run: |
-        cargo build --release --target x86_64-apple-darwin
-        cargo build --release --target aarch64-apple-darwin
+        cargo build --locked --release --all-features --target x86_64-apple-darwin
+        cargo build --locked --release --all-features --target aarch64-apple-darwin
     - name: Create universal binary
       run: |
         mkdir -p target/universal/release

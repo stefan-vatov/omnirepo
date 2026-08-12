@@ -1,7 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     error::Error,
-    path::Path,
+    path::{Component, Path, PathBuf},
 };
 
 use crate::config::{manager::GlobalConfigManager, parser::Config};
@@ -34,45 +34,75 @@ pub fn template_and_dest_from_tags(
 }
 
 pub fn dedupe_vec_string(combined: Vec<String>) -> Vec<String> {
-    let unique: HashSet<String> = combined.into_iter().collect();
+    let mut seen = HashSet::with_capacity(combined.len());
+    let mut unique = Vec::with_capacity(combined.len());
 
-    unique.into_iter().collect()
+    for value in combined {
+        if seen.insert(value.clone()) {
+            unique.push(value);
+        }
+    }
+
+    unique
 }
 
 fn dedupe_vec_tuple(combined: Vec<(String, String)>) -> Vec<(String, String)> {
-    let mut unique_map = HashMap::new();
+    let mut seen = HashSet::with_capacity(combined.len());
+    let mut unique = Vec::with_capacity(combined.len());
 
-    for (key, value) in combined {
-        unique_map.entry(key).or_insert(value);
+    for pair in combined {
+        if seen.insert(pair.clone()) {
+            unique.push(pair);
+        }
     }
 
-    unique_map.into_iter().collect()
+    unique
 }
 
 pub fn load_config(config_location: &Path) -> Result<GlobalConfigManager, Box<dyn Error>> {
-    let config = load_config_from_file(config_location)?;
+    let config = load_config_from_file(&resolve_config_path(config_location))?;
 
     Ok(GlobalConfigManager::new(config))
 }
 
 pub fn load_config_default() -> Result<GlobalConfigManager, Box<dyn Error>> {
-    let config_file = dirs::home_dir()
-        .expect("Could not find home directory")
-        .join(".omnirepo.yaml");
+    let home_dir = dirs::home_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Could not find home directory",
+        )
+    })?;
 
-    let config_dir = dirs::home_dir()
-        .expect("Could not find home directory")
-        .join(".omnirepo/.omnirepo.yaml");
+    load_config_default_from_home(&home_dir)
+}
 
-    if Path::new(&config_file).exists() {
+pub fn default_config_paths(home_dir: &Path) -> [PathBuf; 2] {
+    [
+        home_dir.join(".omnirepo.yaml"),
+        home_dir.join(".omnirepo/.omnirepo.yaml"),
+    ]
+}
+
+fn load_config_default_from_home(home_dir: &Path) -> Result<GlobalConfigManager, Box<dyn Error>> {
+    let [config_file, config_dir] = default_config_paths(home_dir);
+
+    if config_file.is_file() {
         load_config(&config_file)
-    } else if Path::new(&config_dir).exists() {
+    } else if config_dir.is_file() {
         load_config(&config_dir)
     } else {
         Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "Default config file not found.",
         )))
+    }
+}
+
+fn resolve_config_path(config_location: &Path) -> PathBuf {
+    if config_location.is_dir() {
+        config_location.join(".omnirepo.yaml")
+    } else {
+        config_location.to_path_buf()
     }
 }
 
@@ -88,3 +118,36 @@ fn load_config_from_file(config_location: &Path) -> Result<Config, Box<dyn Error
 pub fn filename_from_url(url: &str) -> &str {
     url.split('/').next_back().unwrap_or("")
 }
+
+pub(crate) fn join_relative(
+    base: &Path,
+    relative: &str,
+    description: &str,
+) -> std::io::Result<PathBuf> {
+    let path = Path::new(relative);
+
+    if let Some(component) = path.components().find(|component| {
+        matches!(
+            component,
+            Component::RootDir | Component::Prefix(_) | Component::ParentDir
+        )
+    }) {
+        let reason = match component {
+            Component::RootDir => "an absolute path",
+            Component::Prefix(_) => "a path prefix",
+            Component::ParentDir => "parent-directory traversal",
+            Component::CurDir | Component::Normal(_) => unreachable!(),
+        };
+
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("{description} must be a relative path without {reason}: {relative:?}"),
+        ));
+    }
+
+    Ok(base.join(path))
+}
+
+#[cfg(test)]
+#[path = "utilities_tests.rs"]
+mod tests;

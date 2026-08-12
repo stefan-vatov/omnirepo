@@ -1,17 +1,17 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Config {
     pub repositories: Vec<Repository>,
     pub templates: Vec<Template>,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Repositories {
     pub repositories: Vec<Repository>,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Repository {
     pub name: String,
     pub url: String,
@@ -19,7 +19,7 @@ pub struct Repository {
     pub dest: String,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RepoConfig {
     pub dirs: Vec<String>,
 }
@@ -30,12 +30,12 @@ impl RepoConfig {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Templates {
     pub templates: Vec<Template>,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Template {
     pub name: String,
     pub id: String,
@@ -46,19 +46,24 @@ pub struct Template {
     pub included_files: Option<Vec<IncludedFile>>,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct IncludedFile {
     pub file_name: String,
     pub id: String,
     pub dest: String,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TemplateType {
     File,
     Dir,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GlobalConfig {
     pub log: bool,
 }
+
+#[cfg(test)]
+#[path = "parser_tests.rs"]
+mod tests;

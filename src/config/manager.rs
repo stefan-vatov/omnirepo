@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use super::parser::{Config, GlobalConfig, RepoConfig};
+use super::parser::{Config, GlobalConfig, RepoConfig, TemplateType};
 
 use once_cell::sync::Lazy;
 
@@ -42,12 +42,12 @@ impl GlobalConfigManager {
         self.config.templates.iter().for_each(|t| {
             if t.tags.iter().any(|s| s == tag) {
                 match t.kind {
-                    super::parser::TemplateType::File => {
+                    TemplateType::File => {
                         if let Some(dest) = &t.dest {
                             templ_dest_pairs.push((t.url.clone(), dest.clone()));
                         }
                     }
-                    super::parser::TemplateType::Dir => {
+                    TemplateType::Dir => {
                         if let Some(included_files) = &t.included_files {
                             included_files.iter().for_each(|f| {
                                 templ_dest_pairs
@@ -76,3 +76,7 @@ impl RepoConfigManager {
         &self.config.dirs
     }
 }
+
+#[cfg(test)]
+#[path = "manager_tests.rs"]
+mod tests;

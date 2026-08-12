@@ -1,0 +1,80 @@
+name: coverage
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - trying
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: measure coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: always
+      COVERAGE_LINES_MIN: "95"
+      COVERAGE_FUNCTIONS_MIN: "80"
+      COVERAGE_REGIONS_MIN: "80"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2.85.11
+        with:
+          tool: cargo-llvm-cov@0.8.7
+          fallback: none
+
+      - name: Generate coverage reports
+        run: |
+          mkdir -p coverage
+
+          cargo llvm-cov clean --workspace
+
+          # Run tests once and retain the profraw data for each report format.
+          cargo llvm-cov --workspace --all-targets --all-features --locked \
+            --no-report
+
+          # Keep the threshold result while still producing the artifact if the
+          # measured floor is raised and a future change falls below it.
+          set +e
+          cargo llvm-cov report --summary-only \
+            --fail-under-lines "${COVERAGE_LINES_MIN}" \
+            --fail-under-functions "${COVERAGE_FUNCTIONS_MIN}" \
+            --fail-under-regions "${COVERAGE_REGIONS_MIN}" \
+            | tee coverage/summary.txt
+          coverage_status=${PIPESTATUS[0]}
+          set -e
+
+          cargo llvm-cov report --lcov --output-path coverage/lcov.info
+          cargo llvm-cov report --html --output-dir coverage
+
+          exit "${coverage_status}"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-reports
+          path: coverage/
+          if-no-files-found: error
+          retention-days: 14

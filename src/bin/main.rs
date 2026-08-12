@@ -111,7 +111,7 @@ enum Commands {
         url: Option<String>,
         #[arg(short, long, help = "Local source file for syncing ")]
         source_file: Option<String>,
-        #[arg(short, long, help = "Template file for syncing")]
+        #[arg(short, long, help = "Configured template ID for syncing")]
         template_file: Option<String>,
         #[arg(
             short,
@@ -169,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             info!("Syncing file: {}", &file);
 
-            sync_file(cfg_mgr, file, url, template_file, destination, source_file);
+            sync_file(cfg_mgr, file, url, template_file, destination, source_file)?;
         }
     }
 
