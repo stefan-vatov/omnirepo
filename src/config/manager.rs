@@ -42,18 +42,18 @@ impl GlobalConfigManager {
         self.config.templates.iter().for_each(|t| {
             if t.tags.iter().any(|s| s == tag) {
                 match t.kind {
-                    super::parser::TemplateType::File => match &t.dest {
-                        Some(dest) => templ_dest_pairs.push((t.url.clone(), dest.clone())),
-                        None => (),
-                    },
+                    super::parser::TemplateType::File => {
+                        if let Some(dest) = &t.dest {
+                            templ_dest_pairs.push((t.url.clone(), dest.clone()));
+                        }
+                    }
                     super::parser::TemplateType::Dir => {
-                        match &t.included_files {
-                            Some(included_files) => included_files.iter().for_each(|f| {
+                        if let Some(included_files) = &t.included_files {
+                            included_files.iter().for_each(|f| {
                                 templ_dest_pairs
                                     .push((format!("{}/{}", &t.url, &f.file_name), f.dest.clone()))
-                            }),
-                            None => (),
-                        };
+                            });
+                        }
                     }
                 }
             }

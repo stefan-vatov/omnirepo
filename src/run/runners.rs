@@ -4,12 +4,12 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
 use rayon::prelude::*;
 use std::{
-    io::{Error, ErrorKind},
+    io::Error,
     process::Output,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use prettytable::{row, Table};
+use prettytable::{Table, row};
 
 pub fn run_command(
     command_string: String,
@@ -28,7 +28,7 @@ pub fn run_command(
         )
     })?;
 
-    let config: RepoConfig = serde_yaml::from_reader(file)
+    let config: RepoConfig = yaml_serde::from_reader(file)
         .map_err(|e| format!("Error parsing repo config YAML file: {}", e))?;
 
     let rpc = RepoConfigManager::new(config);
@@ -61,12 +61,7 @@ pub fn run_command(
                 progress_bar.finish_with_message("All tasks completed.");
             }
 
-            output.map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Error running command: {}, {}", &cmd_dir, e),
-                )
-            })
+            output.map_err(|e| Error::other(format!("Error running command: {}, {}", &cmd_dir, e)))
         })
         .collect();
 

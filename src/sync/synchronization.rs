@@ -1,12 +1,12 @@
 use std::{
     fs::{self},
-    io::{Error, ErrorKind},
+    io::Error,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
-use prettytable::{row, Table};
+use prettytable::{Table, row};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelRefIterator;
 use reqwest::blocking;
@@ -105,7 +105,7 @@ pub fn update_file(
         )
     })?;
 
-    let config: RepoConfig = serde_yaml::from_reader(repo_cfg_file)
+    let config: RepoConfig = yaml_serde::from_reader(repo_cfg_file)
         .map_err(|e| format!("Error parsing repo config YAML file: {}", e))?;
 
     let rpc = RepoConfigManager::new(config);
@@ -141,10 +141,10 @@ pub fn update_file(
                 Err(e) => {
                     info!("Failed saving file {} to disk. {}", &filename, e);
 
-                    Err(Error::new(
-                        ErrorKind::Other,
-                        format!("Failed to save file {}: {}", &filename, &e),
-                    ))
+                    Err(Error::other(format!(
+                        "Failed to save file {}: {}",
+                        &filename, &e
+                    )))
                 }
             };
 

@@ -23,8 +23,12 @@ fn setup_logger() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[derive(Debug, Parser)]
-#[clap(name = "omnirepo", version = "0.1.0", author = "")]
-#[command(about = "A tool for managing multiple git repositories", long_about = None)]
+#[command(
+    name = "omnirepo",
+    version,
+    about = "A tool for managing multiple git repositories",
+    long_about = None
+)]
 struct Cli {
     #[arg(
         short,

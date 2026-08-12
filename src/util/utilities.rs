@@ -80,11 +80,11 @@ fn load_config_from_file(config_location: &Path) -> Result<Config, Box<dyn Error
     let file = std::fs::File::open(config_location)
         .map_err(|e| format!("Could not open config file: {:?} {}", config_location, e))?;
     let config =
-        serde_yaml::from_reader(file).map_err(|e| format!("Error parsing YAML file: {}", e))?;
+        yaml_serde::from_reader(file).map_err(|e| format!("Error parsing YAML file: {}", e))?;
 
     Ok(config)
 }
 
 pub fn filename_from_url(url: &str) -> &str {
-    url.split('/').last().unwrap_or("")
+    url.split('/').next_back().unwrap_or("")
 }

@@ -11,13 +11,10 @@ jobs:
       CARGO_TERM_COLOR: always
       RUSTFLAGS: -C link-arg=-Wl,--as-needed
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v7
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
-        target: x86_64-unknown-linux-gnu
-        profile: minimal
-        override: true
+        targets: x86_64-unknown-linux-gnu
     - name: Format
       run: cargo fmt --all -- --check
     - name: Lint
@@ -27,7 +24,7 @@ jobs:
     - name: Build
       run: cargo build --release --target x86_64-unknown-linux-gnu
     - name: Upload release binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v7
       with:
         name: x86_64-unknown-linux-gnu
         path: target/x86_64-unknown-linux-gnu/release/omnirepo
@@ -37,12 +34,8 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
+    - uses: actions/checkout@v7
+    - uses: dtolnay/rust-toolchain@stable
     - name: Add targets
       run: |
         rustup target add x86_64-apple-darwin
@@ -64,7 +57,7 @@ jobs:
             target/x86_64-apple-darwin/release/omnirepo \
             target/aarch64-apple-darwin/release/omnirepo
     - name: Upload release binary
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v7
       with:
         name: universal-darwin
         path: target/universal/release/omnirepo
@@ -72,53 +65,59 @@ jobs:
   create_release:
     runs-on: ubuntu-latest
     needs: [build_linux, build_universal]
+    permissions:
+      contents: write
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v7
     - name: Get latest tag
       id: latest_tag
       run: |
         git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-        echo "::set-output name=tag::$(git describe --tags $(git rev-list --tags --max-count=1))"
+        latest_version="$(
+          git tag --list \
+            | sed -nE 's/^v?([0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?)$/\1/p' \
+            | sort -V \
+            | tail -n 1
+        )"
+        if [[ -z "$latest_version" ]]; then
+          echo "No semantic-version tag found." >&2
+          exit 1
+        fi
+        echo "tag=v$latest_version" >> "$GITHUB_OUTPUT"
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.latest_tag.outputs.tag }}
-        release_name: Release v${{ steps.latest_tag.outputs.tag }}
+        tag_name: ${{ steps.latest_tag.outputs.tag }}
+        name: Release ${{ steps.latest_tag.outputs.tag }}
         draft: false
         prerelease: false
 
     - name: Download Linux binary
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v8
       with:
         name: x86_64-unknown-linux-gnu
         path: release/linux
 
     - name: Download universal binary
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v8
       with:
         name: universal-darwin
         path: release/dar
 
-    - name: Upload Linux binary
-      uses: actions/upload-release-asset@v1
+    - name: Rename release binaries
+      run: |
+        mv release/linux/omnirepo release/linux/omnirepo-x86_64-unknown-linux-gnu
+        mv release/dar/omnirepo release/dar/omnirepo-universal-darwin
+    - name: Upload release binaries
+      uses: softprops/action-gh-release@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: release/linux/omnirepo
-        asset_name: omnirepo-x86_64-unknown-linux-gnu
-        asset_content_type: application/octet-stream
-
-    - name: Upload universal binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: release/dar/omnirepo
-        asset_name: omnirepo-universal-darwin
-        asset_content_type: application/octet-stream
+        tag_name: ${{ steps.latest_tag.outputs.tag }}
+        files: |
+          release/linux/omnirepo-x86_64-unknown-linux-gnu
+          release/dar/omnirepo-universal-darwin

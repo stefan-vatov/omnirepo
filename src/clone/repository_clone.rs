@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::{Error, ErrorKind},
+    io::Error,
     process::Output,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -8,7 +8,7 @@ use std::{
 use duct::cmd;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::info;
-use prettytable::{row, Table};
+use prettytable::{Table, row};
 use rayon::prelude::*;
 
 use crate::{
@@ -55,12 +55,7 @@ pub fn clone_repo(
                 progress_bar.finish_with_message("All tasks completed.");
             }
 
-            output.map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Error cloning repo: {}, {}", repo.clone(), e),
-                )
-            })
+            output.map_err(|e| Error::other(format!("Error cloning repo: {}, {}", repo.clone(), e)))
         })
         .collect();
 
@@ -78,7 +73,7 @@ pub fn clone_repo(
         }
     }
 
-    let rpc = serde_yaml::to_string(&RepoConfig::new(dests))
+    let rpc = yaml_serde::to_string(&RepoConfig::new(dests))
         .expect("Failed to serialise local multirepo config.");
     fs::write(format!("{}/.omni.yaml", &dest), rpc)?;
 
