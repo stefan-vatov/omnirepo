@@ -1,0 +1,13 @@
+workflow:
+  strict: true
+  statuses:
+    - open
+    - decision
+    - in_progress
+    - blocked
+    - deferred
+    - closed
+    - tombstone
+  status_groups:
+    ready:
+      - open
