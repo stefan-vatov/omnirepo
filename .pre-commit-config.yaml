@@ -19,3 +19,11 @@ repos:
   - id: end-of-file-fixer
   - id: sort-simple-yaml
   - id: trailing-whitespace
+
+- repo: local
+  hooks:
+  - id: validate-beads-decisions
+    name: validate Beads decision workflow
+    entry: .beads/validate-decisions.sh
+    language: system
+    pass_filenames: false
