@@ -23,7 +23,12 @@ fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
 }
 
 fn confinement(workdir: &Path) -> crate::lifecycle::agent_confinement::AgentConfinement {
-    confine(workdir, &[], &[]).expect("confine")
+    let root = crate::platform::AuthorityRoot::<
+        crate::platform::AgentWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >::open(workdir)
+    .expect("root");
+    confine(&root, &[], &[]).expect("confine")
 }
 
 fn shell_argv(script: &str) -> Vec<String> {

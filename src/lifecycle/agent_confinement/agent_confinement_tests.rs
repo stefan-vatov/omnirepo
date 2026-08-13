@@ -3,6 +3,7 @@
 #![allow(dead_code, unused_imports)]
 
 use super::{ConfinementError, confine};
+use crate::platform::{AgentWorkingDirectoryRoot, AuthorityRoot, ReadOnly};
 use std::{collections::HashMap, fs, path::Path, path::PathBuf};
 
 fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
@@ -24,7 +25,9 @@ fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
 #[test]
 fn agent_confinement_is_destination_only() {
     let (_fixture, destination, inside, _outside) = fixture();
-    let confinement = confine(&destination, &[inside.clone()], &[inside.clone()]).expect("confine");
+    let root =
+        AuthorityRoot::<AgentWorkingDirectoryRoot, ReadOnly>::open(&destination).expect("root");
+    let confinement = confine(&root, &[inside.clone()], &[inside.clone()]).expect("confine");
     assert_eq!(
         confinement.workdir,
         destination.canonicalize().expect("canonical")
@@ -48,7 +51,9 @@ fn agent_confinement_is_destination_only() {
 #[test]
 fn outside_extra_paths_escape_and_fail() {
     let (_fixture, destination, _inside, outside) = fixture();
-    let error = confine(&destination, &[], &[outside.clone()]).expect_err("escape must fail");
+    let root =
+        AuthorityRoot::<AgentWorkingDirectoryRoot, ReadOnly>::open(&destination).expect("root");
+    let error = confine(&root, &[], &[outside.clone()]).expect_err("escape must fail");
     assert!(
         matches!(error, ConfinementError::EscapesDestination { .. }),
         "{error:?}"
@@ -56,11 +61,16 @@ fn outside_extra_paths_escape_and_fail() {
 }
 
 #[test]
-fn missing_destination_is_a_typed_root_error() {
+fn missing_destination_is_rejected_at_the_typed_root() {
     let (_fixture, _destination, _inside, _outside) = fixture();
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
     let missing = base.join("confinement-missing-destination");
     let _ = fs::remove_dir_all(&missing);
-    let error = confine(&missing, &[], &[]).expect_err("missing root must fail");
-    assert!(matches!(error, ConfinementError::Root { .. }), "{error:?}");
+    // The typed root rejects a missing destination before any effect.
+    let error = AuthorityRoot::<AgentWorkingDirectoryRoot, ReadOnly>::open(&missing)
+        .expect_err("missing root must fail at the typed root");
+    assert!(
+        matches!(error, crate::platform::PathError::NotFound { .. }),
+        "{error:?}"
+    );
 }

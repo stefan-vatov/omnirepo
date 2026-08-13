@@ -44,6 +44,15 @@ jobs:
           --manifest scripts/quality-manifest.json --repo-root .
           --profile stable --json
 
+      - name: Run the repository test suite (CI/local equivalence)
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- test
+          --manifest scripts/test-suite-manifest.json --repo-root .
+          --full --jobs 2 --artifacts target/omnirepo-test-artifacts --json
+        env:
+          RUSTFLAGS: "-D warnings"
+
   msrv:
     name: repository quality manifest on Rust 1.86 MSRV
     runs-on: ubuntu-latest

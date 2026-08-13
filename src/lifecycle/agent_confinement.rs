@@ -8,7 +8,8 @@
 
 #![allow(dead_code)]
 
-use std::{error::Error, fmt, path::Path, path::PathBuf};
+use crate::platform::{AgentWorkingDirectoryRoot, AuthorityRoot, ReadOnly};
+use std::{error::Error, fmt, path::PathBuf};
 
 #[cfg(test)]
 mod agent_confinement_tests;
@@ -52,21 +53,17 @@ impl Error for ConfinementError {}
 
 /// Build the confinement for one destination repository.
 ///
-/// `adapter_paths` are the resolved adapter executable directories (already
-/// machine-validated); `extra_paths` are additional configured directories
-/// that must be checked for containment.
+/// The destination is accepted only through the typed agent working
+/// directory root (no-follow authority): the root is already canonical and
+/// alias-free.  `adapter_paths` are the resolved adapter executable
+/// directories (already machine-validated); `extra_paths` are additional
+/// configured directories that must be checked for containment.
 pub fn confine(
-    destination: &Path,
+    destination: &AuthorityRoot<AgentWorkingDirectoryRoot, ReadOnly>,
     adapter_paths: &[PathBuf],
     extra_paths: &[PathBuf],
 ) -> Result<AgentConfinement, ConfinementError> {
-    let canonical_destination =
-        destination
-            .canonicalize()
-            .map_err(|error| ConfinementError::Root {
-                path: destination.to_path_buf(),
-                reason: error.to_string(),
-            })?;
+    let canonical_destination = destination.display_path().as_path().to_path_buf();
     if !canonical_destination.is_dir() {
         return Err(ConfinementError::Root {
             path: canonical_destination.clone(),

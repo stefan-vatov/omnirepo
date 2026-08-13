@@ -21,6 +21,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/fleet_permits.rs",
+      "row_id": "behavior-fleet-progress"
+    },
+    {
       "path": "src/lifecycle/invocation.rs",
       "row_id": "behavior-run-record"
     },

@@ -341,16 +341,26 @@ pub enum MutationIntent {
     Rename,
 }
 
+#[derive(Debug)]
 pub struct MachineConfigRoot;
+#[derive(Debug)]
 pub struct SourceSnapshotRoot;
+#[derive(Debug)]
 pub struct DestinationRepositoryRoot;
+#[derive(Debug)]
 pub struct RunRecordRoot;
+#[derive(Debug)]
 pub struct ProcessWorkingDirectoryRoot;
+#[derive(Debug)]
 pub struct AgentWorkingDirectoryRoot;
+#[derive(Debug)]
 pub struct GitWorkingDirectoryRoot;
+#[derive(Debug)]
 pub struct TemporaryRoot<O>(PhantomData<O>);
 
+#[derive(Debug)]
 pub struct ReadOnly;
+#[derive(Debug)]
 pub struct Mutate;
 
 pub trait MutationAllowed {}
@@ -492,6 +502,7 @@ impl AbsolutePath {
     }
 }
 
+#[derive(Debug)]
 pub struct AuthorityRoot<K, A> {
     handle: std::fs::File,
     identity: AuthorityIdentity,

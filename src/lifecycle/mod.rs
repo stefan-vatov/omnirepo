@@ -10,6 +10,7 @@ mod agent_runtime;
 mod cancellation;
 mod commit_journal;
 mod event;
+mod fleet_permits;
 mod invocation;
 mod journal;
 mod remote_target;

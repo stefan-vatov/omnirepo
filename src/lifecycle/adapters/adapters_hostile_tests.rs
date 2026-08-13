@@ -128,8 +128,16 @@ fn fake_and_replaced_adapter_executables_fail_resolution() {
 #[test]
 fn prompt_injection_and_ambient_secrets_are_contained() {
     let (_fixture, workdir, evidence) = agent_fixture();
-    let confinement =
-        crate::lifecycle::agent_confinement::confine(&workdir, &[], &[]).expect("confine");
+    let confinement = crate::lifecycle::agent_confinement::confine(
+        &crate::platform::AuthorityRoot::<
+            crate::platform::AgentWorkingDirectoryRoot,
+            crate::platform::ReadOnly,
+        >::open(&workdir)
+        .expect("root"),
+        &[],
+        &[],
+    )
+    .expect("confine");
     // The ambient environment carries a secret; the agent must not see it,
     // and its untrusted output (with ANSI injection) is inert.  The unsafe
     // env mutation is test-only ambient setup.
@@ -164,8 +172,16 @@ fn prompt_injection_and_ambient_secrets_are_contained() {
 #[test]
 fn ambient_secret_environment_is_cleared() {
     let (_fixture, workdir, evidence) = agent_fixture();
-    let confinement =
-        crate::lifecycle::agent_confinement::confine(&workdir, &[], &[]).expect("confine");
+    let confinement = crate::lifecycle::agent_confinement::confine(
+        &crate::platform::AuthorityRoot::<
+            crate::platform::AgentWorkingDirectoryRoot,
+            crate::platform::ReadOnly,
+        >::open(&workdir)
+        .expect("root"),
+        &[],
+        &[],
+    )
+    .expect("confine");
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_owned());
     let argv = vec![
         shell,
@@ -185,7 +201,12 @@ fn escaping_extra_paths_fail_closed() {
     let (_fixture, workdir, _evidence) = agent_fixture();
     let outside = workdir.parent().expect("parent").join("outside");
     fs::create_dir_all(&outside).expect("outside");
-    let error = crate::lifecycle::agent_confinement::confine(&workdir, &[], &[outside])
+    let root = crate::platform::AuthorityRoot::<
+        crate::platform::AgentWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >::open(&workdir)
+    .expect("root");
+    let error = crate::lifecycle::agent_confinement::confine(&root, &[], &[outside])
         .expect_err("escape must fail closed");
     assert!(
         matches!(error, ConfinementError::EscapesDestination { .. }),

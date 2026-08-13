@@ -1001,8 +1001,15 @@ fn nesting_depth_is_bounded() {
 fn validate_file_rejects_external_and_symlink_inputs() {
     use std::os::unix::fs::symlink;
 
-    let external = tempfile::NamedTempFile::new().expect("create external fixture");
-    let external_error = traceability::validate_file(external.path())
+    // The external fixture must live OUTSIDE the repository root: the
+    // suite runner pins TMPDIR under target/, so the system temp directory
+    // can be inside the repo.  The repo's parent is deterministic and
+    // outside the root.
+    let external_dir =
+        tempfile::tempdir_in(root().parent().expect("repo parent")).expect("external dir");
+    let external = external_dir.path().join("external-matrix.json");
+    std::fs::write(&external, "{}").expect("write external fixture");
+    let external_error = traceability::validate_file(&external)
         .expect_err("external matrix must be rejected before reading");
     assert!(
         external_error
@@ -1013,7 +1020,7 @@ fn validate_file_rejects_external_and_symlink_inputs() {
     let inside =
         tempfile::tempdir_in(root().join("tests/traceability")).expect("create fixture dir");
     let link = inside.path().join("matrix-link.json");
-    symlink(external.path(), &link).expect("create hostile symlink fixture");
+    symlink(&external, &link).expect("create hostile symlink fixture");
     let symlink_error = traceability::validate_file(&link)
         .expect_err("symlink matrix must be rejected before reading");
     assert!(symlink_error.to_string().contains("contains a symlink"));
