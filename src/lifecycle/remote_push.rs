@@ -256,3 +256,6 @@ fn join_readers(readers: Vec<std::thread::JoinHandle<()>>) {
 
 #[cfg(test)]
 mod remote_push_tests;
+
+#[cfg(test)]
+mod remote_push_fixture_tests;

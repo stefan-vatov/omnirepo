@@ -190,3 +190,6 @@ impl NestedPermits {
 
 #[cfg(test)]
 mod nested_permits_tests;
+
+#[cfg(test)]
+mod fairness_tests;

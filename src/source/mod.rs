@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod acquisition;
+mod catalog_state;
 mod declarations;
 mod extraction;
 mod item_resolution;
@@ -20,6 +21,11 @@ pub(crate) use item_resolution::{
 };
 
 #[cfg(test)]
+pub(crate) use catalog_state::{
+    CatalogError, CatalogState, PlanningImpact, SourceCatalog, plan_impact,
+};
+
+#[cfg(test)]
 pub(crate) use declarations::DECLARATION_VERSION;
 
 #[cfg(test)]
@@ -27,6 +33,9 @@ pub(crate) use extraction::content_identity;
 
 #[cfg(test)]
 mod acquisition_tests;
+
+#[cfg(test)]
+mod catalog_state_tests;
 
 #[cfg(test)]
 mod declarations_tests;

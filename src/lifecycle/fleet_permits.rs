@@ -56,7 +56,7 @@ struct LedgerState {
 /// One granted permit; dropping it returns the slot to the ledger.
 #[derive(Debug)]
 pub struct Permit {
-    repository: String,
+    pub repository: String,
     state: Arc<Mutex<LedgerState>>,
 }
 

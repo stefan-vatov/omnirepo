@@ -93,6 +93,10 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/source/catalog_state.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/source/extraction.rs",
       "row_id": "behavior-source-materialization"
     },
