@@ -67,6 +67,8 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/admission.rs",
         "src/lifecycle/adapters.rs",
         "src/lifecycle/agent_confinement.rs",
+        "src/lifecycle/agent_runtime.rs",
+        "src/lifecycle/cancellation.rs",
         "src/lifecycle/agent_framing.rs",
         "src/lifecycle/commit_journal.rs",
         "src/lifecycle/stages.rs",

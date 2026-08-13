@@ -651,9 +651,11 @@ impl EventLog {
                     });
                 };
                 self.intents.remove(index);
-                if *outcome == Outcome::Cancelled {
-                    self.cancelled = true;
-                }
+                // A cancelled outcome is a per-repository fact; only the
+                // run-level Cancelled event marks the run cancelled, so a
+                // fleet-wide cancellation can record every repository result
+                // before the run terminalizes.
+                let _ = outcome;
             }
             JournalEvent::SnapshotRecorded { .. } | JournalEvent::Evidence { .. } => {
                 require_running(self, "run state event")?;

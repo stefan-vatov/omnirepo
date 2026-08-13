@@ -18,6 +18,9 @@ use std::{error::Error, fmt, path::Path, process::Command};
 #[cfg(test)]
 mod commit_journal_tests;
 
+#[cfg(test)]
+mod commit_journal_fixture_tests;
+
 /// Journaled commit failures.
 #[derive(Debug)]
 pub enum JournaledCommitError {

@@ -69,6 +69,14 @@
       "row_id": "behavior-repair-causation"
     },
     {
+      "path": "src/lifecycle/cancellation.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/agent_runtime.rs",
+      "row_id": "behavior-repair-causation"
+    },
+    {
       "path": "src/lifecycle/admission.rs",
       "row_id": "behavior-run-record"
     },

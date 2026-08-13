@@ -21,6 +21,9 @@ pub(crate) use git_index::prepare_index;
 pub(crate) use manifest::{PlannedOperation, build_authorized_delta};
 
 #[cfg(test)]
+pub(crate) use state::AuthorizedDelta;
+
+#[cfg(test)]
 pub(crate) use state::{
     AuthorityIdentity, CheckWitness, EntryKind, FileIdentity, FilesystemClass, FilesystemIdentity,
     FrozenWitnesses, GitFacts, GitRepositoryState, HeadState, IndexState, ManagedTargetIdentity,

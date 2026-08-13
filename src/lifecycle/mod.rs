@@ -6,6 +6,8 @@ mod adapters;
 mod admission;
 mod agent_confinement;
 mod agent_framing;
+mod agent_runtime;
+mod cancellation;
 mod commit_journal;
 mod event;
 mod invocation;

@@ -254,12 +254,23 @@ fn terminal_cannot_carry_the_cancelled_outcome() {
 }
 
 #[test]
-fn cancelled_repository_result_marks_the_run_terminal() {
+fn cancelled_repository_result_is_a_per_repository_fact() {
     let mut log = EventLog::new();
     record_ok(&mut log, &intent(0));
     record_ok(&mut log, &repository_intent(1, 1));
     record_ok(&mut log, &repository_result(2, 1, Outcome::Cancelled));
-    record_err(&mut log, &repository_intent(3, 2), "terminal run");
+    // Fleet-wide cancellation records every repository result before the
+    // run-level Cancelled event seals the run.
+    record_ok(&mut log, &repository_intent(3, 2));
+    record_ok(&mut log, &repository_result(4, 2, Outcome::Cancelled));
+    record_ok(
+        &mut log,
+        &JournalEvent::Cancelled {
+            checkpoint: 5,
+            run_id: run_id(),
+        },
+    );
+    record_err(&mut log, &repository_intent(6, 3), "terminal run");
 }
 
 #[test]
