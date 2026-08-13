@@ -14,16 +14,14 @@ pub(crate) use extraction::{
 };
 pub(crate) use snapshot::{RevisionId, SourceId};
 
-#[cfg(test)]
-pub(crate) use item_resolution::{
-    CollisionKind, ItemDeclaration, ItemKind, LoserRef, ResolutionError, ResolvedItem,
-    resolve_items,
-};
+pub(crate) use catalog_state::{CatalogState, SourceCatalog};
+pub(crate) use item_resolution::{ItemDeclaration, ResolvedItem, resolve_items};
 
 #[cfg(test)]
-pub(crate) use catalog_state::{
-    CatalogError, CatalogState, PlanningImpact, SourceCatalog, plan_impact,
-};
+pub(crate) use catalog_state::{CatalogError, PlanningImpact, plan_impact};
+
+#[cfg(test)]
+pub(crate) use item_resolution::{CollisionKind, ItemKind, LoserRef, ResolutionError};
 
 #[cfg(test)]
 pub(crate) use declarations::DECLARATION_VERSION;

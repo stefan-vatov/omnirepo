@@ -97,6 +97,14 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/lifecycle/terminal_projection.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/plan_builder.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/lifecycle/sync_plan.rs",
       "row_id": "behavior-source-materialization"
     },

@@ -80,6 +80,8 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/run_summary.rs",
         "src/lifecycle/record_finalize.rs",
         "src/lifecycle/plan_selection.rs",
+        "src/lifecycle/terminal_projection.rs",
+        "src/lifecycle/plan_builder.rs",
         "src/lifecycle/sync_plan.rs",
         "src/lifecycle/push_reconcile.rs",
         "src/source/catalog_state.rs",

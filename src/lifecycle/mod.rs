@@ -17,6 +17,7 @@ mod fleet_permits;
 mod invocation;
 mod journal;
 mod nested_permits;
+mod plan_builder;
 mod plan_selection;
 mod push_reconcile;
 mod record_finalize;
@@ -31,6 +32,7 @@ mod source_catalog;
 mod source_extraction;
 mod stages;
 mod sync_plan;
+mod terminal_projection;
 mod transaction_evidence;
 
 pub(crate) use invocation::run_invocation;

@@ -68,6 +68,8 @@ impl Error for ResolutionError {}
 pub struct ItemDeclaration {
     pub id: String,
     pub target: String,
+    /// The owning source in declared precedence order.
+    pub source: String,
     pub kind: ItemKind,
     pub section: Option<(u64, u64)>,
     pub source_order: usize,

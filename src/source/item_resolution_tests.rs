@@ -10,6 +10,7 @@ fn whole(id: &str, target: &str, order: usize) -> ItemDeclaration {
     ItemDeclaration {
         id: id.to_owned(),
         target: target.to_owned(),
+        source: "primary".to_owned(),
         kind: ItemKind::WholeFile,
         section: None,
         source_order: order,
@@ -20,6 +21,7 @@ fn section(id: &str, target: &str, start: u64, end: u64, order: usize) -> ItemDe
     ItemDeclaration {
         id: id.to_owned(),
         target: target.to_owned(),
+        source: "primary".to_owned(),
         kind: ItemKind::Section,
         section: Some((start, end)),
         source_order: order,

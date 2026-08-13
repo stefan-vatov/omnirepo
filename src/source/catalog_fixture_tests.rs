@@ -58,6 +58,7 @@ fn changing_configured_order_changes_only_the_specified_winners() {
             ItemDeclaration {
                 id: "item-a".to_owned(),
                 target: "t1".to_owned(),
+                source: "primary".to_owned(),
                 kind: ItemKind::WholeFile,
                 section: None,
                 source_order: order_a,
@@ -65,6 +66,7 @@ fn changing_configured_order_changes_only_the_specified_winners() {
             ItemDeclaration {
                 id: "item-b".to_owned(),
                 target: "t2".to_owned(),
+                source: "primary".to_owned(),
                 kind: ItemKind::WholeFile,
                 section: None,
                 source_order: order_b,
@@ -77,6 +79,7 @@ fn changing_configured_order_changes_only_the_specified_winners() {
             ItemDeclaration {
                 id: first_id.to_owned(),
                 target: "shared".to_owned(),
+                source: "primary".to_owned(),
                 kind: ItemKind::WholeFile,
                 section: None,
                 source_order: 1,
@@ -84,6 +87,7 @@ fn changing_configured_order_changes_only_the_specified_winners() {
             ItemDeclaration {
                 id: second_id.to_owned(),
                 target: "shared".to_owned(),
+                source: "primary".to_owned(),
                 kind: ItemKind::WholeFile,
                 section: None,
                 source_order: 2,
