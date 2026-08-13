@@ -228,9 +228,21 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
         String::from_utf8_lossy(&help.stdout),
         String::from_utf8_lossy(&help.stderr)
     );
-    assert_eq!(
-        String::from_utf8(help.stdout).expect("help is UTF-8"),
-        "A tool for managing multiple git repositories\n\nUsage: omnirepo\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n\nMachine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1).\nLegacy tag-selected commands and legacy fleet files are unsupported and are not migrated automatically.\n"
+    let help_text = String::from_utf8(help.stdout).expect("help is UTF-8");
+    for declared in ["sync", "setup", "validate"] {
+        assert!(
+            help_text.contains(declared),
+            "help must declare the constitutional command {declared:?}"
+        );
+    }
+    assert!(
+        help_text.contains("--output"),
+        "help must declare the machine-readable output flag"
+    );
+    assert!(
+        help_text
+            .contains("Machine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1)."),
+        "help must keep the machine configuration pointer"
     );
 
     let version = binary(&["--version"]);
@@ -246,7 +258,10 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
         format!("omnirepo {}\n", env!("CARGO_PKG_VERSION"))
     );
 
-    for forbidden_command in ["new", "clone", "run", "sync"] {
+    // Legacy general surfaces and the first-release no-migrate decision stay
+    // rejected; the constitutional commands are recognized and fail closed
+    // until the lifecycle slices land (owner exit contract: 2).
+    for forbidden_command in ["new", "clone", "run", "migrate"] {
         let output = binary(&[forbidden_command]);
         assert_eq!(
             output.status.code(),
@@ -254,8 +269,21 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
             "forbidden command {forbidden_command:?} must remain rejected"
         );
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("unexpected argument"),
+            String::from_utf8_lossy(&output.stderr).contains("unrecognized subcommand")
+                || String::from_utf8_lossy(&output.stderr).contains("unexpected argument"),
             "forbidden command {forbidden_command:?} must report an argument error"
+        );
+    }
+    for recognized in ["sync", "setup", "validate"] {
+        let output = binary(&[recognized]);
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{recognized:?} must fail closed with the invocation exit until its lifecycle lands"
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("not available in this build"),
+            "{recognized:?} must not claim landed capabilities"
         );
     }
 }

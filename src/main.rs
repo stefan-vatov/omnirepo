@@ -6,5 +6,5 @@ mod repository;
 mod source;
 
 fn main() {
-    let _ = configuration::run();
+    std::process::exit(configuration::run() as i32);
 }

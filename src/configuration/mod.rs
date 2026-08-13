@@ -8,25 +8,76 @@
 
 #![allow(dead_code)]
 
-use clap::Parser;
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::{error::Error, fmt};
 
 #[cfg(test)]
 mod unit_tests;
 
+/// Constitutional synchronization surface. The owner-approved command tree
+/// (.27) is exactly `sync`, `setup`, and `validate`; there is no `migrate`
+/// command in the first constitutional release, and legacy general surfaces
+/// (run/new/clone/ad-hoc sync) are absent by boundary decision.
 #[derive(Debug, Parser)]
 #[command(
     name = "omnirepo",
     version,
-    about = "A tool for managing multiple git repositories",
+    about = "Synchronize machine-declared managed content into destination repositories",
     long_about = None,
-    after_help = "Machine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1).\nLegacy tag-selected commands and legacy fleet files are unsupported and are not migrated automatically."
+    after_help = "Commands: sync, setup, validate.\nMachine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1).\nLegacy general orchestration surfaces are unsupported and are not migrated automatically."
 )]
-struct Cli;
+struct Cli {
+    /// Emit a versioned machine-readable JSON projection of the outcome.
+    #[arg(long, global = true, value_enum, default_value_t = OutputMode::Human)]
+    output: OutputMode,
+    #[command(subcommand)]
+    command: Command,
+}
 
-pub(crate) fn run() -> Result<(), Box<dyn Error>> {
-    let _ = Cli::parse();
-    Ok(())
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+enum OutputMode {
+    #[default]
+    Human,
+    Json,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Synchronize managed files and sections from machine-declared sources
+    /// into selected destination repositories.
+    Sync,
+    /// Set up machine configuration for a first synchronization.
+    Setup(SetupArgs),
+    /// Validate machine configuration and repository policy without effects.
+    Validate,
+}
+
+#[derive(Debug, Args)]
+struct SetupArgs {
+    /// Apply the setup plan instead of printing it.
+    #[arg(long)]
+    apply: bool,
+}
+
+pub(crate) fn run() -> u8 {
+    let cli = Cli::parse();
+    match cli.command {
+        // The command tree is the owner-approved constitutional surface; the
+        // lifecycle execution lands in the invocation-to-run sequencing and
+        // fleet slices. Until then every command fails closed with an
+        // invocation-class exit (owner exit contract: 2), without prompting
+        // and without claiming capabilities that have not landed.
+        Command::Sync => unavailable("sync"),
+        Command::Setup(_) => unavailable("setup"),
+        Command::Validate => unavailable("validate"),
+    }
+}
+
+fn unavailable(command: &str) -> u8 {
+    eprintln!(
+        "omnirepo: {command} is not available in this build; the constitutional lifecycle lands in a later delivery slice"
+    );
+    2
 }
 
 pub const SUPPORTED_SCHEMA_VERSION: u16 = 1;

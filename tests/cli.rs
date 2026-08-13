@@ -30,10 +30,10 @@ fn help_is_available_without_a_global_config() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Usage: omnirepo"))
-        .stdout(predicate::str::contains("new").not())
-        .stdout(predicate::str::contains("clone").not())
-        .stdout(predicate::str::contains("run").not())
-        .stdout(predicate::str::contains("sync").not());
+        .stdout(predicate::str::contains("sync"))
+        .stdout(predicate::str::contains("setup"))
+        .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("--output"));
 
     command(home.path(), workspace.path())
         .arg("-h")
@@ -68,7 +68,10 @@ fn clap_rejects_unknown_commands_and_invalid_arguments_with_exit_two() {
         .arg("unknown-command")
         .assert()
         .code(2)
-        .stderr(predicate::str::contains("unexpected argument"));
+        .stderr(
+            predicate::str::contains("unrecognized subcommand")
+                .or(predicate::str::contains("unexpected argument")),
+        );
 
     for arguments in [
         vec!["new", "--name", "first-project"],
@@ -80,7 +83,10 @@ fn clap_rejects_unknown_commands_and_invalid_arguments_with_exit_two() {
             .args(arguments)
             .assert()
             .code(2)
-            .stderr(predicate::str::contains("unexpected argument"));
+            .stderr(
+                predicate::str::contains("unrecognized subcommand")
+                    .or(predicate::str::contains("unexpected argument")),
+            );
     }
 }
 
@@ -101,7 +107,7 @@ fn removed_new_command_is_rejected_without_creating_a_repository() {
         ])
         .assert()
         .code(2)
-        .stderr(predicate::str::contains("unexpected argument"));
+        .stderr(predicate::str::contains("unrecognized subcommand"));
 
     assert!(!destination.join("first-project").exists());
 }

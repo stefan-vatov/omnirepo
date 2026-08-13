@@ -53,7 +53,10 @@ fn legacy_omni_and_tag_clone_cannot_select_or_create_destinations() {
     assert_eq!(output.status.code(), Some(2));
     let mut output_text = String::from_utf8_lossy(&output.stdout).into_owned();
     output_text.push_str(&String::from_utf8_lossy(&output.stderr));
-    assert!(output_text.contains("unexpected argument"));
+    assert!(
+        output_text.contains("unrecognized subcommand")
+            || output_text.contains("unexpected argument")
+    );
     assert!(!output_text.contains(LEGACY_SENTINEL.trim()));
     assert!(!new_destination.exists());
     for path in &legacy_files {

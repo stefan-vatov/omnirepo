@@ -72,7 +72,10 @@ fn help_rejects_run_with_the_decided_parse_status() {
             .args([alias, "--command", "true"])
             .assert()
             .code(2)
-            .stderr(predicate::str::contains("unexpected argument"));
+            .stderr(
+                predicate::str::contains("unrecognized subcommand")
+                    .or(predicate::str::contains("unexpected argument")),
+            );
     }
 }
 
