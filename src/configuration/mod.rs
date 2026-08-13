@@ -35,14 +35,14 @@ struct Cli {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
-enum OutputMode {
+pub(crate) enum OutputMode {
     #[default]
     Human,
     Json,
 }
 
 #[derive(Debug, Subcommand)]
-enum Command {
+pub(crate) enum Command {
     /// Synchronize managed files and sections from machine-declared sources
     /// into selected destination repositories.
     Sync,
@@ -53,31 +53,14 @@ enum Command {
 }
 
 #[derive(Debug, Args)]
-struct SetupArgs {
+pub(crate) struct SetupArgs {
     /// Apply the setup plan instead of printing it.
     #[arg(long)]
     apply: bool,
 }
 
-pub(crate) fn run() -> u8 {
-    let cli = Cli::parse();
-    match cli.command {
-        // The command tree is the owner-approved constitutional surface; the
-        // lifecycle execution lands in the invocation-to-run sequencing and
-        // fleet slices. Until then every command fails closed with an
-        // invocation-class exit (owner exit contract: 2), without prompting
-        // and without claiming capabilities that have not landed.
-        Command::Sync => unavailable("sync"),
-        Command::Setup(_) => unavailable("setup"),
-        Command::Validate => unavailable("validate"),
-    }
-}
-
-fn unavailable(command: &str) -> u8 {
-    eprintln!(
-        "omnirepo: {command} is not available in this build; the constitutional lifecycle lands in a later delivery slice"
-    );
-    2
+pub(crate) fn parse() -> Command {
+    Cli::parse().command
 }
 
 pub const SUPPORTED_SCHEMA_VERSION: u16 = 1;

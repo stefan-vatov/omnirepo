@@ -9,8 +9,8 @@ use crate::platform::{MutationIntent, PathError, RelativePath, RunRecordRoot, op
 use std::{
     error::Error,
     fmt,
-    fs::File,
-    io::{Read, Write},
+    fs::{self, File},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -140,6 +140,22 @@ pub struct RunRecord {
 }
 
 impl RunRecord {
+    /// Establish the canonical runs directory below a validated home.
+    ///
+    /// The record seam deliberately never creates parents (hostile-parent
+    /// rejection is a pre-record contract); the invocation layer establishes
+    /// the directory chain once, and the record creation revalidates it
+    /// through the authority (no-follow, regular, absolute) before any write.
+    pub(crate) fn ensure_runs_directory(home: &Path) -> Result<(), RunRecordError> {
+        validate_home(home)?;
+        let runs_directory = home.join(RUN_DIRECTORY);
+        let omni_directory = runs_directory
+            .parent()
+            .expect("runs directory has a parent");
+        create_directory_once(omni_directory)?;
+        create_directory_once(&runs_directory)
+    }
+
     /// Create a run record using the operating system clock and entropy source.
     pub fn create(home: impl AsRef<Path>) -> Result<Self, RunRecordError> {
         let timestamp = SystemTime::now();
@@ -246,6 +262,20 @@ impl RunRecord {
     #[allow(dead_code)]
     pub(crate) fn sync_tail(&mut self) -> Result<(), crate::platform::PathError> {
         crate::platform::sync_file(&self.file, &self.path.display().to_string())
+    }
+}
+
+/// Create a directory exactly once; an existing real directory is accepted,
+/// an existing non-directory (including a symlink target mismatch) fails
+/// closed so the authority revalidation decides what is reachable.
+fn create_directory_once(directory: &Path) -> Result<(), RunRecordError> {
+    match fs::create_dir(directory) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists && directory.is_dir() => Ok(()),
+        Err(error) => Err(RunRecordError::ParentUnavailable {
+            path: directory.to_path_buf(),
+            reason: error.to_string(),
+        }),
     }
 }
 

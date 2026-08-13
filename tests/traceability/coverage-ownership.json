@@ -13,6 +13,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/invocation.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
       "path": "src/lifecycle/journal.rs",
       "row_id": "behavior-run-record"
     },

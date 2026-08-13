@@ -6,5 +6,6 @@ mod repository;
 mod source;
 
 fn main() {
-    std::process::exit(configuration::run() as i32);
+    let command = configuration::parse();
+    std::process::exit(lifecycle::run_invocation(command) as i32);
 }

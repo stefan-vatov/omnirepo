@@ -10,7 +10,9 @@
 
 #![allow(dead_code)]
 
-use super::event::{Checkpoint, EventError, EventLog, JournalEvent};
+use super::event::{
+    Checkpoint, EventError, EventLog, INVOCATION_CHECKPOINT, JournalEvent, RunStage,
+};
 use super::run_record::RunRecord;
 use std::{
     error::Error,
@@ -110,7 +112,8 @@ pub struct Journal {
 
 impl Journal {
     /// Start the single writer over the run record.  The invocation intent
-    /// line is already checkpoint 0; the first appended event is checkpoint 1.
+    /// line is already checkpoint 0 in the record; the writer seeds its
+    /// transition state with it, so the first appended event is checkpoint 1.
     pub fn start(record: RunRecord, config: JournalConfig) -> Self {
         let (sender, receiver) = sync_channel(config.queue_capacity);
         let poisoned = Arc::new(Mutex::new(false));
@@ -119,6 +122,14 @@ impl Journal {
             poisoned: Arc::clone(&poisoned),
         };
         let mut log = EventLog::new();
+        let run_id = record.id().to_string();
+        let invocation = JournalEvent::RunIntent {
+            checkpoint: INVOCATION_CHECKPOINT,
+            run_id,
+            stage: RunStage::Invocation,
+        };
+        log.record(&invocation)
+            .expect("invocation intent is the first valid event");
         let thread = thread::spawn(move || {
             let mut record = record;
             let mut checkpoint: Checkpoint = 0;

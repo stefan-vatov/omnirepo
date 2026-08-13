@@ -96,23 +96,27 @@ fn single_producer_appends_are_acknowledged_in_monotonic_order() {
     let (_home, record, record_path) = fixture_record();
     let mut journal = Journal::start(record, JournalConfig::default());
     let mut log = EventLog::new();
+    log.record(&intent(0)).expect("seed invocation intent");
+    // The writer seeds the invocation intent (checkpoint 0) from the record;
+    // appended events start at checkpoint 1.
     let events = vec![
-        intent(1),
-        repository_intent(2, "destination-a", 1),
-        repository_result(3, "destination-a", 1, Outcome::Success),
-        terminal(4, Outcome::Success),
+        repository_intent(0, "destination-a", 1),
+        repository_result(0, "destination-a", 1, Outcome::Success),
+        terminal(0, Outcome::Success),
     ];
+    let mut assigned_renders = Vec::new();
     for event in &events {
-        submit_with_declared(&mut log, &journal.handle, event.clone());
+        let checkpoint = submit_with_declared(&mut log, &journal.handle, event.clone());
+        assigned_renders.push(event.with_checkpoint(checkpoint).render());
     }
     journal.shutdown().expect("clean shutdown");
     let content = fs::read_to_string(&record_path).expect("read record");
-    // Invocation intent (checkpoint 0) plus the four appended lines.
+    // Invocation intent (checkpoint 0) plus the three appended lines.
     let lines: Vec<&str> = content.lines().collect();
-    assert_eq!(lines.len(), 5);
-    for (index, event) in events.iter().enumerate() {
+    assert_eq!(lines.len(), 4);
+    for (index, rendered) in assigned_renders.iter().enumerate() {
         assert!(
-            content.contains(&event.render()),
+            content.contains(rendered),
             "record must contain event {}: {content}",
             index + 1
         );
@@ -129,8 +133,9 @@ fn concurrent_producers_lose_none_and_checkpoints_are_unique_and_monotonic() {
             sync_each_append: false,
         },
     );
-    let mut log = EventLog::new();
-    submit_with_declared(&mut log, &journal.handle, intent(1));
+    let _log = EventLog::new();
+    // The writer seeds the invocation intent; producers append repository
+    // events only.
     let producers = 6;
     let events_per_producer = 20;
     let handle = journal.handle.clone();
@@ -175,8 +180,8 @@ fn concurrent_producers_lose_none_and_checkpoints_are_unique_and_monotonic() {
     let content = fs::read_to_string(&record_path).expect("read record");
     assert_eq!(
         content.lines().count(),
-        2 + producers * events_per_producer,
-        "record must contain the invocation intent, the run intent, and every acknowledged event"
+        1 + producers * events_per_producer,
+        "record must contain the invocation intent plus every acknowledged event"
     );
 }
 
@@ -194,13 +199,18 @@ fn invalid_transitions_are_rejected_without_poisoning() {
         "unexpected error: {error:?}"
     );
     // The journal stays usable for valid events; one shared log mirrors the
-    // writer's own transition state.
+    // writer's own transition state (the invocation intent is already seeded).
     let mut log = EventLog::new();
-    submit_with_declared(&mut log, &journal.handle, intent(1));
+    log.record(&intent(0)).expect("seed invocation intent");
     submit_with_declared(
         &mut log,
         &journal.handle,
-        repository_intent(2, "destination-a", 1),
+        repository_intent(1, "destination-a", 1),
+    );
+    submit_with_declared(
+        &mut log,
+        &journal.handle,
+        repository_result(2, "destination-a", 1, Outcome::Success),
     );
     journal.shutdown().expect("clean shutdown");
 }
@@ -210,13 +220,18 @@ fn writer_assigns_monotonic_checkpoints_ignoring_producer_claims() {
     let (_home, record, record_path) = fixture_record();
     let mut journal = Journal::start(record, JournalConfig::default());
     let mut log = EventLog::new();
+    log.record(&intent(0)).expect("seed invocation intent");
     // The producer's declared checkpoints are ignored; the writer assigns 1..n.
-    let first = submit_with_declared(&mut log, &journal.handle, intent(99));
+    let first = submit_with_declared(
+        &mut log,
+        &journal.handle,
+        repository_intent(99, "destination-a", 1),
+    );
     assert_eq!(first, 1);
     let second = submit_with_declared(
         &mut log,
         &journal.handle,
-        repository_intent(77, "destination-a", 1),
+        repository_intent(77, "destination-b", 1),
     );
     assert_eq!(second, 2);
     journal.shutdown().expect("clean shutdown");
@@ -235,14 +250,16 @@ fn bounded_queue_exposes_full_without_blocking_and_recovers_after_drain() {
             sync_each_append: false,
         },
     );
-    // Fill the bounded queue faster than the writer drains it: the run
-    // intent plus repository intents for distinct repositories form a valid
-    // monotonic sequence.
-    let first = journal.handle.submit(intent(1)).expect("intent accepted");
+    // Fill the bounded queue faster than the writer drains it: repository
+    // intents for distinct repositories form a valid monotonic sequence.
+    let first = journal
+        .handle
+        .submit(repository_intent(1, "destination-b", 1))
+        .expect("intent accepted");
     assert_eq!(first, 1);
     let second = journal
         .handle
-        .submit(repository_intent(2, "destination-b", 1))
+        .submit(repository_intent(2, "destination-c", 1))
         .expect("second accepted");
     assert_eq!(second, 2);
     // With capacity 2 the queue is now full (both slots pending acks were
@@ -283,7 +300,13 @@ fn bounded_queue_exposes_full_without_blocking_and_recovers_after_drain() {
 fn shutdown_syncs_the_tail_and_joins() {
     let (_home, record, record_path) = fixture_record();
     let mut journal = Journal::start(record, JournalConfig::default());
-    submit_with_declared(&mut EventLog::new(), &journal.handle, intent(1));
+    let mut log = EventLog::new();
+    log.record(&intent(0)).expect("seed invocation intent");
+    submit_with_declared(
+        &mut log,
+        &journal.handle,
+        repository_intent(1, "destination-a", 1),
+    );
     journal.shutdown().expect("clean shutdown");
     let content = fs::read_to_string(&record_path).expect("read record");
     assert_eq!(content.lines().count(), 2);
@@ -297,7 +320,13 @@ fn writer_failure_poisons_every_later_submit() {
     // a poisoned journal rejects submits after shutdown.
     let (_home, record, _record_path) = fixture_record();
     let mut journal = Journal::start(record, JournalConfig::default());
-    submit_with_declared(&mut EventLog::new(), &journal.handle, intent(1));
+    let mut log = EventLog::new();
+    log.record(&intent(0)).expect("seed invocation intent");
+    submit_with_declared(
+        &mut log,
+        &journal.handle,
+        repository_intent(1, "destination-a", 1),
+    );
     journal.shutdown().expect("clean shutdown");
     // After the writer is gone, the shared handle must fail closed.
     let error = journal
