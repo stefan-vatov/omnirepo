@@ -7,11 +7,15 @@ mod admission;
 #[cfg(test)]
 mod authority_integration_tests;
 
+#[cfg(test)]
+mod sync_idempotence_tests;
+
 mod agent_confinement;
 mod agent_framing;
 mod agent_runtime;
 mod cancellation;
 mod commit_journal;
+mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
 mod fleet_permits;

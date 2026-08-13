@@ -141,6 +141,14 @@
       "row_id": "behavior-configuration-authority"
     },
     {
+      "path": "src/managed_content/section_append.rs",
+      "row_id": "behavior-partial-section-sync"
+    },
+    {
+      "path": "src/lifecycle/diagnostic_aggregation.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
       "path": "src/lifecycle/sync_plan.rs",
       "row_id": "behavior-source-materialization"
     },
