@@ -23,10 +23,12 @@ mod remote_target;
 mod replace;
 mod replay;
 mod run_record;
+mod run_summary;
 mod scheduler;
 mod source_catalog;
 mod source_extraction;
 mod stages;
+mod sync_plan;
 mod transaction_evidence;
 
 pub(crate) use invocation::run_invocation;

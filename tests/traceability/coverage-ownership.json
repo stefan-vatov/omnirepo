@@ -85,6 +85,14 @@
       "row_id": "behavior-fleet-progress"
     },
     {
+      "path": "src/lifecycle/run_summary.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/sync_plan.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/lifecycle/push_reconcile.rs",
       "row_id": "behavior-git-delivery"
     },

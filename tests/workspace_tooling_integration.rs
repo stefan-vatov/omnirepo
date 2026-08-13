@@ -77,6 +77,8 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/remote_push.rs",
         "src/lifecycle/source_extraction.rs",
         "src/lifecycle/scheduler.rs",
+        "src/lifecycle/run_summary.rs",
+        "src/lifecycle/sync_plan.rs",
         "src/lifecycle/push_reconcile.rs",
         "src/source/catalog_state.rs",
         "src/source/item_resolution.rs",
