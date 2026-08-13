@@ -10,6 +10,7 @@ fn selected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         target: target.to_owned(),
         source: source.to_owned(),
         source_order: order,
+        kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },
@@ -22,6 +23,7 @@ fn rejected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         target: target.to_owned(),
         source: source.to_owned(),
         source_order: order,
+        kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Rejected {
             reason: "shadowed by a higher-precedence source".to_owned(),
         },

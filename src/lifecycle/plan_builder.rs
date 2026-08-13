@@ -106,6 +106,7 @@ pub fn build_repository_plan(
             target: winner.target.clone(),
             source: declared[winner.winner].source.clone(),
             source_order: declared[winner.winner].source_order,
+            kind: winner.kind,
             decision: PlanDecision::Selected {
                 reason: "declared winner".to_owned(),
             },

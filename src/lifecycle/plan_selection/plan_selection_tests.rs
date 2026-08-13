@@ -11,6 +11,7 @@ fn item(id: &str, decision: PlanDecision) -> PlanItem {
         target: "t".to_owned(),
         source: "primary".to_owned(),
         source_order: 1,
+        kind: crate::source::ItemKind::WholeFile,
         decision,
     }
 }

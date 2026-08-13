@@ -20,8 +20,10 @@ pub(crate) use item_resolution::{ItemDeclaration, ResolvedItem, resolve_items};
 #[cfg(test)]
 pub(crate) use catalog_state::{CatalogError, PlanningImpact, plan_impact};
 
+pub(crate) use item_resolution::ItemKind;
+
 #[cfg(test)]
-pub(crate) use item_resolution::{CollisionKind, ItemKind, LoserRef, ResolutionError};
+pub(crate) use item_resolution::{CollisionKind, LoserRef, ResolutionError};
 
 #[cfg(test)]
 pub(crate) use declarations::DECLARATION_VERSION;

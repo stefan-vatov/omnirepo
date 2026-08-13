@@ -105,6 +105,18 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/managed_content/delimiters.rs",
+      "row_id": "behavior-partial-section-sync"
+    },
+    {
+      "path": "src/lifecycle/replacement_requests.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/lifecycle/diagnostics.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
       "path": "src/lifecycle/sync_plan.rs",
       "row_id": "behavior-source-materialization"
     },

@@ -30,6 +30,8 @@ pub struct PlanItem {
     /// The owning source in declared precedence order.
     pub source: String,
     pub source_order: usize,
+    /// The item kind (whole file or section).
+    pub kind: crate::source::ItemKind,
     pub decision: PlanDecision,
 }
 
