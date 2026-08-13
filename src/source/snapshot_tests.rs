@@ -416,6 +416,12 @@ fn identity_boundaries_reject_empty_nul_and_invalid_source_values() {
         })
     );
     assert_eq!(
+        SourceId::new("UpperSource"),
+        Err(IdentityError::InvalidSourceId {
+            value: "UpperSource".to_owned()
+        })
+    );
+    assert_eq!(
         RevisionId::new(""),
         Err(IdentityError::Empty { field: "revision" })
     );
