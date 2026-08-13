@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod capture;
+mod git_index;
 mod manifest;
 mod policy;
 mod policy_loader;
@@ -9,6 +10,9 @@ mod state;
 
 #[cfg(test)]
 mod capture_tests;
+
+#[cfg(test)]
+mod git_index_tests;
 
 #[cfg(test)]
 mod manifest_tests;

@@ -89,6 +89,10 @@
       "row_id": "behavior-repository-policy"
     },
     {
+      "path": "src/repository/git_index.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
       "path": "src/repository/revalidate.rs",
       "row_id": "behavior-repository-policy"
     },
