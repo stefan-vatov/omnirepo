@@ -5,6 +5,7 @@
 mod event;
 mod invocation;
 mod journal;
+mod replace;
 mod replay;
 mod run_record;
 
