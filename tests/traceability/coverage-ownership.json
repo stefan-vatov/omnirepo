@@ -49,6 +49,14 @@
       "row_id": "behavior-repair-causation"
     },
     {
+      "path": "src/repository/operation_commit.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/agent_framing.rs",
+      "row_id": "behavior-repair-causation"
+    },
+    {
       "path": "src/lifecycle/admission.rs",
       "row_id": "behavior-run-record"
     },

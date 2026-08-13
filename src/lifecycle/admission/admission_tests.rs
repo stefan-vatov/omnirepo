@@ -113,6 +113,7 @@ fn foreign_and_missing_releases_are_typed_errors() {
     let foreign = super::Lease {
         repository: "destination-a".to_owned(),
         token: lease.token() + 1,
+        last_seen: std::time::Instant::now(),
     };
     let error = table.release(&foreign).expect_err("foreign token");
     assert!(
@@ -155,5 +156,57 @@ fn admission_wait_after_hold_is_journaled() {
         Admission::AdmittedAfterWait,
         "bounded wait then admit"
     );
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn lease_heartbeats_and_stale_recovery() {
+    let (_fixture, mut journal, _path, run_id) = fixture_journal();
+    let table = LeaseTable::new();
+    let a = repo("destination-a");
+    let (_, lease) = table
+        .acquire(&journal.handle, &run_id, &a, DEFAULT_LEASE_WAIT)
+        .expect("acquire");
+    let mut lease = lease.expect("lease");
+    // A fresh lease is not stale under a long deadline; the heartbeat keeps
+    // the owner authoritative.
+    assert!(!table.is_stale("destination-a", Duration::from_secs(3_600)));
+    table.heartbeat(&mut lease).expect("heartbeat");
+    // Under a zero stale deadline the lease is stale and reclaim removes
+    // only it; the repository becomes reacquirable.
+    assert!(table.is_stale("destination-a", Duration::ZERO));
+    let reclaimed = table.reclaim_stale(Duration::ZERO);
+    assert_eq!(reclaimed, vec!["destination-a".to_owned()]);
+    assert!(!table.is_held("destination-a"));
+    let (outcome, _) = table
+        .acquire(&journal.handle, &run_id, &a, DEFAULT_LEASE_WAIT)
+        .expect("reacquire");
+    assert_eq!(outcome, Admission::Admitted);
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn foreign_heartbeat_is_a_typed_error() {
+    let (_fixture, mut journal, _path, run_id) = fixture_journal();
+    let table = LeaseTable::new();
+    let a = repo("destination-a");
+    let (_, lease) = table
+        .acquire(&journal.handle, &run_id, &a, DEFAULT_LEASE_WAIT)
+        .expect("acquire");
+    let mut lease = lease.expect("lease");
+    let mut foreign = super::Lease {
+        repository: "destination-a".to_owned(),
+        token: lease.token() + 1,
+        last_seen: std::time::Instant::now(),
+    };
+    let error = table
+        .heartbeat(&mut foreign)
+        .expect_err("foreign heartbeat");
+    assert!(
+        matches!(error, AdmissionError::ForeignLease { .. }),
+        "{error:?}"
+    );
+    // The genuine owner's heartbeat still works.
+    table.heartbeat(&mut lease).expect("owner heartbeat");
     journal.shutdown().expect("shutdown");
 }

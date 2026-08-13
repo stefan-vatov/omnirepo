@@ -4,6 +4,7 @@
 
 mod adapters;
 mod admission;
+mod agent_framing;
 mod event;
 mod invocation;
 mod journal;

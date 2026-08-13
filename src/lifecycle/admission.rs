@@ -32,6 +32,7 @@ const LEASE_POLL: Duration = Duration::from_millis(10);
 pub struct Lease {
     repository: String,
     token: u64,
+    last_seen: Instant,
 }
 
 impl Lease {
@@ -40,6 +41,11 @@ impl Lease {
     }
     pub fn token(&self) -> u64 {
         self.token
+    }
+
+    /// Refresh the heartbeat so the owner stays authoritative.
+    pub fn heartbeat(&mut self) {
+        self.last_seen = Instant::now();
     }
 }
 
@@ -57,7 +63,14 @@ pub enum Admission {
 /// The shared lease table.
 #[derive(Clone, Default)]
 pub struct LeaseTable {
-    inner: Arc<Mutex<BTreeMap<String, u64>>>,
+    inner: Arc<Mutex<BTreeMap<String, LeaseEntry>>>,
+}
+
+/// The held lease with its heartbeat.
+#[derive(Clone)]
+struct LeaseEntry {
+    token: u64,
+    last_seen: Instant,
 }
 
 impl LeaseTable {
@@ -81,7 +94,13 @@ impl LeaseTable {
                 let mut table = self.inner.lock().expect("lease table");
                 if !table.contains_key(repository.as_str()) {
                     let token = table.len() as u64 + 1;
-                    table.insert(repository.as_str().to_owned(), token);
+                    table.insert(
+                        repository.as_str().to_owned(),
+                        LeaseEntry {
+                            token,
+                            last_seen: Instant::now(),
+                        },
+                    );
                     Some(token)
                 } else {
                     None
@@ -99,6 +118,7 @@ impl LeaseTable {
                     Some(Lease {
                         repository: repository.as_str().to_owned(),
                         token,
+                        last_seen: Instant::now(),
                     }),
                 ));
             }
@@ -118,7 +138,7 @@ impl LeaseTable {
     pub fn release(&self, lease: &Lease) -> Result<(), AdmissionError> {
         let mut table = self.inner.lock().expect("lease table");
         match table.get(&lease.repository) {
-            Some(token) if *token == lease.token => {
+            Some(entry) if entry.token == lease.token => {
                 table.remove(&lease.repository);
                 Ok(())
             }
@@ -137,6 +157,51 @@ impl LeaseTable {
             .lock()
             .expect("lease table")
             .contains_key(repository)
+    }
+
+    /// Refresh a lease's heartbeat; a foreign or missing lease fails.
+    pub fn heartbeat(&self, lease: &mut Lease) -> Result<(), AdmissionError> {
+        let mut table = self.inner.lock().expect("lease table");
+        match table.get_mut(&lease.repository) {
+            Some(entry) if entry.token == lease.token => {
+                entry.last_seen = Instant::now();
+                lease.last_seen = Instant::now();
+                Ok(())
+            }
+            Some(_) => Err(AdmissionError::ForeignLease {
+                repository: lease.repository.clone(),
+            }),
+            None => Err(AdmissionError::MissingLease {
+                repository: lease.repository.clone(),
+            }),
+        }
+    }
+
+    /// True when a held lease's heartbeat is older than the stale deadline:
+    /// the owner is presumed dead and the lease is reclaimable.
+    pub fn is_stale(&self, repository: &str, stale_after: Duration) -> bool {
+        self.inner
+            .lock()
+            .expect("lease table")
+            .get(repository)
+            .map(|entry| entry.last_seen.elapsed() >= stale_after)
+            .unwrap_or(false)
+    }
+
+    /// Reclaim stale leases, returning the reclaimed repositories.  Only
+    /// leases whose heartbeat expired are removed; live leases are never
+    /// touched.
+    pub fn reclaim_stale(&self, stale_after: Duration) -> Vec<String> {
+        let mut table = self.inner.lock().expect("lease table");
+        let stale: Vec<String> = table
+            .iter()
+            .filter(|(_, entry)| entry.last_seen.elapsed() >= stale_after)
+            .map(|(repository, _)| repository.clone())
+            .collect();
+        for repository in &stale {
+            table.remove(repository);
+        }
+        stale
     }
 }
 
