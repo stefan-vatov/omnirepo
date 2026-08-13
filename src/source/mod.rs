@@ -38,6 +38,9 @@ mod acquisition_tests;
 mod catalog_state_tests;
 
 #[cfg(test)]
+mod catalog_fixture_tests;
+
+#[cfg(test)]
 mod declarations_tests;
 
 #[cfg(test)]
