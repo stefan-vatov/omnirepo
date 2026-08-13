@@ -65,6 +65,10 @@
       "row_id": "behavior-repository-policy"
     },
     {
+      "path": "src/repository/capture.rs",
+      "row_id": "behavior-repository-policy"
+    },
+    {
       "path": "src/repository/policy.rs",
       "row_id": "behavior-repository-policy"
     },
