@@ -217,12 +217,17 @@ fn crash_between_commit_and_journal_reconciles_by_oid() {
     // Commit succeeds; the journal side "crashes" (record never written).
     // Recovery reconciles the exact OID against the object database.
     let committed = create_commit(&root, &index, Some(&base), "sync managed").expect("commit");
+    let git_root = crate::platform::AuthorityRoot::<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >::open(&root)
+    .expect("git root");
     assert!(
-        crate::lifecycle::commit_journal::reconcile_commit(&root, &committed.sha)
+        crate::lifecycle::commit_journal::reconcile_commit(&git_root, &committed.sha)
             .expect("reconcile")
     );
     let missing = "0000000000000000000000000000000000000000";
     assert!(
-        !crate::lifecycle::commit_journal::reconcile_commit(&root, missing).expect("reconcile")
+        !crate::lifecycle::commit_journal::reconcile_commit(&git_root, missing).expect("reconcile")
     );
 }

@@ -70,6 +70,7 @@ exclude = [
     "src/lifecycle/adapters/adapters_hostile_tests.rs",
     "src/lifecycle/admission/admission_concurrency_tests.rs",
     "src/lifecycle/agent_confinement/agent_confinement_tests.rs",
+    "src/lifecycle/authority_integration_tests.rs",
     "src/lifecycle/agent_runtime/agent_runtime_tests.rs",
     "src/lifecycle/cancellation/cancellation_tests.rs",
     "src/lifecycle/commit_journal/commit_journal_fixture_tests.rs",

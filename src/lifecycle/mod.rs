@@ -4,6 +4,9 @@
 
 mod adapters;
 mod admission;
+#[cfg(test)]
+mod authority_integration_tests;
+
 mod agent_confinement;
 mod agent_framing;
 mod agent_runtime;

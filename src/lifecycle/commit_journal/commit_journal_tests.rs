@@ -176,8 +176,13 @@ fn journaled_commit_records_intent_result_and_exact_oid() {
     )
     .expect("delta");
     let isolated = crate::repository::prepare_index(&root, &delta).expect("index");
+    let git_root = crate::platform::AuthorityRoot::<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >::open(&root)
+    .expect("git root");
     let recorded = super::create_commit_journaled(
-        &root,
+        &git_root,
         &isolated,
         Some(&base),
         "chore(omnirepo): sync managed content",
@@ -188,9 +193,9 @@ fn journaled_commit_records_intent_result_and_exact_oid() {
     .expect("journaled commit");
     // The OID exists in the object database and reconciles; a bogus OID does
     // not.
-    assert!(super::reconcile_commit(&root, &recorded.sha).expect("reconcile"));
+    assert!(super::reconcile_commit(&git_root, &recorded.sha).expect("reconcile"));
     assert!(
-        !super::reconcile_commit(&root, "0000000000000000000000000000000000000000")
+        !super::reconcile_commit(&git_root, "0000000000000000000000000000000000000000")
             .expect("reconcile bogus")
     );
     journal

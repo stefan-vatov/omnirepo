@@ -6,6 +6,7 @@ use super::{PushError, push_recorded_oid};
 use crate::lifecycle::journal::{Journal, JournalConfig};
 use crate::lifecycle::remote_target::FrozenRemoteTarget;
 use crate::lifecycle::run_record::RunRecord;
+use crate::platform::{AuthorityRoot, GitWorkingDirectoryRoot, ReadOnly};
 use crate::repository::{RefName, RevisionId};
 use std::{
     fs,
@@ -13,6 +14,10 @@ use std::{
     process::Command,
     time::{Duration, SystemTime},
 };
+
+fn git_root(working: &std::path::Path) -> AuthorityRoot<GitWorkingDirectoryRoot, ReadOnly> {
+    AuthorityRoot::<GitWorkingDirectoryRoot, ReadOnly>::open(working).expect("git root")
+}
 
 fn ref_name(value: &str) -> RefName {
     RefName::new(value).expect("ref name")
@@ -126,7 +131,7 @@ fn push_sends_only_the_recorded_oid_to_the_selected_ref() {
         oid: oid.clone(),
     };
     let outcome = push_recorded_oid(
-        &repos.working,
+        &git_root(&repos.working),
         &target,
         &oid,
         "dest-a",
@@ -225,7 +230,7 @@ fn remote_rejection_is_typed_and_intent_is_journaled() {
         oid: oid.clone(),
     };
     let error = push_recorded_oid(
-        &repos.working,
+        &git_root(&repos.working),
         &target,
         &oid,
         "dest-a",

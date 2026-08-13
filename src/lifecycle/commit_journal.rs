@@ -13,7 +13,7 @@ use crate::repository::{CommitError, RecordedCommit, create_commit};
 
 use crate::lifecycle::event::{EvidenceKind, EvidenceRef, JournalEvent, Operation, Outcome};
 use crate::lifecycle::journal::{JournalError, JournalHandle};
-use std::{error::Error, fmt, path::Path, process::Command};
+use std::{error::Error, fmt, process::Command};
 
 #[cfg(test)]
 mod commit_journal_tests;
@@ -48,7 +48,10 @@ impl Error for JournaledCommitError {}
 
 /// Create and journal an operation commit with its exact OID and ref.
 pub fn create_commit_journaled(
-    root: &Path,
+    root: &crate::platform::AuthorityRoot<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >,
     index: &crate::repository::IsolatedIndex,
     parent: Option<&str>,
     message: &str,
@@ -66,8 +69,9 @@ pub fn create_commit_journaled(
             attempt: 1,
         })
         .map_err(JournaledCommitError::Journal)?;
+    let working = root.display_path().as_path();
     let recorded =
-        create_commit(root, index, parent, message).map_err(JournaledCommitError::Commit)?;
+        create_commit(working, index, parent, message).map_err(JournaledCommitError::Commit)?;
     // Result after effect with the exact OID.
     journal
         .submit(JournalEvent::RepositoryResult {
@@ -95,9 +99,15 @@ pub fn create_commit_journaled(
 
 /// Reconcile local commit ambiguity: the journal result was lost but the
 /// OID may exist in the object database.
-pub fn reconcile_commit(root: &Path, oid: &str) -> Result<bool, JournaledCommitError> {
+pub fn reconcile_commit(
+    root: &crate::platform::AuthorityRoot<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >,
+    oid: &str,
+) -> Result<bool, JournaledCommitError> {
     let output = Command::new("git")
-        .current_dir(root)
+        .current_dir(root.display_path().as_path())
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_TERMINAL_PROMPT", "0")
         .args(["cat-file", "-e", &format!("{oid}^{{commit}}")])

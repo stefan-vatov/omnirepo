@@ -191,3 +191,38 @@ fn source_and_package_surfaces_expose_no_repository_creation_api() {
         );
     }
 }
+
+/// Setup and sync must not create repositories, .git directories, or
+/// arbitrary directories today: the creation boundary holds before the
+/// setup/onboarding workstream lands.
+#[test]
+fn setup_and_sync_create_no_repository_or_git_artifacts() {
+    let home = TempDir::new().expect("create isolated home");
+    let workspace = TempDir::new().expect("create isolated workspace");
+    for (label, arguments) in [("setup", vec!["setup", "--apply"]), ("sync", vec!["sync"])] {
+        let before_home = snapshot_tree(home.path());
+        let before_workspace = snapshot_tree(workspace.path());
+        command(home.path(), workspace.path())
+            .args(arguments)
+            .assert()
+            // The application service is not in this build: both commands
+            // exit with the typed unavailable codes and create nothing.
+            .code(predicate::function(|code: &i32| *code == 2 || *code == 5));
+        if label == "setup" {
+            assert_eq!(
+                before_home,
+                snapshot_tree(home.path()),
+                "{label} must not write global configuration"
+            );
+        }
+        assert_eq!(
+            before_workspace,
+            snapshot_tree(workspace.path()),
+            "{label} must not create directories or repositories"
+        );
+        assert!(
+            !workspace.path().join(".git").exists(),
+            "{label} must not initialize Git"
+        );
+    }
+}

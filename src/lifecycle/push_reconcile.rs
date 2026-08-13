@@ -63,13 +63,16 @@ impl Error for ReconcileError {}
 /// of exactly the selected reference; the recorded and pre-push OIDs come
 /// from the caller's frozen state.
 pub fn reconcile_push(
-    working: &Path,
+    working: &crate::platform::AuthorityRoot<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >,
     target: &FrozenRemoteTarget,
     recorded: &RevisionId,
     pre_push: &RevisionId,
 ) -> Result<ReconcileOutcome, ReconcileError> {
     let remote_text = git_text(
-        working,
+        working.display_path().as_path(),
         &["ls-remote", &target.remote, target.reference.as_str()],
     )
     .map_err(|reason| ReconcileError::Git {

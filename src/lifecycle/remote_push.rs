@@ -71,7 +71,10 @@ impl Error for PushError {}
 /// before contact and response evidence after.  Nothing else is offered to
 /// the transport.
 pub fn push_recorded_oid(
-    working: &Path,
+    working: &crate::platform::AuthorityRoot<
+        crate::platform::GitWorkingDirectoryRoot,
+        crate::platform::ReadOnly,
+    >,
     target: &FrozenRemoteTarget,
     oid: &RevisionId,
     repository_id: &str,
@@ -89,7 +92,7 @@ pub fn push_recorded_oid(
         })
         .map_err(PushError::Journal)?;
     let refspec = format!("{}:{}", oid.as_str(), target.reference.as_str());
-    let mut command = sanitized_command(working);
+    let mut command = sanitized_command(working.display_path().as_path());
     command
         .arg("push")
         .arg("--no-tags")

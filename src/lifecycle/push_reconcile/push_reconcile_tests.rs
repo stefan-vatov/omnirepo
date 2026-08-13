@@ -4,6 +4,7 @@
 
 use super::{ReconcileError, ReconcileOutcome, reconcile_push};
 use crate::lifecycle::remote_target::FrozenRemoteTarget;
+use crate::platform::{AuthorityRoot, GitWorkingDirectoryRoot, ReadOnly};
 use crate::repository::{RefName, RevisionId};
 use std::{fs, path::Path, process::Command};
 
@@ -14,6 +15,10 @@ fn head_oid(working: &std::path::Path) -> RevisionId {
         .output()
         .expect("git");
     revision(String::from_utf8(output.stdout).expect("stdout").trim())
+}
+
+fn git_root(working: &std::path::Path) -> AuthorityRoot<GitWorkingDirectoryRoot, ReadOnly> {
+    AuthorityRoot::<GitWorkingDirectoryRoot, ReadOnly>::open(working).expect("git root")
 }
 
 fn ref_name(value: &str) -> RefName {
@@ -94,7 +99,7 @@ fn remote_already_new_records_success_without_repush() {
     let (_fixture, working, _upstream) = fixture_repos();
     let recorded = head_oid(&working);
     let outcome = reconcile_push(
-        &working,
+        &git_root(&working),
         &target(),
         &recorded,
         &revision("pre-push-placeholder"),
@@ -133,7 +138,8 @@ fn remote_old_allows_retry_within_policy() {
         "rewind failed: {:?}",
         String::from_utf8_lossy(&rewind.stderr)
     );
-    let outcome = reconcile_push(&working, &target(), &recorded, &parent).expect("reconcile");
+    let outcome =
+        reconcile_push(&git_root(&working), &target(), &recorded, &parent).expect("reconcile");
     assert_eq!(
         outcome,
         ReconcileOutcome::RetryAllowed {
@@ -176,7 +182,7 @@ fn third_oid_is_a_conflict_without_force() {
     );
     git(&upstream, &["update-ref", "refs/heads/main", &third]);
     let outcome = reconcile_push(
-        &working,
+        &git_root(&working),
         &target(),
         &recorded,
         &revision("pre-push-placeholder"),

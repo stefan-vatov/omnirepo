@@ -8,6 +8,7 @@ use crate::lifecycle::remote_target::{
     FrozenRemoteTarget, RemoteTargetError, freeze_remote_target,
 };
 use crate::lifecycle::run_record::RunRecord;
+use crate::platform::{AuthorityRoot, GitWorkingDirectoryRoot, ReadOnly};
 use crate::repository::{RefName, RevisionId};
 use std::{
     fs,
@@ -15,6 +16,10 @@ use std::{
     process::Command,
     time::{Duration, SystemTime},
 };
+
+fn git_root(working: &std::path::Path) -> AuthorityRoot<GitWorkingDirectoryRoot, ReadOnly> {
+    AuthorityRoot::<GitWorkingDirectoryRoot, ReadOnly>::open(working).expect("git root")
+}
 
 fn ref_name(value: &str) -> RefName {
     RefName::new(value).expect("ref name")
@@ -118,7 +123,7 @@ fn exactly_one_intended_ref_reaches_one_intended_oid() {
         oid: oid.clone(),
     };
     push_recorded_oid(
-        &working,
+        &git_root(&working),
         &target,
         &oid,
         "dest-a",
@@ -184,7 +189,7 @@ fn divergent_remote_rejects_without_force() {
     // The recorded OID is an ancestor of the upstream: without force the
     // push must fail typed.
     let outcome = push_recorded_oid(
-        &working,
+        &git_root(&working),
         &target,
         &oid,
         "dest-a",
