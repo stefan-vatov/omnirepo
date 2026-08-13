@@ -9,6 +9,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/event.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
       "path": "src/lifecycle/run_record.rs",
       "row_id": "behavior-run-record"
     },

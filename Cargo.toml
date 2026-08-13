@@ -35,6 +35,7 @@ exclude = [
     "src/repository/state_tests.rs",
     "src/platform/authority/tests.rs",
     "src/platform/authority/tests/",
+    "src/lifecycle/event/event_tests.rs",
     "src/lifecycle/run_record/run_record_tests.rs",
     "cog.toml",
     "Cargo.toml.orig",
