@@ -58,6 +58,7 @@ fn product_package_contains_runtime_only_files() {
         "src/configuration/mod.rs",
         "src/lifecycle/mod.rs",
         "src/lifecycle/event.rs",
+        "src/lifecycle/journal.rs",
         "src/lifecycle/run_record.rs",
         "src/managed_content/mod.rs",
         "src/managed_content/transaction.rs",

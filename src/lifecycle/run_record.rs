@@ -235,6 +235,18 @@ impl RunRecord {
     pub(crate) fn file_mut(&mut self) -> &mut File {
         &mut self.file
     }
+
+    /// Append one exact journal line after the invocation intent.
+    #[allow(dead_code)]
+    pub(crate) fn append(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+        self.file.write_all(bytes)
+    }
+
+    /// Sync the record tail so an acknowledged checkpoint is durable.
+    #[allow(dead_code)]
+    pub(crate) fn sync_tail(&mut self) -> Result<(), crate::platform::PathError> {
+        crate::platform::sync_file(&self.file, &self.path.display().to_string())
+    }
 }
 
 fn validate_home(home: &Path) -> Result<(), RunRecordError> {

@@ -254,6 +254,81 @@ impl JournalEvent {
         }
     }
 
+    /// Rebuild the event with the writer-assigned checkpoint.  Producers
+    /// never choose checkpoints; the single writer owns allocation.
+    pub fn with_checkpoint(&self, checkpoint: Checkpoint) -> Self {
+        match self {
+            Self::RunIntent { run_id, stage, .. } => Self::RunIntent {
+                checkpoint,
+                run_id: run_id.clone(),
+                stage: *stage,
+            },
+            Self::RepositoryIntent {
+                run_id,
+                repository_id,
+                operation,
+                attempt,
+                ..
+            } => Self::RepositoryIntent {
+                checkpoint,
+                run_id: run_id.clone(),
+                repository_id: repository_id.clone(),
+                operation: *operation,
+                attempt: *attempt,
+            },
+            Self::RepositoryResult {
+                run_id,
+                repository_id,
+                operation,
+                attempt,
+                outcome,
+                ..
+            } => Self::RepositoryResult {
+                checkpoint,
+                run_id: run_id.clone(),
+                repository_id: repository_id.clone(),
+                operation: *operation,
+                attempt: *attempt,
+                outcome: *outcome,
+            },
+            Self::SnapshotRecorded {
+                run_id,
+                repository_id,
+                snapshot_id,
+                revision,
+                ..
+            } => Self::SnapshotRecorded {
+                checkpoint,
+                run_id: run_id.clone(),
+                repository_id: repository_id.clone(),
+                snapshot_id: snapshot_id.clone(),
+                revision: revision.clone(),
+            },
+            Self::Evidence {
+                run_id,
+                repository_id,
+                evidence,
+                ..
+            } => Self::Evidence {
+                checkpoint,
+                run_id: run_id.clone(),
+                repository_id: repository_id.clone(),
+                evidence: evidence.clone(),
+            },
+            Self::Cancelled { run_id, .. } => Self::Cancelled {
+                checkpoint,
+                run_id: run_id.clone(),
+            },
+            Self::Terminal {
+                run_id, outcome, ..
+            } => Self::Terminal {
+                checkpoint,
+                run_id: run_id.clone(),
+                outcome: *outcome,
+            },
+        }
+    }
+
     pub fn run_id(&self) -> &str {
         match self {
             Self::RunIntent { run_id, .. }
