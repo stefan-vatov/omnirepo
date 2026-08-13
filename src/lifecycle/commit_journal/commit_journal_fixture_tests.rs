@@ -185,11 +185,15 @@ fn hostile_hooks_and_config_are_inert_during_commit() {
         "#!/bin/sh\ntouch /tmp/omnirepo-hook-ran\n",
     )
     .expect("hook");
-    let _ = Command::new("chmod")
-        .arg("u+x")
-        .arg(evil.join("pre-commit"))
-        .status()
-        .expect("chmod");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = fs::metadata(evil.join("pre-commit"))
+            .expect("metadata")
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(evil.join("pre-commit"), permissions).expect("set executable");
+    }
     let marker = Path::new("/tmp/omnirepo-hook-ran");
     let _ = fs::remove_file(marker);
     fs::OpenOptions::new()

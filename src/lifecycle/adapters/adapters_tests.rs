@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use super::{AdapterOutcome, executable_name, resolve_adapters};
+use super::{AdapterOutcome, executable_name, resolve_adapters, resolve_adapters_with_path};
 use crate::configuration::AgentKind;
 use std::{fs, path::Path, path::PathBuf};
 
@@ -58,28 +58,30 @@ fn order_is_stable_and_identities_resolve() {
 #[test]
 fn absent_executables_are_excluded_and_exhaustion_fails() {
     let (_fixture, bin, _codex) = fixture_bin("codex");
-    // Only codex exists; claude is absent.  PATH is pinned to the fixture so
-    // the ambient machine cannot satisfy the missing entry.
-    let previous_path = std::env::var_os("PATH");
-    unsafe { std::env::set_var("PATH", &bin) };
+    // Only codex exists; claude is absent.  The explicit PATH seam keeps the
+    // resolution deterministic without mutating the process environment.
     let configured = vec![bin.clone()];
-    let outcome = resolve_adaptors(&[AgentKind::Codex, AgentKind::ClaudeCode], &configured);
-    let AdapterOutcome::Resolved(adapters) = outcome else {
-        panic!("expected partial resolution: {outcome:?}");
+    let outcome = resolve_adapters_with_path(
+        &[AgentKind::Codex, AgentKind::ClaudeCode],
+        &configured,
+        Some(bin.as_os_str()),
+    );
+    let AdapterOutcome::Resolved(adapters) = outcome.expect("resolution") else {
+        panic!("expected partial resolution");
     };
     assert_eq!(adapters.len(), 1);
     assert_eq!(adapters[0].kind, AgentKind::Codex);
 
-    // A non-empty priority with every executable absent is exhausted (PATH
-    // is still pinned to the fixture bin).
-    let outcome = resolve_adaptors(&[AgentKind::ClaudeCode, AgentKind::Pi], &[]);
-    match outcome {
+    // A non-empty priority with every executable absent is exhausted (the
+    // seam PATH has no executables at all).
+    let outcome = resolve_adapters_with_path(
+        &[AgentKind::ClaudeCode, AgentKind::Pi],
+        &[],
+        Some(bin.as_os_str()),
+    );
+    match outcome.expect("resolution") {
         AdapterOutcome::Exhausted { missing } => assert_eq!(missing.len(), 2),
         other => panic!("expected exhausted, got {other:?}"),
-    }
-    match &previous_path {
-        Some(value) => unsafe { std::env::set_var("PATH", value) },
-        None => unsafe { std::env::remove_var("PATH") },
     }
 }
 

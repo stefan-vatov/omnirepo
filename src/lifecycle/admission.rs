@@ -8,6 +8,9 @@
 
 #![allow(dead_code)]
 
+#[cfg(test)]
+mod admission_concurrency_tests;
+
 use super::journal::{JournalError, JournalHandle};
 use crate::lifecycle::event::{EvidenceKind, EvidenceRef, JournalEvent};
 use crate::repository::RepositoryId;
@@ -112,7 +115,15 @@ impl LeaseTable {
                 } else {
                     Admission::Admitted
                 };
-                journal_admission(journal, run_id, repository, &outcome)?;
+                if let Err(error) = journal_admission(journal, run_id, repository, &outcome) {
+                    // A rejected admission must not leave the lease behind:
+                    // the table state stays consistent with the journal.
+                    self.inner
+                        .lock()
+                        .expect("lease table")
+                        .remove(repository.as_str());
+                    return Err(error);
+                }
                 return Ok((
                     outcome,
                     Some(Lease {

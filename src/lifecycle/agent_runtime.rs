@@ -90,6 +90,12 @@ pub fn run_agent(
     for (key, value) in &confinement.env {
         command.env(key, value);
     }
+    // The confined environment replaces the ambient one entirely: no
+    // credential or ambient variable survives into the agent.
+    command.env_clear();
+    for (key, value) in &confinement.env {
+        command.env(key, value);
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;

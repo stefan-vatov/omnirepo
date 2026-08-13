@@ -17,6 +17,9 @@ use std::{error::Error, fmt, fs, path::Path, path::PathBuf, time::SystemTime};
 #[cfg(test)]
 mod adapters_tests;
 
+#[cfg(test)]
+mod adapters_hostile_tests;
+
 /// One resolved adapter entry.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AdapterResolution {
@@ -78,13 +81,30 @@ pub fn resolve_adapters(
     priority: &[AgentKind],
     configured_paths: &[PathBuf],
 ) -> Result<AdapterOutcome, AdapterError> {
+    resolve_adapters_with_path(
+        priority,
+        configured_paths,
+        std::env::var_os("PATH").as_deref(),
+    )
+}
+
+/// Deterministic resolution with an explicit PATH value.
+///
+/// The PATH seam keeps resolution free of ambient environment mutation, so
+/// concurrent tests cannot observe another test's environment.  Production
+/// resolution always uses the ambient PATH; only tests inject the value.
+pub(crate) fn resolve_adapters_with_path(
+    priority: &[AgentKind],
+    configured_paths: &[PathBuf],
+    path_value: Option<&std::ffi::OsStr>,
+) -> Result<AdapterOutcome, AdapterError> {
     if priority.is_empty() {
         return Ok(AdapterOutcome::NoneConfigured);
     }
     let mut resolved = Vec::new();
     let mut missing = Vec::new();
     for kind in priority {
-        if let Some(executable) = locate(kind, configured_paths)? {
+        if let Some(executable) = locate(kind, configured_paths, path_value)? {
             resolved.push(AdapterResolution {
                 kind: *kind,
                 identity: executable_identity(&executable)?,
@@ -101,7 +121,11 @@ pub fn resolve_adapters(
     }
 }
 
-fn locate(kind: &AgentKind, configured_paths: &[PathBuf]) -> Result<Option<PathBuf>, AdapterError> {
+fn locate(
+    kind: &AgentKind,
+    configured_paths: &[PathBuf],
+    path_value: Option<&std::ffi::OsStr>,
+) -> Result<Option<PathBuf>, AdapterError> {
     let name = executable_name(*kind);
     for directory in configured_paths {
         let candidate = directory.join(name);
@@ -109,10 +133,10 @@ fn locate(kind: &AgentKind, configured_paths: &[PathBuf]) -> Result<Option<PathB
             return Ok(Some(candidate));
         }
     }
-    let Some(path_value) = std::env::var_os("PATH") else {
+    let Some(path_value) = path_value else {
         return Ok(None);
     };
-    for directory in std::env::split_paths(&path_value) {
+    for directory in std::env::split_paths(path_value) {
         let candidate = directory.join(name);
         if candidate.is_file() {
             return Ok(Some(candidate));
