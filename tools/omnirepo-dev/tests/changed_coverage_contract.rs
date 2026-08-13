@@ -197,8 +197,15 @@ fn deleted_and_comment_only_changes_report_explicit_zero_sample() {
         .expect("write manifest");
     git(&fixture, &root, &["add", "."]);
     git(&fixture, &root, &["commit", "--quiet", "--message", "base"]);
-    // Head deletes the Rust file and only edits a comment in the manifest.
+    // Head deletes the Rust file, edits a comment in the manifest, and adds a
+    // declaration-only module (no executable lines, so no LCOV record exists).
     git(&fixture, &root, &["rm", "--quiet", "src/gone.rs"]);
+    std::fs::create_dir_all(root.join("src/decl")).expect("create decl module");
+    std::fs::write(
+        root.join("src/decl/mod.rs"),
+        "//! Declaration-only module.\n#![allow(dead_code)]\nmod inner;\n",
+    )
+    .expect("write declaration-only module");
     std::fs::write(
         root.join("Cargo.toml"),
         "[package]\n# comment-only change\nname = \"fixture\"\n",
@@ -474,6 +481,9 @@ fn missing_explicit_or_resolved_base_fails_closed() {
         lcov.to_string_lossy().into_owned(),
         "--json".to_owned(),
     ];
+    // The ambient OMNIREPO_COVERAGE_BASE contract must not rescue the missing
+    // base case; the test pins the variable absent and present explicitly.
+    unsafe { std::env::remove_var("OMNIREPO_COVERAGE_BASE") };
     let output = omnirepo_dev::run(arguments.clone());
     assert_eq!(output.status, 1);
     assert!(output.stderr.contains("requires --base"));

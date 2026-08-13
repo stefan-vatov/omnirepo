@@ -177,10 +177,7 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     for raw in untracked.split(|byte| *byte == 0) {
         let raw = String::from_utf8_lossy(raw);
         let raw = raw.trim();
-        if raw.is_empty()
-            || !raw.ends_with(".rs")
-            || !(raw.starts_with("src/") || raw.contains("/src/"))
-        {
+        if raw.is_empty() || !raw.ends_with(".rs") || !raw.starts_with("src/") {
             continue;
         }
         let path = safe_product_path(raw)?;
@@ -199,9 +196,18 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     let mut lines = Vec::new();
     for (path, numbers) in changed {
         let Some(record) = records.get(&path) else {
-            return Err(Error::Lcov(format!(
-                "missing executable source record for {path}"
-            )));
+            // The official LCOV only emits records for files with at least one
+            // executable line. A changed file made only of declarations or
+            // comments contributes no executable changed lines and is skipped;
+            // a changed file with real code but no record fails closed.
+            let text = fs::read_to_string(root.join(&path))
+                .map_err(|e| Error::Lcov(format!("cannot read {path}: {e}")))?;
+            if file_has_executable_code(&text) {
+                return Err(Error::Lcov(format!(
+                    "missing executable source record for {path}"
+                )));
+            }
+            continue;
         };
         for number in numbers {
             if let Some(hits) = record.get(&number) {
@@ -275,6 +281,127 @@ fn git_text(root: &Path, args: &[&str]) -> Result<String, Error> {
     let bytes = git_bytes(root, args)?;
     String::from_utf8(bytes).map_err(|e| Error::Git(e.to_string()))
 }
+/// Conservative probe: does the source text contain a line that is not a
+/// comment, attribute, blank, brace, module/use declaration, or item header?
+/// The official LCOV omits files with no executable lines; such files must
+/// not trigger the fail-closed missing-record rule, while real code must.
+fn file_has_executable_code(text: &str) -> bool {
+    let mut in_block_comment = false;
+    // A multi-line `use` declaration (re-exports with braces) declares without
+    // executing; consume it until its terminating semicolon.
+    let mut in_use_span = false;
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if in_use_span {
+            if line.ends_with(';') {
+                in_use_span = false;
+            }
+            continue;
+        }
+        if in_block_comment {
+            if let Some(end) = line.find("*/") {
+                in_block_comment = false;
+                let rest = line[end + 2..].trim();
+                if rest.is_empty() || rest.starts_with("//") {
+                    continue;
+                }
+                return true;
+            }
+            continue;
+        }
+        if line.starts_with("/*") {
+            if !line.contains("*/") {
+                in_block_comment = true;
+            }
+            continue;
+        }
+        if line.starts_with("//")
+            || line.starts_with("#!")
+            || line.starts_with("#[")
+            || line == "{"
+            || line == "}"
+            || line.ends_with(';') && is_declaration_line(line)
+            || is_empty_item_line(line)
+        {
+            continue;
+        }
+        if first_keyword(line) == Some("use") {
+            if !line.ends_with(';') {
+                in_use_span = true;
+            }
+            continue;
+        }
+        return true;
+    }
+    false
+}
+
+/// The first significant keyword of a line after visibility/qualifier tokens.
+fn first_keyword(line: &str) -> Option<&str> {
+    let mut words = line.split_whitespace();
+    let mut first = words.next().unwrap_or("");
+    while matches!(
+        first,
+        "pub" | "pub(crate)" | "pub(super)" | "pub(in" | "async" | "unsafe" | "default" | "extern"
+    ) {
+        first = words.next().unwrap_or("");
+    }
+    if first.is_empty() { None } else { Some(first) }
+}
+
+/// True for a single-line item with an empty body such as `pub enum Y {}`,
+/// `struct X {}`, or `fn proto() {}`; these declare without executing.
+fn is_empty_item_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    if !(trimmed.ends_with("{}") || trimmed.ends_with("{ }")) {
+        return false;
+    }
+    let head = trimmed[..trimmed.len() - 1].trim_end();
+    let mut words = head.split_whitespace();
+    let mut first = words.next().unwrap_or("");
+    while matches!(
+        first,
+        "pub" | "pub(crate)" | "pub(super)" | "pub(in" | "async" | "unsafe" | "default" | "extern"
+    ) {
+        first = words.next().unwrap_or("");
+    }
+    matches!(
+        first,
+        "struct" | "enum" | "trait" | "type" | "impl" | "fn" | "mod"
+    )
+}
+
+/// True when a `;`-terminated line is a pure item declaration rather than a
+/// statement: `use`, `mod`, item types, `fn` prototypes, constants, and
+/// `macro_rules!` all declare without executing.
+fn is_declaration_line(line: &str) -> bool {
+    let mut words = line.split_whitespace();
+    let mut first = words.next().unwrap_or("");
+    while matches!(
+        first,
+        "pub" | "pub(crate)" | "pub(super)" | "pub(in" | "async" | "unsafe" | "default" | "extern"
+    ) {
+        first = words.next().unwrap_or("");
+    }
+    matches!(
+        first,
+        "use"
+            | "mod"
+            | "struct"
+            | "enum"
+            | "type"
+            | "trait"
+            | "static"
+            | "const"
+            | "fn"
+            | "macro_rules"
+            | "impl"
+    )
+}
+
 /// Parse a NUL-delimited `git diff --name-status -M -z` stream into a rename
 /// map (old product path -> new product path). Records are split on NUL bytes
 /// so any valid Git path (including newlines and tabs) stays one record.
@@ -323,6 +450,9 @@ fn parse_name_status(bytes: &[u8]) -> Result<BTreeMap<String, String>, Error> {
 /// Classify a repo-relative path: `Some` for product Rust sources, `None`
 /// for non-product files (skipped, never counted), and fail closed for
 /// unsafe paths such as absolute or parent-traversing components.
+/// Product scope matches the official coverage gate: the root package's
+/// `src/` tree only, excluding test modules (`unit_tests.rs`, `*_tests.rs`,
+/// `tests.rs`) and tool crates, which the official LCOV never measures.
 fn classify_product_path(raw: &str) -> Result<Option<String>, Error> {
     let path = Path::new(raw);
     if path.is_absolute()
@@ -336,13 +466,25 @@ fn classify_product_path(raw: &str) -> Result<Option<String>, Error> {
         return Err(Error::Path(raw.into()));
     }
     let normalized = path.to_string_lossy().replace('\\', "/");
-    if normalized.ends_with(".rs")
-        && (normalized.starts_with("src/") || normalized.contains("/src/"))
-    {
-        Ok(Some(normalized))
-    } else {
-        Ok(None)
+    if !normalized.ends_with(".rs") || !normalized.starts_with("src/") {
+        return Ok(None);
     }
+    // Test modules never appear in the official LCOV: colocated test files
+    // (unit_tests.rs, *_tests.rs, tests.rs) and test-directory subtrees
+    // (a `tests/` component under src/).
+    let file_name = normalized.rsplit('/').next().unwrap_or("");
+    if file_name == "unit_tests.rs" || file_name == "tests.rs" || file_name.ends_with("_tests.rs") {
+        return Ok(None);
+    }
+    if normalized
+        .strip_prefix("src/")
+        .unwrap_or("")
+        .split('/')
+        .any(|component| component == "tests")
+    {
+        return Ok(None);
+    }
+    Ok(Some(normalized))
 }
 fn safe_product_path(raw: &str) -> Result<String, Error> {
     match classify_product_path(raw)? {
@@ -564,10 +706,102 @@ mod tests {
 
     #[test]
     fn name_status_ignores_non_product_renames() {
-        let records = b"R100\0README.md\0docs/README.md\0R100\0src/a.rs\0src/b.rs\0";
-        let map = parse_name_status(records).expect("non-Rust renames are ignored");
+        let records =
+            b"R100\0README.md\0docs/README.md\0R100\0src/a.rs\0src/b.rs\0R100\0tools/omnirepo-dev/src/x.rs\0tools/omnirepo-dev/src/y.rs\0";
+        let map = parse_name_status(records).expect("non-product renames are ignored");
         assert_eq!(map.len(), 1);
         assert_eq!(map.get("src/a.rs").map(String::as_str), Some("src/b.rs"));
+    }
+
+    #[test]
+    fn diff_parser_skips_tool_crate_and_test_files() {
+        // Tool crates and test files are outside the official coverage scope;
+        // their hunks are consumed but never counted.
+        let diff = "diff --git a/tools/omnirepo-dev/src/tool.rs b/tools/omnirepo-dev/src/tool.rs\n--- a/tools/omnirepo-dev/src/tool.rs\n+++ b/tools/omnirepo-dev/src/tool.rs\n@@ -1,1 +1,2 @@\n-old\n+new\n+another\ndiff --git a/tests/some_test.rs b/tests/some_test.rs\n--- a/tests/some_test.rs\n+++ b/tests/some_test.rs\n@@ -1,1 +1,2 @@\n-old\n+new\n+another\n";
+        let parsed = parse_diff(diff).expect("valid out-of-scope diff");
+        assert!(
+            parsed.is_empty(),
+            "out-of-scope files must not count: {parsed:?}"
+        );
+    }
+
+    #[test]
+    fn diff_parser_skips_colocated_test_modules() {
+        // Colocated test modules (unit_tests.rs, *_tests.rs, tests.rs) are
+        // never measured by the official LCOV and must not enter the sample.
+        let diff = "diff --git a/src/configuration/unit_tests.rs b/src/configuration/unit_tests.rs\n--- a/src/configuration/unit_tests.rs\n+++ b/src/configuration/unit_tests.rs\n@@ -1,1 +1,2 @@\n-old\n+new\n+another\ndiff --git a/src/platform/authority/tests.rs b/src/platform/authority/tests.rs\n--- a/src/platform/authority/tests.rs\n+++ b/src/platform/authority/tests.rs\n@@ -1,1 +1,2 @@\n-old\n+new\n+another\ndiff --git a/src/repository/state_tests.rs b/src/repository/state_tests.rs\n--- a/src/repository/state_tests.rs\n+++ b/src/repository/state_tests.rs\n@@ -1,1 +1,2 @@\n-old\n+new\n+another\n";
+        let parsed = parse_diff(diff).expect("valid test-module diff");
+        assert!(parsed.is_empty(), "test modules must not count: {parsed:?}");
+    }
+
+    #[test]
+    fn executable_code_probe_distinguishes_declarations_from_code() {
+        use super::file_has_executable_code;
+        // Pure declaration/comment files are omitted from the official LCOV
+        // and must not demand a record.
+        assert!(!file_has_executable_code(
+            "//! docs\n#![allow(dead_code)]\nmod run_record;\n"
+        ));
+        assert!(!file_has_executable_code(
+            "pub mod snapshot;\n#[cfg(test)]\nmod snapshot_tests;\n"
+        ));
+        assert!(!file_has_executable_code(
+            "/* block\n * comment\n */\npub struct X;\npub enum Y {}\npub type Z = u8;\nuse std::path::Path;\n"
+        ));
+        assert!(!file_has_executable_code(
+            "pub fn proto();\nconst N: u64 = 1;\n"
+        ));
+        // Real code demands a record.
+        assert!(file_has_executable_code(
+            "fn main() {\n    println!(\"x\");\n}\n"
+        ));
+        assert!(file_has_executable_code("let x = 1;\n"));
+        assert!(file_has_executable_code("pub fn foo() { let _ = 1; }\n"));
+        assert!(!file_has_executable_code("pub fn empty() {}\n"));
+        assert!(file_has_executable_code(
+            "impl Foo {\n    fn bar(&self) {}\n}\n"
+        ));
+        // Multi-line re-export spans declare without executing.
+        assert!(!file_has_executable_code(
+            "pub(crate) use authority::{\n    MutationIntent, PathError, sync_file,\n};\n"
+        ));
+    }
+
+    #[test]
+    fn classify_keeps_only_product_source_files() {
+        use super::classify_product_path;
+        assert!(
+            classify_product_path("src/configuration/mod.rs")
+                .unwrap()
+                .is_some()
+        );
+        assert!(classify_product_path("src/main.rs").unwrap().is_some());
+        assert!(
+            classify_product_path("src/configuration/unit_tests.rs")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            classify_product_path("src/repository/state_tests.rs")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            classify_product_path("src/platform/authority/tests.rs")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            classify_product_path("src/platform/authority/tests/coverage_tests/adapters.rs")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            classify_product_path("tools/omnirepo-dev/src/tool.rs")
+                .unwrap()
+                .is_none()
+        );
+        assert!(classify_product_path("src/mod.rs").unwrap().is_some());
     }
 
     #[test]
