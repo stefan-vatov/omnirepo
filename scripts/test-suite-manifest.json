@@ -1,16 +1,12 @@
 {
-  "schema": "omnirepo.test-suite-manifest.v1",
-  "version": 1,
   "quality": {
     "manifest": "scripts/quality-manifest.json"
   },
+  "schema": "omnirepo.test-suite-manifest.v1",
   "suites": [
     {
-      "id": "unit",
-      "kind": "unit",
       "cases": [
         {
-          "id": "test-support-unit",
           "argv": [
             "cargo",
             "test",
@@ -21,17 +17,20 @@
             "--package",
             "omnirepo-test-support"
           ],
-          "working_directory": ".",
-          "tags": ["repository", "unit"]
+          "id": "test-support-unit",
+          "tags": [
+            "repository",
+            "unit"
+          ],
+          "working_directory": "."
         }
-      ]
+      ],
+      "id": "unit",
+      "kind": "unit"
     },
     {
-      "id": "component",
-      "kind": "component",
       "cases": [
         {
-          "id": "workspace-boundary-contract",
           "argv": [
             "cargo",
             "test",
@@ -42,17 +41,20 @@
             "--test",
             "workspace_boundary_contract"
           ],
-          "working_directory": ".",
-          "tags": ["repository", "component"]
+          "id": "workspace-boundary-contract",
+          "tags": [
+            "repository",
+            "component"
+          ],
+          "working_directory": "."
         }
-      ]
+      ],
+      "id": "component",
+      "kind": "component"
     },
     {
-      "id": "e2e",
-      "kind": "e2e",
       "cases": [
         {
-          "id": "canonical-acceptance-journeys",
           "argv": [
             "cargo",
             "test",
@@ -62,17 +64,20 @@
             "canonical_journeys_gray_seal",
             "--locked"
           ],
-          "working_directory": ".",
-          "tags": ["canonical", "e2e"]
+          "id": "canonical-acceptance-journeys",
+          "tags": [
+            "canonical",
+            "e2e"
+          ],
+          "working_directory": "."
         }
-      ]
+      ],
+      "id": "e2e",
+      "kind": "e2e"
     },
     {
-      "id": "adversarial",
-      "kind": "adversarial",
       "cases": [
         {
-          "id": "authority-negative-contract",
           "argv": [
             "cargo",
             "test",
@@ -83,28 +88,42 @@
             "--test",
             "sync_authority_negative"
           ],
-          "working_directory": ".",
-          "tags": ["negative", "adversarial"]
+          "id": "authority-negative-contract",
+          "tags": [
+            "negative",
+            "adversarial"
+          ],
+          "working_directory": "."
         }
-      ]
+      ],
+      "id": "adversarial",
+      "kind": "adversarial"
     },
     {
-      "id": "platform",
-      "kind": "platform",
       "cases": [
         {
-          "id": "linux-ext-family",
-          "argv": ["bash", "tests/authority_capability.sh", "linux-ext-family"],
-          "working_directory": ".",
+          "argv": [
+            "bash",
+            "tests/authority_capability.sh",
+            "linux-ext-family"
+          ],
           "capabilities": [
             {
               "name": "linux-ext-family",
               "supported": true
             }
           ],
-          "tags": ["platform", "capability"]
+          "id": "linux-ext-family",
+          "tags": [
+            "platform",
+            "capability"
+          ],
+          "working_directory": "."
         }
-      ]
+      ],
+      "id": "platform",
+      "kind": "platform"
     }
-  ]
+  ],
+  "version": 1
 }

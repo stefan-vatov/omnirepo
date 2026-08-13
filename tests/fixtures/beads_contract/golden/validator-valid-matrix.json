@@ -1,19 +1,19 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "validator-valid-matrix",
   "exit_status": 0,
-  "stream": "stdout",
   "output": {
+    "candidate_ids": [],
+    "error_code": null,
+    "error_issues": [],
+    "excluded": [],
     "schema": "decision-workflow-text.v1",
     "status": "consistent",
+    "stderr_contains": [],
     "stdout_contains": [
       "decision workflow is consistent"
-    ],
-    "stderr_contains": [],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": null,
-    "error_issues": []
-  }
+    ]
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stdout",
+  "version": 1
 }

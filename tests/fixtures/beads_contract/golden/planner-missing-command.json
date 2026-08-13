@@ -1,22 +1,25 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "planner-missing-command",
   "exit_status": 1,
-  "stream": "stderr",
   "output": {
+    "candidate_ids": [],
+    "error_code": "required-command-missing",
+    "error_issues": [
+      {
+        "id": "<command>",
+        "reason": "required-command-missing"
+      }
+    ],
+    "excluded": [],
     "schema": "omnirepo.checked-agent-plan.v1",
     "status": "error",
-    "stdout_contains": [],
     "stderr_contains": [
       "required-command-missing",
       "br"
     ],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": "required-command-missing",
-    "error_issues": [
-      {"id":"<command>","reason":"required-command-missing"}
-    ]
-  }
+    "stdout_contains": []
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stderr",
+  "version": 1
 }

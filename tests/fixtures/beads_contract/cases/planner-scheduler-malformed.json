@@ -1,13 +1,17 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-scheduler-malformed",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "scheduler-malformed-peer",
+      "labels": [],
+      "status": "open"
+    }
+  ],
+  "scheduler": [],
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"scheduler-malformed-peer\",\"status\":\"open\",\"labels\":[]}"
   ],
-  "ready": [
-    {"id":"scheduler-malformed-peer","status":"open","labels":[]}
-  ],
-  "scheduler": []
+  "version": 1
 }

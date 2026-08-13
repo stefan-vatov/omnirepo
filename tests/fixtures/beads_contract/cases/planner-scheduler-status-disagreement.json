@@ -1,18 +1,29 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-scheduler-status-disagreement",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "scheduler-status-drift",
+      "labels": [],
+      "status": "open"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [
+      {
+        "issue": {
+          "id": "scheduler-status-drift",
+          "labels": [],
+          "status": "blocked"
+        },
+        "rank": 1
+      }
+    ],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"scheduler-status-drift\",\"status\":\"open\",\"labels\":[]}"
   ],
-  "ready": [
-    {"id":"scheduler-status-drift","status":"open","labels":[]}
-  ],
-  "scheduler": {
-    "schema":"br.scheduler.v1",
-    "recommendations":[
-      {"rank":1,"issue":{"id":"scheduler-status-drift","status":"blocked","labels":[]}}
-    ]
-  }
+  "version": 1
 }

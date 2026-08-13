@@ -1,12 +1,15 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-missing-command",
   "kind": "planner",
+  "missing_command": "br",
+  "ready": [],
+  "scheduler": {
+    "recommendations": [],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"command-missing-peer\",\"status\":\"open\",\"labels\":[]}"
   ],
-  "ready": [],
-  "scheduler": {"schema":"br.scheduler.v1","recommendations":[]},
-  "missing_command": "br"
+  "version": 1
 }

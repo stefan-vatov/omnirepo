@@ -1,18 +1,36 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-scheduler-label-disagreement",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "scheduler-label-drift",
+      "labels": [
+        "decision-needed",
+        "human-input"
+      ],
+      "status": "decision"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [
+      {
+        "issue": {
+          "id": "scheduler-label-drift",
+          "labels": [
+            "decision-needed",
+            "human-input",
+            "scheduler-extra"
+          ],
+          "status": "decision"
+        },
+        "rank": 1
+      }
+    ],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"scheduler-label-drift\",\"status\":\"decision\",\"labels\":[\"decision-needed\",\"human-input\"]}"
   ],
-  "ready": [
-    {"id":"scheduler-label-drift","status":"decision","labels":["decision-needed","human-input"]}
-  ],
-  "scheduler": {
-    "schema":"br.scheduler.v1",
-    "recommendations":[
-      {"rank":1,"issue":{"id":"scheduler-label-drift","status":"decision","labels":["decision-needed","human-input","scheduler-extra"]}}
-    ]
-  }
+  "version": 1
 }

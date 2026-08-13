@@ -1,18 +1,35 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-tracked-label-disagreement",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "stale-labels",
+      "labels": [
+        "decision-needed",
+        "human-input"
+      ],
+      "status": "decision"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [
+      {
+        "issue": {
+          "id": "stale-labels",
+          "labels": [
+            "decision-needed",
+            "human-input"
+          ],
+          "status": "decision"
+        },
+        "rank": 1
+      }
+    ],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"stale-labels\",\"status\":\"decision\",\"labels\":[\"decision-needed\",\"human-input\",\"extra\"]}"
   ],
-  "ready": [
-    {"id":"stale-labels","status":"decision","labels":["decision-needed","human-input"]}
-  ],
-  "scheduler": {
-    "schema":"br.scheduler.v1",
-    "recommendations":[
-      {"rank":1,"issue":{"id":"stale-labels","status":"decision","labels":["decision-needed","human-input"]}}
-    ]
-  }
+  "version": 1
 }

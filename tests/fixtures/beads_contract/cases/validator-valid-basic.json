@@ -1,9 +1,9 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "validator-valid-basic",
   "kind": "validator",
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"ordinary-work\",\"status\":\"open\",\"labels\":[]}"
-  ]
+  ],
+  "version": 1
 }

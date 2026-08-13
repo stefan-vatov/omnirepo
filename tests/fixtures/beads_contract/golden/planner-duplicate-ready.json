@@ -1,22 +1,25 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "planner-duplicate-ready",
   "exit_status": 1,
-  "stream": "stderr",
   "output": {
+    "candidate_ids": [],
+    "error_code": "planner-disagreement",
+    "error_issues": [
+      {
+        "id": "<set>",
+        "reason": "scheduler-ready-disagreement"
+      }
+    ],
+    "excluded": [],
     "schema": "omnirepo.checked-agent-plan.v1",
     "status": "error",
-    "stdout_contains": [],
     "stderr_contains": [
       "planner-disagreement",
       "scheduler-ready-disagreement"
     ],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": "planner-disagreement",
-    "error_issues": [
-      {"id":"<set>","reason":"scheduler-ready-disagreement"}
-    ]
-  }
+    "stdout_contains": []
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stderr",
+  "version": 1
 }

@@ -63,7 +63,11 @@ pub struct Report {
     pub threshold_percent: u64,
     pub executable_changed_lines: u64,
     pub covered_changed_lines: u64,
-    pub coverage_percent: u64,
+    /// Informational floor percentage; `None` for an explicit zero sample.
+    pub coverage_percent: Option<u64>,
+    /// Non-lossy ratio `covered/total`; the gate result derives from the exact
+    /// comparison, never from the rounded percentage.
+    pub coverage_ratio: String,
     pub passed: bool,
     pub lines: Vec<Line>,
 }
@@ -75,6 +79,28 @@ impl Report {
         }
         Ok(json)
     }
+}
+
+/// Exact 95% threshold: `covered * 100 >= total * 95`. Overflow fails closed.
+/// A zero sample (no executable changed lines) passes explicitly.
+pub fn passes_threshold(covered: u64, total: u64) -> bool {
+    if total == 0 {
+        return true;
+    }
+    match (covered.checked_mul(100), total.checked_mul(FLOOR_PERCENT)) {
+        (Some(numerator), Some(denominator)) => numerator >= denominator,
+        _ => false,
+    }
+}
+
+/// Informational floor percentage; `None` for a zero sample.
+pub fn coverage_percent(covered: u64, total: u64) -> Option<u64> {
+    if total == 0 {
+        return None;
+    }
+    covered
+        .checked_mul(100)
+        .and_then(|value| value.checked_div(total))
 }
 
 pub fn evaluate(options: &Options) -> Result<Report, Error> {
@@ -104,30 +130,52 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
             "--",
         ]
     };
-    let rename_check = if options.head.is_some() {
-        git(
-            &root,
-            &["diff", "--no-color", "--name-status", "-M", &base, &head, "--"],
-        )?
+    // NUL-safe rename/copy inventory: maps old product path -> new path and
+    // fails closed when a target has more than one source. The changed-line
+    // diff itself runs without rename detection, so a rename is a delete under
+    // the old path plus an add under the new path; only the new-side added
+    // lines count, exactly once.
+    let name_status_args = if options.head.is_some() {
+        vec![
+            "diff",
+            "--no-color",
+            "--name-status",
+            "-M",
+            "-z",
+            &base,
+            &head,
+            "--",
+        ]
     } else {
-        git(
-            &root,
-            &["diff", "--no-color", "--name-status", "-M", &base, "--"],
-        )?
+        vec![
+            "diff",
+            "--no-color",
+            "--name-status",
+            "-M",
+            "-z",
+            &base,
+            "--",
+        ]
     };
-    if rename_check
-        .lines()
-        .any(|line| line.starts_with('R') || line.starts_with('C'))
-    {
-        return Err(Error::Diff("rename or copy is ambiguous".into()));
-    }
-    let diff = git(&root, &diff_args)?;
+    let renames = parse_name_status(&git_bytes(&root, &name_status_args)?)?;
+    let diff = git_text(&root, &diff_args)?;
     if diff.len() > MAX_DIFF_BYTES {
         return Err(Error::Diff("diff exceeds size limit".into()));
     }
     let mut changed = parse_diff(&diff)?;
-    let untracked = git(&root, &["ls-files", "--others", "--exclude-standard"])?;
-    for raw in untracked.lines() {
+    // Defense: the new side of a rename must never still carry the old path.
+    if let Some(old_path) = changed
+        .keys()
+        .find(|path| renames.contains_key(path.as_str()))
+    {
+        return Err(Error::Diff(format!(
+            "renamed source path still received added lines: {old_path}"
+        )));
+    }
+    // NUL-safe untracked product files count as changed lines.
+    let untracked = git_bytes(&root, &["ls-files", "--others", "--exclude-standard", "-z"])?;
+    for raw in untracked.split(|byte| *byte == 0) {
+        let raw = String::from_utf8_lossy(raw);
         let raw = raw.trim();
         if raw.is_empty()
             || !raw.ends_with(".rs")
@@ -168,10 +216,6 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     lines.sort_by(|a, b| a.path.cmp(&b.path).then(a.line.cmp(&b.line)));
     let total = lines.len() as u64;
     let covered = lines.iter().filter(|line| line.status == "covered").count() as u64;
-    let percent = covered
-        .saturating_mul(100)
-        .checked_div(total)
-        .unwrap_or(100);
     let report = Report {
         schema: REPORT_SCHEMA,
         base,
@@ -179,8 +223,9 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
         threshold_percent: FLOOR_PERCENT,
         executable_changed_lines: total,
         covered_changed_lines: covered,
-        coverage_percent: percent,
-        passed: total == 0 || percent >= FLOOR_PERCENT,
+        coverage_percent: coverage_percent(covered, total),
+        coverage_ratio: format!("{covered}/{total}"),
+        passed: passes_threshold(covered, total),
         lines,
     };
     if let Some(path) = &options.report_path {
@@ -203,7 +248,7 @@ fn verify_revision(root: &Path, revision: &str) -> Result<String, Error> {
     if revision.is_empty() || revision.starts_with('-') {
         return Err(Error::Git("base/head is missing or unsafe".into()));
     }
-    let resolved = git(
+    let resolved = git_text(
         root,
         &["rev-parse", "--verify", &format!("{revision}^{{commit}}")],
     )?;
@@ -213,7 +258,7 @@ fn verify_revision(root: &Path, revision: &str) -> Result<String, Error> {
     }
     Ok(resolved.to_owned())
 }
-fn git(root: &Path, args: &[&str]) -> Result<String, Error> {
+fn git_bytes(root: &Path, args: &[&str]) -> Result<Vec<u8>, Error> {
     let output = Command::new("git")
         .args(args)
         .current_dir(root)
@@ -224,9 +269,61 @@ fn git(root: &Path, args: &[&str]) -> Result<String, Error> {
             String::from_utf8_lossy(&output.stderr).trim().to_owned(),
         ));
     }
-    String::from_utf8(output.stdout).map_err(|e| Error::Git(e.to_string()))
+    Ok(output.stdout)
 }
-fn safe_product_path(raw: &str) -> Result<String, Error> {
+fn git_text(root: &Path, args: &[&str]) -> Result<String, Error> {
+    let bytes = git_bytes(root, args)?;
+    String::from_utf8(bytes).map_err(|e| Error::Git(e.to_string()))
+}
+/// Parse a NUL-delimited `git diff --name-status -M -z` stream into a rename
+/// map (old product path -> new product path). Records are split on NUL bytes
+/// so any valid Git path (including newlines and tabs) stays one record.
+/// A target reached from more than one source is ambiguous and fails closed.
+fn parse_name_status(bytes: &[u8]) -> Result<BTreeMap<String, String>, Error> {
+    let mut map = BTreeMap::new();
+    let mut seen_targets = BTreeSet::new();
+    let mut records = bytes.split(|byte| *byte == 0);
+    while let Some(status) = records.next() {
+        if status.is_empty() {
+            continue;
+        }
+        let status = std::str::from_utf8(status)
+            .map_err(|_| Error::Diff("non-UTF-8 name-status record".into()))?;
+        let kind = status.as_bytes().first().copied().unwrap_or(0);
+        let Some(old_raw) = records.next() else {
+            return Err(Error::Diff("name-status record lacks a path".into()));
+        };
+        if kind != b'R' && kind != b'C' {
+            continue;
+        }
+        let Some(new_raw) = records.next() else {
+            return Err(Error::Diff("rename record lacks a target path".into()));
+        };
+        let old = String::from_utf8_lossy(old_raw).trim().to_owned();
+        let new = String::from_utf8_lossy(new_raw).trim().to_owned();
+        if old.is_empty() || new.is_empty() || old == new {
+            return Err(Error::Diff("malformed rename record".into()));
+        }
+        // Only product Rust sources participate in the changed-line mapping;
+        // non-product renames (docs, configs) are irrelevant to LCOV lookup.
+        if safe_product_path(&old).is_err() || safe_product_path(&new).is_err() {
+            continue;
+        }
+        if !seen_targets.insert(new.clone()) {
+            return Err(Error::Diff(format!(
+                "ambiguous rename: multiple sources resolve to {new}"
+            )));
+        }
+        if map.insert(old.clone(), new).is_some() {
+            return Err(Error::Diff(format!("duplicate rename source: {old}")));
+        }
+    }
+    Ok(map)
+}
+/// Classify a repo-relative path: `Some` for product Rust sources, `None`
+/// for non-product files (skipped, never counted), and fail closed for
+/// unsafe paths such as absolute or parent-traversing components.
+fn classify_product_path(raw: &str) -> Result<Option<String>, Error> {
     let path = Path::new(raw);
     if path.is_absolute()
         || path.components().any(|c| {
@@ -239,28 +336,49 @@ fn safe_product_path(raw: &str) -> Result<String, Error> {
         return Err(Error::Path(raw.into()));
     }
     let normalized = path.to_string_lossy().replace('\\', "/");
-    if !normalized.ends_with(".rs")
-        || !(normalized.starts_with("src/") || normalized.contains("/src/"))
+    if normalized.ends_with(".rs")
+        && (normalized.starts_with("src/") || normalized.contains("/src/"))
     {
-        return Err(Error::Path(format!("not product Rust source: {raw}")));
+        Ok(Some(normalized))
+    } else {
+        Ok(None)
     }
-    Ok(normalized)
+}
+fn safe_product_path(raw: &str) -> Result<String, Error> {
+    match classify_product_path(raw)? {
+        Some(path) => Ok(path),
+        None => Err(Error::Path(format!("not product Rust source: {raw}"))),
+    }
+}
+enum NewSide {
+    /// No new-side path has been seen for the current `diff --git` record.
+    Absent,
+    /// A product Rust source; added lines are counted for it.
+    Product(String),
+    /// Deleted or non-product file; hunks are consumed but never counted.
+    Skip,
 }
 fn parse_diff(diff: &str) -> Result<BTreeMap<String, BTreeSet<u64>>, Error> {
     let mut result: BTreeMap<String, BTreeSet<u64>> = BTreeMap::new();
-    let mut path = None;
+    let mut path = NewSide::Absent;
     let mut new_line = 0u64;
     let mut remaining = 0u64;
     for raw in diff.lines() {
         if raw.starts_with("diff --git ") {
-            path = None;
+            path = NewSide::Absent;
             remaining = 0;
         } else if let Some(value) = raw.strip_prefix("+++ b/") {
-            path = Some(safe_product_path(value)?);
+            path = match classify_product_path(value)? {
+                Some(product) => NewSide::Product(product),
+                None => NewSide::Skip, // non-product file: hunks never count
+            };
         } else if raw.starts_with("+++ ") {
-            return Err(Error::Diff("binary/deleted file encountered".into()));
+            // The new side is /dev/null: a pure deletion or the deleted half
+            // of a rename. Deletions have no new-side executable lines and
+            // must not inflate the sample.
+            path = NewSide::Skip;
         } else if raw.starts_with("@@ ") {
-            if path.is_none() {
+            if matches!(path, NewSide::Absent) {
                 return Err(Error::Diff("hunk has no new-side path".into()));
             }
             let plus = raw
@@ -284,7 +402,7 @@ fn parse_diff(diff: &str) -> Result<BTreeMap<String, BTreeSet<u64>>, Error> {
                 .ok_or_else(|| Error::Diff("empty hunk line".into()))?;
             match marker {
                 b'+' => {
-                    if let Some(p) = &path {
+                    if let NewSide::Product(p) = &path {
                         result.entry(p.clone()).or_default().insert(new_line);
                     }
                     new_line += 1;
@@ -374,7 +492,7 @@ fn parse_lcov(root: &Path, text: &str) -> Result<BTreeMap<String, BTreeMap<u64, 
 
 #[cfg(test)]
 mod tests {
-    use super::{FLOOR_PERCENT, REPORT_SCHEMA, Report, parse_diff};
+    use super::{FLOOR_PERCENT, REPORT_SCHEMA, Report, parse_diff, parse_name_status};
 
     #[test]
     fn diff_parser_keeps_only_added_new_side_lines() {
@@ -397,6 +515,87 @@ mod tests {
     }
 
     #[test]
+    fn diff_parser_skips_deleted_files_without_inflating() {
+        // A pure deletion has only a /dev/null new side and minus lines.
+        let diff = "diff --git a/src/gone.rs b/src/gone.rs\ndeleted file mode 100644\n--- a/src/gone.rs\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-fn gone() {}\n-    println!(\"bye\");\n-}\n";
+        let parsed = parse_diff(diff).expect("valid deletion diff");
+        assert!(parsed.is_empty(), "deletions must not inflate: {parsed:?}");
+    }
+
+    #[test]
+    fn diff_parser_handles_a_rename_without_detection_as_added_new_side() {
+        // Without -M, a rename is a delete under the old path plus an add under
+        // the new path; only the new-side added lines may count.
+        let diff = "diff --git a/src/old.rs b/src/new.rs\nsimilarity index 100%\nrename from src/old.rs\nrename to src/new.rs\n--- a/src/old.rs\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-fn old() {}\n-}\n--- /dev/null\n+++ b/src/new.rs\n@@ -0,0 +1,3 @@\n+fn new() {\n+    println!(\"renamed\");\n+}\n";
+        let parsed = parse_diff(diff).expect("valid rename diff");
+        let new_lines = parsed.get("src/new.rs").expect("new path present");
+        assert_eq!(new_lines.iter().copied().collect::<Vec<_>>(), vec![1, 2, 3]);
+        assert!(!parsed.contains_key("src/old.rs"));
+    }
+
+    #[test]
+    fn name_status_parses_renames_nul_safely() {
+        let records = b"R100\0src/old.rs\0src/new.rs\0";
+        let map = parse_name_status(records).expect("valid rename record");
+        assert_eq!(
+            map.get("src/old.rs").map(String::as_str),
+            Some("src/new.rs")
+        );
+    }
+
+    #[test]
+    fn name_status_parses_paths_containing_newlines() {
+        // NUL-safety: a path with an embedded newline must stay one record.
+        let records = b"R100\0src/old\nline.rs\0src/new\nline.rs\0";
+        let map = parse_name_status(records).expect("NUL-safe rename record");
+        assert_eq!(
+            map.get("src/old\nline.rs").map(String::as_str),
+            Some("src/new\nline.rs")
+        );
+    }
+
+    #[test]
+    fn name_status_rejects_ambiguous_rename_targets() {
+        // Two different sources resolving to the same target cannot be mapped.
+        let records = b"R100\0src/a.rs\0src/b.rs\0R100\0src/c.rs\0src/b.rs\0";
+        let error = parse_name_status(records).expect_err("ambiguous rename must fail");
+        assert!(error.to_string().contains("ambiguous"));
+    }
+
+    #[test]
+    fn name_status_ignores_non_product_renames() {
+        let records = b"R100\0README.md\0docs/README.md\0R100\0src/a.rs\0src/b.rs\0";
+        let map = parse_name_status(records).expect("non-Rust renames are ignored");
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get("src/a.rs").map(String::as_str), Some("src/b.rs"));
+    }
+
+    #[test]
+    fn zero_changed_lines_are_reported_explicitly_and_pass() {
+        assert!(super::passes_threshold(0, 0));
+        assert_eq!(super::coverage_percent(0, 0), None);
+    }
+
+    #[test]
+    fn exact_threshold_arithmetic_never_truncates() {
+        // 94/99 is 94.94%: truncating would say 94 and still fail, but the
+        // exact comparison must be the authority in both directions.
+        assert!(!super::passes_threshold(94, 99));
+        assert!(super::passes_threshold(95, 100));
+        // 1045/1100 is exactly 95%; 1041/1100 is 94.63%.
+        assert!(!super::passes_threshold(1041, 1100));
+        assert!(super::passes_threshold(1045, 1100));
+        assert_eq!(super::coverage_percent(1045, 1100), Some(95));
+    }
+
+    #[test]
+    fn exact_threshold_arithmetic_fails_closed_on_overflow() {
+        assert!(!super::passes_threshold(u64::MAX, u64::MAX));
+        assert!(!super::passes_threshold(u64::MAX, 1));
+        assert_eq!(super::coverage_percent(u64::MAX, u64::MAX), None);
+    }
+
+    #[test]
     fn report_serialization_is_bounded_and_versioned() {
         let report = Report {
             schema: REPORT_SCHEMA,
@@ -405,12 +604,15 @@ mod tests {
             threshold_percent: FLOOR_PERCENT,
             executable_changed_lines: 0,
             covered_changed_lines: 0,
-            coverage_percent: 100,
+            coverage_percent: None,
+            coverage_ratio: "0/0".into(),
             passed: true,
             lines: Vec::new(),
         };
         let json = report.json().expect("small report");
         assert!(json.contains(REPORT_SCHEMA));
         assert!(json.contains("\"base\":\"base\""));
+        assert!(json.contains("\"coverage_percent\":null"));
+        assert!(json.contains("\"coverage_ratio\":\"0/0\""));
     }
 }

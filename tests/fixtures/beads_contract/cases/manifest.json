@@ -1,16 +1,4 @@
 {
-  "schema": "omnirepo.beads-compatibility-cases.v1",
-  "version": 1,
-  "interfaces": {
-    "validator": "omnirepo-dev validate-decisions",
-    "planner": "omnirepo-dev plan --repo-root . --json",
-    "tracked_export_env": "BEADS_JSONL",
-    "planner_sources": [
-      "br --no-auto-import --no-auto-flush ready --json",
-      "br --no-auto-import --no-auto-flush scheduler --json"
-    ],
-    "raw_viewer": "advisory-only"
-  },
   "cases": [
     "validator-valid-basic",
     "validator-valid-matrix",
@@ -35,5 +23,17 @@
     "planner-missing-command",
     "planner-missing-tracked-export",
     "planner-empty-tracked-export"
-  ]
+  ],
+  "interfaces": {
+    "planner": "omnirepo-dev plan --repo-root . --json",
+    "planner_sources": [
+      "br --no-auto-import --no-auto-flush ready --json",
+      "br --no-auto-import --no-auto-flush scheduler --json"
+    ],
+    "raw_viewer": "advisory-only",
+    "tracked_export_env": "BEADS_JSONL",
+    "validator": "omnirepo-dev validate-decisions"
+  },
+  "schema": "omnirepo.beads-compatibility-cases.v1",
+  "version": 1
 }

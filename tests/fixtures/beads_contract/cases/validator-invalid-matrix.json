@@ -1,8 +1,7 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "validator-invalid-matrix",
   "kind": "validator",
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"decision-missing-labels\",\"status\":\"decision\"}",
     "{\"id\":\"decision-one-label\",\"status\":\"decision\",\"labels\":[\"decision-needed\"]}",
@@ -25,5 +24,6 @@
     "{\"id\":\"unknown-status\",\"status\":\"owner-approved\"}",
     "",
     "{\"id\":\"ordinary-valid-peer\",\"status\":\"open\"}"
-  ]
+  ],
+  "version": 1
 }

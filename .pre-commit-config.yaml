@@ -11,6 +11,10 @@ repos:
   - id: check-case-conflict
   - id: check-json
   - id: pretty-format-json
+    # The traceability matrix rows are a compact one-row-per-line test
+    # contract (traceability_contract.rs matches `{"id":...` line prefixes);
+    # expanding or sorting them would break the byte-level fixtures.
+    exclude: ^tests/traceability/matrix\.json$
   - id: check-merge-conflict
   - id: check-symlinks
   - id: check-toml

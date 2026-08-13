@@ -1,22 +1,25 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "planner-tracked-label-disagreement",
   "exit_status": 1,
-  "stream": "stderr",
   "output": {
+    "candidate_ids": [],
+    "error_code": "tracked-state-disagreement",
+    "error_issues": [
+      {
+        "id": "stale-labels",
+        "reason": "tracked-label-disagreement"
+      }
+    ],
+    "excluded": [],
     "schema": "omnirepo.checked-agent-plan.v1",
     "status": "error",
-    "stdout_contains": [],
     "stderr_contains": [
       "tracked-label-disagreement",
       "stale-labels"
     ],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": "tracked-state-disagreement",
-    "error_issues": [
-      {"id":"stale-labels","reason":"tracked-label-disagreement"}
-    ]
-  }
+    "stdout_contains": []
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stderr",
+  "version": 1
 }

@@ -1,19 +1,58 @@
 {
-  "schema": "omnirepo.coverage-ownership.v1",
-  "status": "canonical-projection",
   "entries": [
-    {"path": "src/configuration/mod.rs", "row_id": "behavior-configuration-authority"},
-    {"path": "src/lifecycle/mod.rs", "row_id": "behavior-run-record"},
-    {"path": "src/lifecycle/run_record.rs", "row_id": "behavior-run-record"},
-    {"path": "src/main.rs", "row_id": "command-sync"},
-    {"path": "src/managed_content/mod.rs", "row_id": "behavior-partial-section-sync"},
-    {"path": "src/managed_content/transaction.rs", "row_id": "behavior-partial-section-sync"},
-    {"path": "src/platform/mod.rs", "row_id": "behavior-containment"},
-    {"path": "src/platform/authority/mod.rs", "row_id": "behavior-containment"},
-    {"path": "src/repository/mod.rs", "row_id": "behavior-repository-policy"},
-    {"path": "src/repository/policy.rs", "row_id": "behavior-repository-policy"},
-    {"path": "src/repository/state.rs", "row_id": "failure-synchronization"},
-    {"path": "src/source/mod.rs", "row_id": "behavior-source-materialization"},
-    {"path": "src/source/snapshot.rs", "row_id": "behavior-source-materialization"}
-  ]
+    {
+      "path": "src/configuration/mod.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
+      "path": "src/lifecycle/mod.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/run_record.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/main.rs",
+      "row_id": "command-sync"
+    },
+    {
+      "path": "src/managed_content/mod.rs",
+      "row_id": "behavior-partial-section-sync"
+    },
+    {
+      "path": "src/managed_content/transaction.rs",
+      "row_id": "behavior-partial-section-sync"
+    },
+    {
+      "path": "src/platform/mod.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/platform/authority/mod.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/repository/mod.rs",
+      "row_id": "behavior-repository-policy"
+    },
+    {
+      "path": "src/repository/policy.rs",
+      "row_id": "behavior-repository-policy"
+    },
+    {
+      "path": "src/repository/state.rs",
+      "row_id": "failure-synchronization"
+    },
+    {
+      "path": "src/source/mod.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/source/snapshot.rs",
+      "row_id": "behavior-source-materialization"
+    }
+  ],
+  "schema": "omnirepo.coverage-ownership.v1",
+  "status": "canonical-projection"
 }

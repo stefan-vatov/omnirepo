@@ -103,10 +103,19 @@ features using locked dependencies, and enforces 90% global line coverage,
 95% changed executable-line coverage, 80% function coverage, and 80% region
 coverage. Critical safety boundaries and failure paths need direct tests;
 trivial accessor or private-format padding is not a valid coverage strategy,
-and each behavior has one primary test owner. It writes text, LCOV, and HTML
-reports below the ignored `coverage/` directory. A threshold or report failure
-remains the command failure after diagnostic reports are generated. GitHub
-Actions invokes the same profile and uploads the reports for 14 days.
+and each behavior has one primary test owner. It writes text, LCOV, HTML,
+ownership, and changed-line reports below the ignored `coverage/` directory.
+A threshold or report failure remains the command failure after diagnostic
+reports are generated. GitHub Actions invokes the same profile and uploads
+the reports for 14 days.
+
+The changed executable-line gate compares the current `HEAD` against one
+explicit base revision supplied through `OMNIREPO_COVERAGE_BASE`. The base
+must resolve to a commit in the local history; an absent, empty, or
+unresolvable base fails the coverage command instead of inventing a sample.
+CI sets the base to the pull-request base commit or the previous push on
+`main`. For local runs, set it explicitly, for example
+`OMNIREPO_COVERAGE_BASE=origin/main bash scripts/coverage.sh`.
 
 ## Usage
 

@@ -1,7 +1,7 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "validator-invalid-empty-export",
   "kind": "validator",
-  "tracked_lines": []
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "tracked_lines": [],
+  "version": 1
 }

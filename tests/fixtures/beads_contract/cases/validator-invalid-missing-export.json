@@ -1,10 +1,10 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "validator-invalid-missing-export",
   "kind": "validator",
+  "omit_tracked": true,
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"unused\",\"status\":\"open\"}"
   ],
-  "omit_tracked": true
+  "version": 1
 }

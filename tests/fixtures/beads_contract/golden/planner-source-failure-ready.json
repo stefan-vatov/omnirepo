@@ -1,23 +1,26 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "planner-source-failure-ready",
   "exit_status": 1,
-  "stream": "stderr",
   "output": {
+    "candidate_ids": [],
+    "error_code": "canonical-source-failure",
+    "error_issues": [
+      {
+        "id": "<ready>",
+        "reason": "canonical-source-command-failed"
+      }
+    ],
+    "excluded": [],
     "schema": "omnirepo.checked-agent-plan.v1",
     "status": "error",
-    "stdout_contains": [],
     "stderr_contains": [
       "canonical-source-failure",
       "<ready>",
       "fake ready failure"
     ],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": "canonical-source-failure",
-    "error_issues": [
-      {"id":"<ready>","reason":"canonical-source-command-failed"}
-    ]
-  }
+    "stdout_contains": []
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stderr",
+  "version": 1
 }

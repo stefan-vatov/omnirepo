@@ -485,10 +485,9 @@ fn malformed_source_is_reported_without_falling_back_to_viewer() {
         "canonical-ready-malformed"
     );
     assert!(
-        serde_json::to_string(&json)
+        !serde_json::to_string(&json)
             .expect("serialize JSON")
-            .find("bv")
-            .is_none()
+            .contains("bv")
     );
     cleanup(&root);
 }

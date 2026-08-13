@@ -1,18 +1,29 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-missing-tracked",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "missing-tracked",
+      "labels": [],
+      "status": "open"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [
+      {
+        "issue": {
+          "id": "missing-tracked",
+          "labels": [],
+          "status": "open"
+        },
+        "rank": 1
+      }
+    ],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"ordinary-peer\",\"status\":\"open\",\"labels\":[]}"
   ],
-  "ready": [
-    {"id":"missing-tracked","status":"open","labels":[]}
-  ],
-  "scheduler": {
-    "schema":"br.scheduler.v1",
-    "recommendations":[
-      {"rank":1,"issue":{"id":"missing-tracked","status":"open","labels":[]}}
-    ]
-  }
+  "version": 1
 }

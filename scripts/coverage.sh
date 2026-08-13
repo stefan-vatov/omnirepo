@@ -19,6 +19,7 @@ readonly coverage_ownership_matrix="$PWD/tests/traceability/matrix.json"
 readonly coverage_ownership_map="$PWD/tests/traceability/coverage-ownership.json"
 readonly coverage_ownership_manifest="tools/omnirepo-dev/Cargo.toml"
 readonly coverage_ownership_command=(cargo "+${RUST_TOOLCHAIN}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- coverage-ownership --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --matrix "$coverage_ownership_matrix" --ownership "$coverage_ownership_map" --json)
+readonly coverage_changed_command=(cargo "+${RUST_TOOLCHAIN}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- changed-coverage --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --base "${OMNIREPO_COVERAGE_BASE:-}" --json)
 
 printf 'coverage: rust-toolchain=%s cargo-llvm-cov=%s lines>=%s functions>=%s regions>=%s\n' \
     "$RUST_TOOLCHAIN" \
@@ -97,6 +98,8 @@ lcov_status=$?
 html_status=$?
 "${coverage_ownership_command[@]}" > "$coverage_dir/ownership.json"
 ownership_status=$?
+"${coverage_changed_command[@]}" > "$coverage_dir/changed-coverage.json"
+changed_status=$?
 set -e
 
 summary_status="${summary_pipeline_status[0]}"
@@ -112,13 +115,16 @@ elif (( html_status != 0 )); then
     final_status="$html_status"
 elif (( ownership_status != 0 )); then
     final_status="$ownership_status"
+elif (( changed_status != 0 )); then
+    final_status="$changed_status"
 fi
 
-printf 'coverage: statuses summary=%s summary-output=%s lcov=%s html=%s ownership=%s final=%s\n' \
+printf 'coverage: statuses summary=%s summary-output=%s lcov=%s html=%s ownership=%s changed=%s final=%s\n' \
     "$summary_status" \
     "$summary_output_status" \
     "$lcov_status" \
     "$html_status" \
     "$ownership_status" \
+    "$changed_status" \
     "$final_status"
 exit "$final_status"

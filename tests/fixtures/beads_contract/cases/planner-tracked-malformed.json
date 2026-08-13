@@ -1,18 +1,29 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
   "id": "planner-tracked-malformed",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "malformed-tracked",
+      "labels": [],
+      "status": "open"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [
+      {
+        "issue": {
+          "id": "malformed-tracked",
+          "labels": [],
+          "status": "open"
+        },
+        "rank": 1
+      }
+    ],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"malformed-tracked\",\"status\":\"open\""
   ],
-  "ready": [
-    {"id":"malformed-tracked","status":"open","labels":[]}
-  ],
-  "scheduler": {
-    "schema":"br.scheduler.v1",
-    "recommendations":[
-      {"rank":1,"issue":{"id":"malformed-tracked","status":"open","labels":[]}}
-    ]
-  }
+  "version": 1
 }

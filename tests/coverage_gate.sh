@@ -20,6 +20,21 @@ fake_cargo() {
         shift
     fi
     if [[ "${1:-}" == "run" ]]; then
+        local after_dash=0
+        local subcommand=""
+        for arg in "$@"; do
+            if (( after_dash )); then
+                subcommand="$arg"
+                break
+            fi
+            if [[ "$arg" == "--" ]]; then
+                after_dash=1
+            fi
+        done
+        if [[ "$subcommand" == "changed-coverage" ]]; then
+            printf '%s' '{"schema":"omnirepo.changed-executable-coverage.v1","base":"b","head":"h","threshold_percent":95,"executable_changed_lines":1,"covered_changed_lines":1,"coverage_percent":100,"coverage_ratio":"1/1","passed":true,"lines":[{"path":"src/main.rs","line":1,"status":"covered"}]}'
+            return "${FAKE_CHANGED_STATUS:-0}"
+        fi
         printf '{"schema":"omnirepo.coverage-ownership-report.v1","sources":[]}'
         return "${FAKE_OWNERSHIP_STATUS:-0}"
     fi
@@ -162,13 +177,15 @@ export FAKE_TEE_STATUS=0
 export FAKE_LCOV_STATUS=0
 export FAKE_HTML_STATUS=0
 export FAKE_OWNERSHIP_STATUS=0
+export FAKE_CHANGED_STATUS=0
 unset FAKE_TEST_FIFO FAKE_TEST_READY
 run_gate all-success 0
 [[ -s "$test_root/all-success/coverage/summary.txt" ]]
 [[ -s "$test_root/all-success/coverage/lcov.info" ]]
 [[ -s "$test_root/all-success/coverage/index.html" ]]
 [[ -s "$test_root/all-success/coverage/ownership.json" ]]
-grep -F -- 'summary=0 summary-output=0 lcov=0 html=0 ownership=0 final=0' \
+[[ -s "$test_root/all-success/coverage/changed-coverage.json" ]]
+grep -F -- 'summary=0 summary-output=0 lcov=0 html=0 ownership=0 changed=0 final=0' \
     "$test_root/all-success/output.log" >/dev/null
 
 export FAKE_SUMMARY_STATUS=5
@@ -176,8 +193,9 @@ export FAKE_TEE_STATUS=6
 export FAKE_LCOV_STATUS=7
 export FAKE_HTML_STATUS=8
 export FAKE_OWNERSHIP_STATUS=9
+export FAKE_CHANGED_STATUS=11
 run_gate simultaneous-failure-precedence 5
-grep -F -- 'summary=5 summary-output=6 lcov=7 html=8 ownership=9 final=5' \
+grep -F -- 'summary=5 summary-output=6 lcov=7 html=8 ownership=9 changed=11 final=5' \
     "$test_root/simultaneous-failure-precedence/output.log" >/dev/null
 
 export FAKE_SUMMARY_STATUS=1
@@ -185,6 +203,7 @@ export FAKE_TEE_STATUS=0
 export FAKE_LCOV_STATUS=0
 export FAKE_HTML_STATUS=0
 export FAKE_OWNERSHIP_STATUS=0
+export FAKE_CHANGED_STATUS=0
 run_gate threshold-failure 1
 [[ -s "$test_root/threshold-failure/coverage/summary.txt" ]]
 [[ -s "$test_root/threshold-failure/coverage/lcov.info" ]]
@@ -195,6 +214,8 @@ grep -F -- '+1.86.0 llvm-cov --workspace --all-targets --all-features --locked -
 grep -F -- '+1.86.0 llvm-cov report --summary-only --fail-under-lines 90 --fail-under-functions 80 --fail-under-regions 80' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
 grep -F -- '+1.86.0 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- coverage-ownership' \
+    "$test_root/threshold-failure/cargo.log" >/dev/null
+grep -F -- '+1.86.0 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- changed-coverage' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
 
 export FAKE_SUMMARY_STATUS=0
@@ -215,6 +236,15 @@ export FAKE_LCOV_STATUS=0
 export FAKE_OWNERSHIP_STATUS=6
 run_gate ownership-failure 6
 [[ -s "$test_root/ownership-failure/coverage/lcov.info" ]]
+
+export FAKE_OWNERSHIP_STATUS=0
+export FAKE_CHANGED_STATUS=4
+run_gate changed-failure 4
+[[ -s "$test_root/changed-failure/coverage/ownership.json" ]]
+[[ -s "$test_root/changed-failure/coverage/changed-coverage.json" ]]
+grep -F -- 'summary=0 summary-output=0 lcov=0 html=0 ownership=0 changed=4 final=4' \
+    "$test_root/changed-failure/output.log" >/dev/null
+export FAKE_CHANGED_STATUS=0
 
 export FAKE_TEST_STATUS=9
 run_gate test-failure 9

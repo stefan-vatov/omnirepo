@@ -1,14 +1,21 @@
 {
-  "schema": "omnirepo.beads-compatibility-case.v1",
-  "version": 1,
+  "fake_br_failure": "scheduler",
   "id": "planner-source-failure-scheduler",
   "kind": "planner",
+  "ready": [
+    {
+      "id": "source-failure-peer",
+      "labels": [],
+      "status": "open"
+    }
+  ],
+  "scheduler": {
+    "recommendations": [],
+    "schema": "br.scheduler.v1"
+  },
+  "schema": "omnirepo.beads-compatibility-case.v1",
   "tracked_lines": [
     "{\"id\":\"source-failure-peer\",\"status\":\"open\",\"labels\":[]}"
   ],
-  "ready": [
-    {"id":"source-failure-peer","status":"open","labels":[]}
-  ],
-  "scheduler": {"schema":"br.scheduler.v1","recommendations":[]},
-  "fake_br_failure": "scheduler"
+  "version": 1
 }

@@ -23,6 +23,10 @@ jobs:
     timeout-minutes: 20
     env:
       CARGO_TERM_COLOR: always
+      # Explicit fail-closed changed-line comparison base: the PR base commit,
+      # the previous push commit on main, or empty (the coverage script then
+      # fails closed rather than inventing a sample).
+      OMNIREPO_COVERAGE_BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1

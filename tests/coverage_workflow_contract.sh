@@ -76,6 +76,17 @@ assert_gate_contract() {
     done
 
     for expected in \
+        'readonly coverage_changed_command=' \
+        'changed-coverage --repo-root' \
+        'OMNIREPO_COVERAGE_BASE' \
+        'changed_status=$?' \
+        'elif (( changed_status != 0 )); then' \
+        'changed=%s'; do
+        grep -F -- "$expected" "$coverage_script" >/dev/null || \
+            fail_contract "coverage gate is missing fail-closed changed-line enforcement: $expected"
+    done
+
+    for expected in \
         'readonly coverage_profile_parent="$coverage_dir/.profiles"' \
         'readonly coverage_profile_root="$(mktemp -d "$coverage_profile_parent/run.XXXXXXXXXX")"' \
         'readonly coverage_profile_file="$coverage_profile_root/%m-%p.profraw"' \
@@ -160,6 +171,9 @@ assert_invocations() {
         fail_contract "README does not document the manifest-owned coverage profile"
     grep -F -- "$expected_profile" "$workflow" >/dev/null || \
         fail_contract "CI does not invoke the manifest-owned coverage profile"
+
+    grep -F -- 'OMNIREPO_COVERAGE_BASE' "$workflow" >/dev/null || \
+        fail_contract "CI does not supply an explicit changed-line comparison base"
 
     if rg -n -e 'cargo \+1\.86\.0 (coverage|coverage-html|llvm-cov)' "$readme" "$workflow"; then
         fail_contract "legacy coverage command remains outside scripts/coverage.sh"
@@ -329,6 +343,14 @@ run_mutation_fixtures() {
     restore_canonical_fixture
     sed -i '/coverage_ownership_command/d' "$fixture_root/scripts/coverage.sh"
     run_fixture_contract "$fixture_root" 1 ownership-attribution-mutated-red
+
+    restore_canonical_fixture
+    sed -i '/changed-coverage --repo-root/d' "$fixture_root/scripts/coverage.sh"
+    run_fixture_contract "$fixture_root" 1 changed-line-gate-mutated-red
+
+    restore_canonical_fixture
+    sed -i '/OMNIREPO_COVERAGE_BASE/d' "$fixture_root/.github/workflows/coverage.yml"
+    run_fixture_contract "$fixture_root" 1 changed-line-base-mutated-red
 
     restore_canonical_fixture
     sed -i '/export CARGO_LLVM_COV_TARGET_DIR=/d' "$fixture_root/scripts/coverage.sh"

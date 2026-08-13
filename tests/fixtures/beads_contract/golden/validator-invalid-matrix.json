@@ -1,13 +1,13 @@
 {
-  "schema": "omnirepo.beads-compatibility-golden.v1",
-  "version": 1,
   "case_id": "validator-invalid-matrix",
   "exit_status": 1,
-  "stream": "stderr",
   "output": {
+    "candidate_ids": [],
+    "error_code": null,
+    "error_issues": [],
+    "excluded": [],
     "schema": "decision-workflow-text.v1",
     "status": "invalid",
-    "stdout_contains": [],
     "stderr_contains": [
       "decision-missing-labels",
       "decision-one-label",
@@ -30,9 +30,9 @@
       "blank JSONL record",
       "decision workflow invalid:"
     ],
-    "candidate_ids": [],
-    "excluded": [],
-    "error_code": null,
-    "error_issues": []
-  }
+    "stdout_contains": []
+  },
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "stream": "stderr",
+  "version": 1
 }
