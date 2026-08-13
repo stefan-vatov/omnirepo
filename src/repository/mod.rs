@@ -10,7 +10,23 @@ mod policy_loader;
 mod revalidate;
 mod state;
 
+pub(crate) use git_index::IsolatedIndex;
+pub(crate) use operation_commit::{CommitError, RecordedCommit, create_commit};
 pub(crate) use state::RepositoryId;
+
+#[cfg(test)]
+pub(crate) use git_index::prepare_index;
+
+#[cfg(test)]
+pub(crate) use manifest::{PlannedOperation, build_authorized_delta};
+
+#[cfg(test)]
+pub(crate) use state::{
+    AuthorityIdentity, CheckWitness, EntryKind, FileIdentity, FilesystemClass, FilesystemIdentity,
+    FrozenWitnesses, GitFacts, GitRepositoryState, HeadState, IndexState, ManagedTargetIdentity,
+    ObjectIdentity, RefName, RelativePath, RepositoryFacts, RepositoryRoot, RepositorySnapshot,
+    RevisionId, UpstreamState, WorktreeState,
+};
 
 #[cfg(test)]
 mod capture_tests;

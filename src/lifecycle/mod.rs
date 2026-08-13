@@ -4,13 +4,16 @@
 
 mod adapters;
 mod admission;
+mod agent_confinement;
 mod agent_framing;
+mod commit_journal;
 mod event;
 mod invocation;
 mod journal;
 mod replace;
 mod replay;
 mod run_record;
+mod stages;
 mod transaction_evidence;
 
 pub(crate) use invocation::run_invocation;

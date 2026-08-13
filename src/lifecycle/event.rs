@@ -491,7 +491,11 @@ impl JournalEvent {
                 let repository_id = field(&fields, "repository_id").map(str::to_owned);
                 let stage = field(&fields, "stage").map(str::to_owned);
                 let stage = match stage.as_deref() {
-                    None | Some("compare" | "write" | "publish" | "cleanup" | "admission") => stage,
+                    None
+                    | Some(
+                        "compare" | "write" | "publish" | "cleanup" | "admission" | "commit"
+                        | "stage",
+                    ) => stage,
                     Some(other) => {
                         return Err(EventError::UnknownStage(other.to_owned()));
                     }
@@ -521,6 +525,8 @@ fn static_stage(label: &str) -> Option<&'static str> {
     match label {
         "compare" => Some("compare"),
         "admission" => Some("admission"),
+        "commit" => Some("commit"),
+        "stage" => Some("stage"),
         "write" => Some("write"),
         "publish" => Some("publish"),
         "cleanup" => Some("cleanup"),

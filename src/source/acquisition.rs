@@ -164,6 +164,17 @@ pub(crate) fn acquire_remote(
     url: &str,
     config: &AcquireConfig,
 ) -> Result<PublishedSnapshot, AcquireError> {
+    let _guard = SourceLock::acquire(config.cache_root.as_path(), source.id().as_str())?;
+    acquire_remote_locked(source, url, config)
+}
+
+/// The acquisition critical section; callers that already hold the source
+/// lock use this directly.
+pub(crate) fn acquire_remote_locked(
+    source: &SourceIdentity,
+    url: &str,
+    config: &AcquireConfig,
+) -> Result<PublishedSnapshot, AcquireError> {
     let cache_root = config.cache_root.as_path();
     if !cache_root.is_absolute() {
         return Err(AcquireError::Containment {
@@ -200,13 +211,8 @@ pub(crate) fn acquire_remote(
         }
     }
 
-    // A per-source lock serializes concurrent acquisitions of the same
-    // source: staging init, remote check, and fetch form one critical
-    // section, so peers converge instead of corrupting each other's staging.
-    let _guard = SourceLock::acquire(cache_root, source.id().as_str())?;
     ensure_staging_repo(&staging, url)?;
     let revision_text = fetch_with_retries(&staging, url, config)?;
-    drop(_guard);
     let revision = RevisionId::new(revision_text).map_err(AcquireError::Identity)?;
     let snapshot_id = SnapshotId::new("remote-snapshot").map_err(AcquireError::Identity)?;
     let cache = CacheKey::new(staging.display().to_string()).map_err(AcquireError::Identity)?;
@@ -492,12 +498,12 @@ fn redact_credentials(text: &str) -> String {
 /// Bounded per-source acquisition lock: exclusive-create a lock file and
 /// retry with a short backoff until the peer releases it or the budget is
 /// exhausted.  Dropping the guard removes the lock.
-struct SourceLock {
+pub(crate) struct SourceLock {
     path: PathBuf,
 }
 
 impl SourceLock {
-    fn acquire(cache_root: &Path, source_id: &str) -> Result<Self, AcquireError> {
+    pub(crate) fn acquire(cache_root: &Path, source_id: &str) -> Result<Self, AcquireError> {
         let path = cache_root.join(format!(".{source_id}.lock"));
         let deadline = Instant::now() + Duration::from_secs(30);
         loop {

@@ -2,7 +2,9 @@
 
 #![allow(dead_code, unused_imports)]
 
-use super::acquisition::{AcquireConfig, AcquireError, acquire, acquire_remote};
+use super::acquisition::{
+    AcquireConfig, AcquireError, acquire, acquire_remote, acquire_remote_locked,
+};
 use super::publish::{PublishOutcome, publish};
 use super::snapshot::{RevisionId, SourceId, SourceIdentity};
 use crate::configuration::{
@@ -531,7 +533,11 @@ fn concurrent_same_revision_acquisition_publishes_exactly_one_snapshot() {
             let cache = cache.clone();
             let store = store.clone();
             std::thread::spawn(move || {
-                let snapshot = acquire_remote(&identity, &url, &config).expect("acquire");
+                // The acquisition lock covers both fetch and publish so the
+                // staging directory cannot race between them.
+                let _lock =
+                    super::acquisition::SourceLock::acquire(&cache, "upstream").expect("lock");
+                let snapshot = acquire_remote_locked(&identity, &url, &config).expect("acquire");
                 let staging = cache.join("upstream");
                 let outcome =
                     publish(&staging, &identity, snapshot.revision(), &store).expect("publish");

@@ -57,6 +57,18 @@
       "row_id": "behavior-repair-causation"
     },
     {
+      "path": "src/lifecycle/stages.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/commit_journal.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/agent_confinement.rs",
+      "row_id": "behavior-repair-causation"
+    },
+    {
       "path": "src/lifecycle/admission.rs",
       "row_id": "behavior-run-record"
     },
