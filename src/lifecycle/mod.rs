@@ -28,6 +28,7 @@ mod remote_target;
 mod replace;
 mod replacement_requests;
 mod replay;
+mod repository_preflight;
 mod run_record;
 mod run_summary;
 mod scheduler;

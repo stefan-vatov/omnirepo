@@ -3,6 +3,8 @@
 mod compare;
 mod delimiters;
 mod partial_scan;
+mod representation;
+mod section_builder;
 mod transaction;
 mod whole_file;
 
