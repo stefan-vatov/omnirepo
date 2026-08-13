@@ -1,0 +1,28 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-valid-exclusions",
+  "exit_status": 0,
+  "stream": "stdout",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "ok",
+    "stdout_contains": [
+      "omnirepo.checked-agent-plan.v1",
+      "raw_bv",
+      "decision-active",
+      "container"
+    ],
+    "stderr_contains": [],
+    "candidate_ids": ["normal-work"],
+    "excluded": [
+      {"id":"decision-active","reason":"owner-decision"},
+      {"id":"decision-closed","reason":"closed-decision-history"},
+      {"id":"blocked-work","reason":"blocked"},
+      {"id":"deferred-work","reason":"deferred"},
+      {"id":"container-work","reason":"container"}
+    ],
+    "error_code": null,
+    "error_issues": []
+  }
+}

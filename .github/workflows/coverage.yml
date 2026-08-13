@@ -23,15 +23,18 @@ jobs:
     timeout-minutes: 20
     env:
       CARGO_TERM_COLOR: always
-      COVERAGE_LINES_MIN: "95"
-      COVERAGE_FUNCTIONS_MIN: "80"
-      COVERAGE_REGIONS_MIN: "80"
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
 
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Verify coverage workflow contract
+        run: bash tests/coverage_workflow_contract.sh
+
+      - name: Verify Linux authority filesystem capability
+        run: bash tests/authority_capability.sh linux-ext-family
+
+      - name: Install Rust 1.86
+        uses: dtolnay/rust-toolchain@1.86.0
         with:
           components: llvm-tools-preview
 
@@ -44,31 +47,12 @@ jobs:
           tool: cargo-llvm-cov@0.8.7
           fallback: none
 
-      - name: Generate coverage reports
-        run: |
-          mkdir -p coverage
-
-          cargo llvm-cov clean --workspace
-
-          # Run tests once and retain the profraw data for each report format.
-          cargo llvm-cov --workspace --all-targets --all-features --locked \
-            --no-report
-
-          # Keep the threshold result while still producing the artifact if the
-          # measured floor is raised and a future change falls below it.
-          set +e
-          cargo llvm-cov report --summary-only \
-            --fail-under-lines "${COVERAGE_LINES_MIN}" \
-            --fail-under-functions "${COVERAGE_FUNCTIONS_MIN}" \
-            --fail-under-regions "${COVERAGE_REGIONS_MIN}" \
-            | tee coverage/summary.txt
-          coverage_status=${PIPESTATUS[0]}
-          set -e
-
-          cargo llvm-cov report --lcov --output-path coverage/lcov.info
-          cargo llvm-cov report --html --output-dir coverage
-
-          exit "${coverage_status}"
+      - name: Run manifest-owned coverage profile
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- quality
+          --manifest scripts/quality-manifest.json --repo-root .
+          --profile coverage --json
 
       - name: Upload coverage reports
         if: always()
@@ -78,3 +62,23 @@ jobs:
           path: coverage/
           if-no-files-found: error
           retention-days: 14
+
+  platform-authority:
+    name: authority platform (${{ matrix.expected }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            expected: linux-ext-family
+          - os: macos-latest
+            expected: macos-apfs
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+      - name: Install Rust 1.86
+        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Verify authority filesystem capability
+        run: bash tests/authority_capability.sh "${{ matrix.expected }}"

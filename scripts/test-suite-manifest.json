@@ -1,0 +1,110 @@
+{
+  "schema": "omnirepo.test-suite-manifest.v1",
+  "version": 1,
+  "quality": {
+    "manifest": "scripts/quality-manifest.json"
+  },
+  "suites": [
+    {
+      "id": "unit",
+      "kind": "unit",
+      "cases": [
+        {
+          "id": "test-support-unit",
+          "argv": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--all-targets",
+            "--all-features",
+            "--locked",
+            "--package",
+            "omnirepo-test-support"
+          ],
+          "working_directory": ".",
+          "tags": ["repository", "unit"]
+        }
+      ]
+    },
+    {
+      "id": "component",
+      "kind": "component",
+      "cases": [
+        {
+          "id": "workspace-boundary-contract",
+          "argv": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--all-targets",
+            "--all-features",
+            "--locked",
+            "--test",
+            "workspace_boundary_contract"
+          ],
+          "working_directory": ".",
+          "tags": ["repository", "component"]
+        }
+      ]
+    },
+    {
+      "id": "e2e",
+      "kind": "e2e",
+      "cases": [
+        {
+          "id": "canonical-acceptance-journeys",
+          "argv": [
+            "cargo",
+            "test",
+            "--package",
+            "omnirepo-test-support",
+            "--test",
+            "canonical_journeys_gray_seal",
+            "--locked"
+          ],
+          "working_directory": ".",
+          "tags": ["canonical", "e2e"]
+        }
+      ]
+    },
+    {
+      "id": "adversarial",
+      "kind": "adversarial",
+      "cases": [
+        {
+          "id": "authority-negative-contract",
+          "argv": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--all-targets",
+            "--all-features",
+            "--locked",
+            "--test",
+            "sync_authority_negative"
+          ],
+          "working_directory": ".",
+          "tags": ["negative", "adversarial"]
+        }
+      ]
+    },
+    {
+      "id": "platform",
+      "kind": "platform",
+      "cases": [
+        {
+          "id": "linux-ext-family",
+          "argv": ["bash", "tests/authority_capability.sh", "linux-ext-family"],
+          "working_directory": ".",
+          "capabilities": [
+            {
+              "name": "linux-ext-family",
+              "supported": true
+            }
+          ],
+          "tags": ["platform", "capability"]
+        }
+      ]
+    }
+  ]
+}

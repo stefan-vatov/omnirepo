@@ -1,0 +1,22 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-missing-tracked",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "error",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "tracked-issue-missing",
+      "missing-tracked"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": "tracked-state-disagreement",
+    "error_issues": [
+      {"id":"missing-tracked","reason":"tracked-issue-missing"}
+    ]
+  }
+}

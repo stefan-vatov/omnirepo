@@ -1,0 +1,38 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "validator-invalid-matrix",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "decision-workflow-text.v1",
+    "status": "invalid",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "decision-missing-labels",
+      "decision-one-label",
+      "reopened-open",
+      "claimed-in-progress",
+      "label-only-drift",
+      "ordinary-entered-decision",
+      "closed-missing-created-at",
+      "closed-missing-created-by",
+      "closed-missing-closed-at",
+      "closed-missing-close-reason",
+      "closed-one-label",
+      "duplicate-id",
+      "malformed",
+      "record must be a JSON object",
+      "labels-object",
+      "labels-number",
+      "duplicate-label",
+      "unknown-status",
+      "blank JSONL record",
+      "decision workflow invalid:"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": null,
+    "error_issues": []
+  }
+}

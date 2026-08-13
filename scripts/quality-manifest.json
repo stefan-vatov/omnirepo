@@ -1,0 +1,293 @@
+{
+  "schema": "omnirepo.quality-manifest.v1",
+  "version": 1,
+  "gates": [
+    {
+      "id": "fmt",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": ["cargo", "fmt", "--all", "--", "--check"],
+      "failure_identity": "quality.fmt",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "clippy",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "failure_identity": "quality.clippy",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "tests",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "failure_identity": "quality.tests",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "doctests",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--doc",
+        "--all-features",
+        "--locked"
+      ],
+      "failure_identity": "quality.doctests",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "build",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "build",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "failure_identity": "quality.build",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "pre-commit",
+      "kind": "gate",
+      "toolchain": "system",
+      "working_directory": ".",
+      "argv": ["pre-commit", "run", "--all-files"],
+      "failure_identity": "quality.pre-commit",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "beads-validate",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "run",
+        "--quiet",
+        "--locked",
+        "--manifest-path",
+        "tools/omnirepo-dev/Cargo.toml",
+        "--",
+        "validate-decisions"
+      ],
+      "failure_identity": "quality.beads-validate",
+      "authority": "tools/omnirepo-dev/src/beads_validator.rs",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "beads-validator-tests",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--quiet",
+        "--locked",
+        "--manifest-path",
+        "tools/omnirepo-dev/Cargo.toml",
+        "--test",
+        "beads_validator_contract"
+      ],
+      "failure_identity": "quality.beads-validator-tests",
+      "authority": "tools/omnirepo-dev/tests/beads_validator_contract.rs",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "beads-plan",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "run",
+        "--quiet",
+        "--locked",
+        "--manifest-path",
+        "tools/omnirepo-dev/Cargo.toml",
+        "--",
+        "plan",
+        "--repo-root",
+        ".",
+        "--json"
+      ],
+      "failure_identity": "quality.beads-plan",
+      "authority": "tools/omnirepo-dev/src/planner.rs",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "beads-plan-tests",
+      "kind": "gate",
+      "toolchain": "stable",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--quiet",
+        "--locked",
+        "--manifest-path",
+        "tools/omnirepo-dev/Cargo.toml",
+        "--test",
+        "planner_contract"
+      ],
+      "failure_identity": "quality.beads-plan-tests",
+      "authority": "tools/omnirepo-dev/tests/planner_contract.rs",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "coverage",
+      "kind": "gate",
+      "toolchain": "rust-1.86.0/cargo-llvm-cov-0.8.7",
+      "working_directory": ".",
+      "argv": ["bash", "scripts/coverage.sh"],
+      "failure_identity": "quality.coverage",
+      "authority": "omni-constitutional-convergence-2r9.34",
+      "owner": "omni-constitutional-convergence-2r9.34"
+    },
+    {
+      "id": "msrv-tests",
+      "kind": "gate",
+      "toolchain": "rust-1.86.0",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--locked"
+      ],
+      "failure_identity": "quality.msrv-tests",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    },
+    {
+      "id": "msrv-doctests",
+      "kind": "gate",
+      "toolchain": "rust-1.86.0",
+      "working_directory": ".",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--doc",
+        "--all-features",
+        "--locked"
+      ],
+      "failure_identity": "quality.msrv-doctests",
+      "authority": "canon/standards.md",
+      "owner": "omni-constitutional-convergence-2r9.63"
+    }
+  ],
+  "profiles": [
+    {
+      "name": "full",
+      "kind": "profile",
+      "gates": [
+        "fmt", "clippy", "tests", "doctests", "build", "pre-commit",
+        "beads-validate", "beads-validator-tests", "beads-plan", "beads-plan-tests",
+        "coverage", "msrv-tests", "msrv-doctests"
+      ]
+    },
+    {
+      "name": "stable",
+      "kind": "profile",
+      "gates": [
+        "fmt", "clippy", "tests", "doctests", "build", "pre-commit",
+        "beads-validate", "beads-validator-tests", "beads-plan", "beads-plan-tests"
+      ]
+    },
+    {
+      "name": "msrv",
+      "kind": "profile",
+      "gates": ["msrv-tests", "msrv-doctests"]
+    },
+    {
+      "name": "coverage",
+      "kind": "profile",
+      "gates": ["coverage"]
+    }
+  ],
+  "aliases": [
+    {
+      "name": "fmt-check",
+      "kind": "alias",
+      "canonical_gate": "fmt",
+      "classification": "developer-shortcut"
+    },
+    {
+      "name": "lint",
+      "kind": "alias",
+      "canonical_gate": "clippy",
+      "classification": "developer-shortcut"
+    },
+    {
+      "name": "test-all",
+      "kind": "alias",
+      "canonical_gate": "tests",
+      "classification": "developer-shortcut"
+    },
+    {
+      "name": "test-docs",
+      "kind": "alias",
+      "canonical_gate": "doctests",
+      "classification": "developer-shortcut"
+    },
+    {
+      "name": "build-all",
+      "kind": "alias",
+      "canonical_gate": "build",
+      "classification": "developer-shortcut"
+    }
+  ],
+  "lockfiles": {
+    "cargo_lock": {
+      "tracked": true,
+      "packaged": true,
+      "validation_flag": "--locked",
+      "update_behavior": "fail"
+    },
+    "package_lock": {
+      "status": "not-used",
+      "policy": "This repository has no Node package; package-lock.json is not an authority and must not be created or updated by quality validation."
+    }
+  }
+}

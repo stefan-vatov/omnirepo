@@ -1,0 +1,12 @@
+name: unsafe untagged release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+    uses: acme/release/.github/workflows/publish.yml@main

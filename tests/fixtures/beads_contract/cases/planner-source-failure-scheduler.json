@@ -1,0 +1,14 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-source-failure-scheduler",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"source-failure-peer\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"source-failure-peer","status":"open","labels":[]}
+  ],
+  "scheduler": {"schema":"br.scheduler.v1","recommendations":[]},
+  "fake_br_failure": "scheduler"
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-scheduler-malformed",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "error",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "canonical-scheduler-malformed",
+      "<scheduler>"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": "canonical-source-malformed",
+    "error_issues": [
+      {"id":"<scheduler>","reason":"canonical-scheduler-malformed"}
+    ]
+  }
+}

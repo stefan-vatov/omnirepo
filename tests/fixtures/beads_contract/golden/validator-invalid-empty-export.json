@@ -1,0 +1,19 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "validator-invalid-empty-export",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "decision-workflow-text.v1",
+    "status": "invalid",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "tracked JSONL is empty"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": null,
+    "error_issues": []
+  }
+}

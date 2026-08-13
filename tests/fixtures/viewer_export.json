@@ -1,0 +1,446 @@
+{
+  "cases": [
+    {
+      "evidence": {
+        "kind": "canonical"
+      },
+      "expected": {
+        "actionable_ids": [
+          "normal-work"
+        ],
+        "counts": {
+          "actionable": 1,
+          "active": 0,
+          "blocked": 0,
+          "closed": 0,
+          "closed-decision": 0,
+          "container": 0,
+          "deferred": 0,
+          "invalid": 0,
+          "invalid-owner-state": 0,
+          "open-non-actionable": 0,
+          "owner-decision": 1,
+          "retired": 0,
+          "stale-export": 0
+        },
+        "invalid_ids": [],
+        "owner_queue_ids": [
+          "decision-active"
+        ],
+        "rows": [
+          {
+            "actionable": false,
+            "category": "owner-decision",
+            "id": "decision-active",
+            "wording": "Owner decision required"
+          },
+          {
+            "actionable": true,
+            "category": "actionable",
+            "id": "normal-work",
+            "wording": "Ready for agent work"
+          }
+        ],
+        "stale_ids": [],
+        "total": 2
+      },
+      "name": "tracer-decision-row",
+      "rows": [
+        {
+          "id": "decision-active",
+          "issue_type": "task",
+          "labels": [
+            "decision-needed",
+            "human-input"
+          ],
+          "status": "decision"
+        },
+        {
+          "id": "normal-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "open"
+        }
+      ],
+      "sources": {
+        "br_ready_ids": [
+          "normal-work"
+        ],
+        "checked_plan": {
+          "actionable_ids": [
+            "normal-work"
+          ],
+          "evidence": {
+            "raw_bv": "advisory-only"
+          },
+          "schema": "omnirepo.checked-agent-plan.v1",
+          "status": "ok"
+        },
+        "raw_bv_recommended_ids": [
+          "decision-active",
+          "normal-work"
+        ]
+      }
+    },
+    {
+      "evidence": {
+        "kind": "canonical"
+      },
+      "expected": {
+        "actionable_ids": [
+          "normal-work"
+        ],
+        "counts": {
+          "actionable": 1,
+          "active": 1,
+          "blocked": 1,
+          "closed": 1,
+          "closed-decision": 1,
+          "container": 1,
+          "deferred": 1,
+          "invalid": 0,
+          "invalid-owner-state": 0,
+          "open-non-actionable": 0,
+          "owner-decision": 1,
+          "retired": 1,
+          "stale-export": 0
+        },
+        "invalid_ids": [],
+        "owner_queue_ids": [
+          "decision-active"
+        ],
+        "rows": [
+          {
+            "actionable": false,
+            "category": "active",
+            "id": "active-work",
+            "wording": "In progress"
+          },
+          {
+            "actionable": false,
+            "category": "blocked",
+            "id": "blocked-work",
+            "wording": "Blocked by dependency or policy"
+          },
+          {
+            "actionable": false,
+            "category": "closed-decision",
+            "id": "closed-decision",
+            "wording": "Closed owner decision"
+          },
+          {
+            "actionable": false,
+            "category": "closed",
+            "id": "closed-work",
+            "wording": "Closed"
+          },
+          {
+            "actionable": false,
+            "category": "container",
+            "id": "container-work",
+            "wording": "Workstream container"
+          },
+          {
+            "actionable": false,
+            "category": "owner-decision",
+            "id": "decision-active",
+            "wording": "Owner decision required"
+          },
+          {
+            "actionable": false,
+            "category": "deferred",
+            "id": "deferred-work",
+            "wording": "Deferred by workflow"
+          },
+          {
+            "actionable": true,
+            "category": "actionable",
+            "id": "normal-work",
+            "wording": "Ready for agent work"
+          },
+          {
+            "actionable": false,
+            "category": "retired",
+            "id": "retired-work",
+            "wording": "Retired"
+          }
+        ],
+        "stale_ids": [],
+        "total": 9
+      },
+      "name": "all-tracker-statuses",
+      "rows": [
+        {
+          "id": "decision-active",
+          "issue_type": "task",
+          "labels": [
+            "decision-needed",
+            "human-input"
+          ],
+          "status": "decision"
+        },
+        {
+          "id": "normal-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "open"
+        },
+        {
+          "id": "active-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "in_progress"
+        },
+        {
+          "id": "blocked-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "blocked"
+        },
+        {
+          "id": "deferred-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "deferred"
+        },
+        {
+          "id": "closed-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "closed"
+        },
+        {
+          "close_reason": "owner approved",
+          "closed_at": "2026-08-13T00:01:00Z",
+          "created_at": "2026-08-13T00:00:00Z",
+          "created_by": "thethracian",
+          "id": "closed-decision",
+          "issue_type": "task",
+          "labels": [
+            "decision-needed",
+            "human-input"
+          ],
+          "status": "closed"
+        },
+        {
+          "id": "container-work",
+          "issue_type": "task",
+          "labels": [
+            "workstream-container"
+          ],
+          "status": "open"
+        },
+        {
+          "id": "retired-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "tombstone"
+        }
+      ],
+      "sources": {
+        "br_ready_ids": [
+          "normal-work"
+        ],
+        "checked_plan": {
+          "actionable_ids": [
+            "normal-work"
+          ],
+          "evidence": {
+            "raw_bv": "advisory-only"
+          },
+          "schema": "omnirepo.checked-agent-plan.v1",
+          "status": "ok"
+        },
+        "raw_bv_recommended_ids": [
+          "decision-active",
+          "normal-work",
+          "active-work",
+          "blocked-work",
+          "deferred-work",
+          "closed-work",
+          "closed-decision",
+          "container-work",
+          "retired-work"
+        ]
+      }
+    },
+    {
+      "evidence": {
+        "kind": "invalid-tracker"
+      },
+      "expected": {
+        "actionable_ids": [],
+        "counts": {
+          "actionable": 0,
+          "active": 0,
+          "blocked": 0,
+          "closed": 0,
+          "closed-decision": 0,
+          "container": 0,
+          "deferred": 0,
+          "invalid": 0,
+          "invalid-owner-state": 1,
+          "open-non-actionable": 0,
+          "owner-decision": 0,
+          "retired": 0,
+          "stale-export": 0
+        },
+        "invalid_ids": [
+          "reopened-decision"
+        ],
+        "owner_queue_ids": [],
+        "rows": [
+          {
+            "actionable": false,
+            "category": "invalid-owner-state",
+            "id": "reopened-decision",
+            "wording": "Unsafe owner-decision state"
+          }
+        ],
+        "stale_ids": [],
+        "total": 1
+      },
+      "name": "reopened-decision",
+      "rows": [
+        {
+          "id": "reopened-decision",
+          "issue_type": "task",
+          "labels": [
+            "decision-needed",
+            "human-input"
+          ],
+          "status": "open"
+        }
+      ],
+      "sources": {
+        "br_ready_ids": [],
+        "checked_plan": {
+          "actionable_ids": [],
+          "evidence": {
+            "raw_bv": "advisory-only"
+          },
+          "schema": "omnirepo.checked-agent-plan.v1",
+          "status": "error"
+        },
+        "raw_bv_recommended_ids": [
+          "reopened-decision"
+        ]
+      }
+    },
+    {
+      "evidence": {
+        "kind": "stale-export"
+      },
+      "expected": {
+        "actionable_ids": [],
+        "counts": {
+          "actionable": 0,
+          "active": 0,
+          "blocked": 0,
+          "closed": 0,
+          "closed-decision": 0,
+          "container": 0,
+          "deferred": 0,
+          "invalid": 0,
+          "invalid-owner-state": 0,
+          "open-non-actionable": 0,
+          "owner-decision": 0,
+          "retired": 0,
+          "stale-export": 1
+        },
+        "invalid_ids": [],
+        "owner_queue_ids": [],
+        "rows": [
+          {
+            "actionable": false,
+            "category": "stale-export",
+            "id": "stale-work",
+            "wording": "Stale export \u2014 refresh required"
+          }
+        ],
+        "stale_ids": [
+          "stale-work"
+        ],
+        "total": 1
+      },
+      "name": "stale-export",
+      "rows": [
+        {
+          "id": "stale-work",
+          "issue_type": "task",
+          "labels": [],
+          "status": "open"
+        }
+      ],
+      "sources": {
+        "br_ready_ids": [],
+        "checked_plan": {
+          "actionable_ids": [],
+          "evidence": {
+            "raw_bv": "advisory-only"
+          },
+          "schema": "omnirepo.checked-agent-plan.v1",
+          "status": "error"
+        },
+        "raw_bv_recommended_ids": [
+          "stale-work"
+        ]
+      }
+    }
+  ],
+  "contract": {
+    "canonical_actionable_sources": [
+      "br-ready",
+      "checked-agent-plan"
+    ],
+    "closed_decision_provenance": [
+      "created_at",
+      "created_by",
+      "closed_at",
+      "close_reason"
+    ],
+    "owner_queue": {
+      "action": "owner-only",
+      "required_labels": [
+        "decision-needed",
+        "human-input"
+      ],
+      "status": "decision"
+    },
+    "raw_bv": "advisory-only",
+    "status_classes": {
+      "blocked": "blocked",
+      "closed": "closed",
+      "decision": "owner-decision",
+      "deferred": "deferred",
+      "in_progress": "active",
+      "open": "actionable",
+      "tombstone": "retired"
+    },
+    "wording": {
+      "actionable": "Ready for agent work",
+      "active": "In progress",
+      "blocked": "Blocked by dependency or policy",
+      "closed": "Closed",
+      "closed-decision": "Closed owner decision",
+      "container": "Workstream container",
+      "deferred": "Deferred by workflow",
+      "invalid": "Invalid tracker state",
+      "invalid-owner-state": "Unsafe owner-decision state",
+      "open-non-actionable": "Open but not actionable",
+      "owner-decision": "Owner decision required",
+      "retired": "Retired",
+      "stale-export": "Stale export \u2014 refresh required"
+    }
+  },
+  "required_tracker_statuses": [
+    "open",
+    "decision",
+    "in_progress",
+    "blocked",
+    "deferred",
+    "closed",
+    "tombstone"
+  ],
+  "schema": "omnirepo.viewer-export-fixture.v1"
+}

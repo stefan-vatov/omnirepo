@@ -1,0 +1,12 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-missing-tracked-export",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"tracked-export-peer\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "omit_tracked": true,
+  "ready": [],
+  "scheduler": {"schema":"br.scheduler.v1","recommendations":[]}
+}

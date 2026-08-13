@@ -1,0 +1,19 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-missing-validator",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"validator-missing-peer\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"validator-missing-peer","status":"open","labels":[]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"validator-missing-peer","status":"open","labels":[]}}
+    ]
+  },
+  "missing_validator": true
+}

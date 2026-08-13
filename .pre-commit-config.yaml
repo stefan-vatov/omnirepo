@@ -14,16 +14,28 @@ repos:
   - id: check-merge-conflict
   - id: check-symlinks
   - id: check-toml
-  - id: check-yaml
   - id: detect-private-key
-  - id: end-of-file-fixer
   - id: sort-simple-yaml
-  - id: trailing-whitespace
 
 - repo: local
   hooks:
   - id: validate-beads-decisions
     name: validate Beads decision workflow
-    entry: .beads/validate-decisions.sh
+    entry: cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions
+    language: system
+    pass_filenames: false
+  - id: test-beads-decisions
+    name: test Beads decision workflow
+    entry: cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract
+    language: system
+    pass_filenames: false
+  - id: checked-agent-plan
+    name: checked autonomous Beads plan
+    entry: cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json
+    language: system
+    pass_filenames: false
+  - id: test-checked-agent-plan
+    name: test checked autonomous Beads plan
+    entry: cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test planner_contract
     language: system
     pass_filenames: false

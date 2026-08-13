@@ -1,0 +1,18 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-scheduler-status-disagreement",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"scheduler-status-drift\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"scheduler-status-drift","status":"open","labels":[]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"scheduler-status-drift","status":"blocked","labels":[]}}
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-set-disagreement",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "error",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "planner-disagreement",
+      "scheduler-ready-disagreement"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": "planner-disagreement",
+    "error_issues": [
+      {"id":"<set>","reason":"scheduler-ready-disagreement"}
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-duplicate-ready",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"duplicate-ready\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"duplicate-ready","status":"open","labels":[]},
+    {"id":"duplicate-ready","status":"open","labels":[]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"duplicate-ready","status":"open","labels":[]}}
+    ]
+  }
+}

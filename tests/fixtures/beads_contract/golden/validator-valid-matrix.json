@@ -1,0 +1,19 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "validator-valid-matrix",
+  "exit_status": 0,
+  "stream": "stdout",
+  "output": {
+    "schema": "decision-workflow-text.v1",
+    "status": "consistent",
+    "stdout_contains": [
+      "decision workflow is consistent"
+    ],
+    "stderr_contains": [],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": null,
+    "error_issues": []
+  }
+}

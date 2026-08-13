@@ -8,7 +8,34 @@ on:
       - trying
   pull_request:
 
+permissions:
+  contents: read
 
 jobs:
   lint_test:
-    uses: stefan-vatov/gh-workflows/.github/workflows/pre-commit-hooks.yml@main
+    name: repository quality manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Install pre-commit
+        run: python -m pip install --disable-pip-version-check 'pre-commit==4.3.0'
+
+      - name: Run aggregate quality manifest
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- quality
+          --manifest scripts/quality-manifest.json --repo-root .
+          --profile stable --json

@@ -1,0 +1,29 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "validator-invalid-matrix",
+  "kind": "validator",
+  "tracked_lines": [
+    "{\"id\":\"decision-missing-labels\",\"status\":\"decision\"}",
+    "{\"id\":\"decision-one-label\",\"status\":\"decision\",\"labels\":[\"decision-needed\"]}",
+    "{\"id\":\"reopened-open\",\"status\":\"open\",\"labels\":[\"decision-needed\",\"human-input\"]}",
+    "{\"id\":\"claimed-in-progress\",\"status\":\"in_progress\",\"labels\":[\"decision-needed\",\"human-input\"]}",
+    "{\"id\":\"label-only-drift\",\"status\":\"open\",\"labels\":[\"human-input\"]}",
+    "{\"id\":\"ordinary-entered-decision\",\"status\":\"decision\",\"labels\":[]}",
+    "{\"id\":\"closed-missing-created-at\",\"status\":\"closed\",\"labels\":[\"decision-needed\",\"human-input\"],\"created_by\":\"owner\",\"closed_at\":\"2026-08-13T00:01:00Z\",\"close_reason\":\"owner approved\"}",
+    "{\"id\":\"closed-missing-created-by\",\"status\":\"closed\",\"labels\":[\"decision-needed\",\"human-input\"],\"created_at\":\"2026-08-13T00:00:00Z\",\"closed_at\":\"2026-08-13T00:01:00Z\",\"close_reason\":\"owner approved\"}",
+    "{\"id\":\"closed-missing-closed-at\",\"status\":\"closed\",\"labels\":[\"decision-needed\",\"human-input\"],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"owner\",\"close_reason\":\"owner approved\"}",
+    "{\"id\":\"closed-missing-close-reason\",\"status\":\"closed\",\"labels\":[\"decision-needed\",\"human-input\"],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"owner\",\"closed_at\":\"2026-08-13T00:01:00Z\"}",
+    "{\"id\":\"closed-one-label\",\"status\":\"closed\",\"labels\":[\"decision-needed\"],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"owner\",\"closed_at\":\"2026-08-13T00:01:00Z\",\"close_reason\":\"owner approved\"}",
+    "{\"id\":\"duplicate-id\",\"status\":\"open\"}",
+    "{\"id\":\"duplicate-id\",\"status\":\"closed\"}",
+    "{\"id\":\"malformed\",\"status\":\"open\"",
+    "[]",
+    "{\"id\":\"labels-object\",\"status\":\"open\",\"labels\":\"human-input\"}",
+    "{\"id\":\"labels-number\",\"status\":\"open\",\"labels\":[\"human-input\",3]}",
+    "{\"id\":\"duplicate-label\",\"status\":\"open\",\"labels\":[\"human-input\",\"human-input\"]}",
+    "{\"id\":\"unknown-status\",\"status\":\"owner-approved\"}",
+    "",
+    "{\"id\":\"ordinary-valid-peer\",\"status\":\"open\"}"
+  ]
+}

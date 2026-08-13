@@ -1,0 +1,24 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-invalid-decision-drift",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "error",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "tracked JSONL failed",
+      "reopened-decision",
+      "relabeled-decision"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": "tracked-state-invalid",
+    "error_issues": [
+      {"id":"reopened-decision","reason":"tracked-decision-state"},
+      {"id":"relabeled-decision","reason":"tracked-decision-state"}
+    ]
+  }
+}

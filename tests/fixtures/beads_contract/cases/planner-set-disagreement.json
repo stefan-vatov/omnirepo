@@ -1,0 +1,16 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-set-disagreement",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"normal-work\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"normal-work","status":"open","labels":[]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[]
+  }
+}

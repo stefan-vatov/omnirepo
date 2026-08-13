@@ -1,0 +1,22 @@
+{
+  "schema": "omnirepo.beads-compatibility-golden.v1",
+  "version": 1,
+  "case_id": "planner-empty-tracked-export",
+  "exit_status": 1,
+  "stream": "stderr",
+  "output": {
+    "schema": "omnirepo.checked-agent-plan.v1",
+    "status": "error",
+    "stdout_contains": [],
+    "stderr_contains": [
+      "tracked-state-invalid",
+      "tracked-decision-state"
+    ],
+    "candidate_ids": [],
+    "excluded": [],
+    "error_code": "tracked-state-invalid",
+    "error_issues": [
+      {"id":"<tracked>","reason":"tracked-decision-state"}
+    ]
+  }
+}

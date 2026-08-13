@@ -20,7 +20,9 @@ The published Cargo package contains runtime essentials only: Rust source,
 Cargo manifests and the lockfile, README, LICENSE, CHANGELOG, CONSTITUTION, and
 runtime assets required by the binary. It excludes Beads data, agent skills,
 Canon sources, CI workflows, generated packaging residue, and development-only
-tooling.
+tooling. Cargo-mandatory normalized-manifest and VCS metadata injected by the
+standard Cargo packaging protocol are package metadata, not generated
+packaging residue; no other generated repository content is permitted.
 
 The packaged crate, rather than only the worktree, must build and expose the
 selected binary surface on the supported toolchain.

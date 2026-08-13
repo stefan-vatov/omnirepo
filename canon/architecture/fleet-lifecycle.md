@@ -18,6 +18,24 @@ failure does not stop valid peers, and successful peers proceed through their
 full lifecycle. Failures are collected for repair and final reporting rather
 than ending the fleet run at the first error.
 
+## Bounded scheduling
+
+Each run freezes the machine limits and uses one scheduler; completion order does not alter authority or accounting.
+A repository slot is held from destination admission through its terminal initial-pass or repair outcome, with at most `max_repositories` slots live.
+Source snapshots are deduplicated per source ID; acquisition uses child work but no destination slot, so repositories wait without holding a slot.
+Destination synchronization, verification, Git, and repair-agent work is serialized per canonical repository and never overlaps for that repository.
+Child work is one global permit pool bounded by `max_child_work`, with source, verification, Git, and agent resource kinds.
+Source work has one operation per source ID; checks run one at a time in configured order; each Git operation and agent invocation is one at a time per repository.
+An agent process tree and its contained descendants use one agent permit; adapter-specific timeouts remain the adapter contract.
+The fixed order is cancellation and journal health, source readiness or lease, stage intent, repository slot, child permit, child process, then result.
+Stage intent is acknowledged before a repository or child permit is taken; no permit is held while waiting for a slot or journal intent, and no child operation acquires a second permit.
+After a child process tree terminates and is reaped, its permit returns before the repository stage is requeued or advanced.
+Ready source and stage requests use a bounded FIFO queue with one pending request per source or repository; a requeued repository goes to the tail.
+Journal saturation pauses new admission and effects without dropping outcomes; writer failure stops new effects and emits typed scheduler or cancellation results.
+Cancellation closes admission, terminates and reaps active trees, releases permits and slots only after termination, and terminalizes queued repositories.
+Scheduler events record tickets, resource kinds, active and queued counts, high-water marks, backpressure, cancellation, release, and terminal outcomes.
+The scheduler uses explicit permits and workers; ambient Rayon pools, CPU autodetection, and environment-based concurrency are not authoritative.
+
 ## Per-repository lifecycle
 
 For each destination repository, the initial fleet pass:

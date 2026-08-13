@@ -1,0 +1,37 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-valid-exclusions",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"decision-active\",\"status\":\"decision\",\"labels\":[\"decision-needed\",\"human-input\"]}",
+    "{\"id\":\"decision-closed\",\"status\":\"closed\",\"labels\":[\"decision-needed\",\"human-input\"],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"owner\",\"closed_at\":\"2026-08-13T00:01:00Z\",\"close_reason\":\"owner approved\"}",
+    "{\"id\":\"blocked-work\",\"status\":\"blocked\",\"labels\":[]}",
+    "{\"id\":\"deferred-work\",\"status\":\"deferred\",\"labels\":[]}",
+    "{\"id\":\"container-work\",\"status\":\"open\",\"labels\":[\"workstream-container\"],\"issue_type\":\"task\"}",
+    "{\"id\":\"normal-work\",\"status\":\"open\",\"labels\":[]}",
+    "{\"id\":\"raw-viewer-decision\",\"status\":\"decision\",\"labels\":[\"decision-needed\",\"human-input\"]}"
+  ],
+  "ready": [
+    {"id":"decision-active","title":"Active owner decision","priority":0,"status":"decision","labels":["decision-needed","human-input"],"issue_type":"task"},
+    {"id":"decision-closed","title":"Closed owner decision","priority":0,"status":"closed","labels":["decision-needed","human-input"],"issue_type":"task","created_at":"2026-08-13T00:00:00Z","created_by":"owner","closed_at":"2026-08-13T00:01:00Z","close_reason":"owner approved"},
+    {"id":"blocked-work","title":"Blocked work","priority":1,"status":"blocked","labels":[],"issue_type":"task"},
+    {"id":"deferred-work","title":"Deferred work","priority":1,"status":"deferred","labels":[],"issue_type":"task"},
+    {"id":"container-work","title":"Container work","priority":1,"status":"open","labels":["workstream-container"],"issue_type":"task"},
+    {"id":"normal-work","title":"Normal work","priority":1,"status":"open","labels":[],"issue_type":"task"}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"decision-active","title":"Active owner decision","priority":0,"status":"decision","labels":["decision-needed","human-input"],"issue_type":"task"}},
+      {"rank":2,"issue":{"id":"decision-closed","title":"Closed owner decision","priority":0,"status":"closed","labels":["decision-needed","human-input"],"issue_type":"task","created_at":"2026-08-13T00:00:00Z","created_by":"owner","closed_at":"2026-08-13T00:01:00Z","close_reason":"owner approved"}},
+      {"rank":3,"issue":{"id":"blocked-work","title":"Blocked work","priority":1,"status":"blocked","labels":[],"issue_type":"task"}},
+      {"rank":4,"issue":{"id":"deferred-work","title":"Deferred work","priority":1,"status":"deferred","labels":[],"issue_type":"task"}},
+      {"rank":5,"issue":{"id":"container-work","title":"Container work","priority":1,"status":"open","labels":["workstream-container"],"issue_type":"task"}},
+      {"rank":6,"issue":{"id":"normal-work","title":"Normal work","priority":1,"status":"open","labels":[],"issue_type":"task"}}
+    ]
+  },
+  "raw_bv": {
+    "plan":{"tracks":[{"track_id":"viewer","items":[{"id":"raw-viewer-decision","status":"decision","labels":["decision-needed","human-input"]},{"id":"normal-work","status":"open","labels":[]}]}]}
+  }
+}

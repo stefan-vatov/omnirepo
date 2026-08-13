@@ -1,0 +1,9 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-empty-tracked-export",
+  "kind": "planner",
+  "tracked_lines": [],
+  "ready": [],
+  "scheduler": {"schema":"br.scheduler.v1","recommendations":[]}
+}

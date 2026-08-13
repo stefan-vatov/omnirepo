@@ -1,0 +1,13 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-scheduler-malformed",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"scheduler-malformed-peer\",\"status\":\"open\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"scheduler-malformed-peer","status":"open","labels":[]}
+  ],
+  "scheduler": []
+}

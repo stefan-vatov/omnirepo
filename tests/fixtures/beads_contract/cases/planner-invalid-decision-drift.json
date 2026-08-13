@@ -1,0 +1,21 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-invalid-decision-drift",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"reopened-decision\",\"status\":\"open\",\"labels\":[\"decision-needed\",\"human-input\"]}",
+    "{\"id\":\"relabeled-decision\",\"status\":\"open\",\"labels\":[\"human-input\"]}"
+  ],
+  "ready": [
+    {"id":"reopened-decision","status":"open","labels":["decision-needed","human-input"]},
+    {"id":"relabeled-decision","status":"open","labels":["human-input"]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"reopened-decision","status":"open","labels":["decision-needed","human-input"]}},
+      {"rank":2,"issue":{"id":"relabeled-decision","status":"open","labels":["human-input"]}}
+    ]
+  }
+}

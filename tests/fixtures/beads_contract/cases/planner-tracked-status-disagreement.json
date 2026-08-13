@@ -1,0 +1,18 @@
+{
+  "schema": "omnirepo.beads-compatibility-case.v1",
+  "version": 1,
+  "id": "planner-tracked-status-disagreement",
+  "kind": "planner",
+  "tracked_lines": [
+    "{\"id\":\"stale-status\",\"status\":\"in_progress\",\"labels\":[]}"
+  ],
+  "ready": [
+    {"id":"stale-status","status":"open","labels":[]}
+  ],
+  "scheduler": {
+    "schema":"br.scheduler.v1",
+    "recommendations":[
+      {"rank":1,"issue":{"id":"stale-status","status":"open","labels":[]}}
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema": "omnirepo.beads-compatibility-cases.v1",
+  "version": 1,
+  "interfaces": {
+    "validator": "omnirepo-dev validate-decisions",
+    "planner": "omnirepo-dev plan --repo-root . --json",
+    "tracked_export_env": "BEADS_JSONL",
+    "planner_sources": [
+      "br --no-auto-import --no-auto-flush ready --json",
+      "br --no-auto-import --no-auto-flush scheduler --json"
+    ],
+    "raw_viewer": "advisory-only"
+  },
+  "cases": [
+    "validator-valid-basic",
+    "validator-valid-matrix",
+    "validator-invalid-matrix",
+    "validator-invalid-empty-export",
+    "validator-invalid-missing-export",
+    "planner-valid-exclusions",
+    "planner-invalid-decision-drift",
+    "planner-tracked-status-disagreement",
+    "planner-tracked-label-disagreement",
+    "planner-missing-tracked",
+    "planner-set-disagreement",
+    "planner-duplicate-ready",
+    "planner-scheduler-status-disagreement",
+    "planner-scheduler-label-disagreement",
+    "planner-ready-malformed",
+    "planner-scheduler-malformed",
+    "planner-source-failure-ready",
+    "planner-source-failure-scheduler",
+    "planner-tracked-malformed",
+    "planner-missing-validator",
+    "planner-missing-command",
+    "planner-missing-tracked-export",
+    "planner-empty-tracked-export"
+  ]
+}

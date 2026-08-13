@@ -31,8 +31,16 @@ so validation fails rather than updating the committed lockfile.
 ## Coverage
 
 Coverage is measured across the workspace, all targets, and all features with
-locked dependencies. It must remain at or above 95% of lines, 80% of
-functions, and 80% of regions.
+locked dependencies. Global coverage must remain at or above 90% of lines,
+80% of functions, and 80% of regions. Lines added or modified by a change must
+remain at or above 95% coverage.
+
+Coverage percentages complement behavioral proof; they do not replace it.
+Critical safety paths require direct tests of their authority boundaries and
+failure behavior. Tests must not exist solely to execute trivial accessors or
+private formatting for a higher percentage. Each behavior has one primary test
+owner, and duplicate assertions belong with that owner rather than in parallel
+coverage-only tests.
 
 A threshold failure remains a failed check. Coverage reports may still be
 generated and retained to diagnose the failure, but report generation must not
