@@ -49,6 +49,10 @@
       "row_id": "behavior-partial-section-sync"
     },
     {
+      "path": "src/managed_content/compare.rs",
+      "row_id": "behavior-whole-file-sync"
+    },
+    {
       "path": "src/platform/mod.rs",
       "row_id": "behavior-containment"
     },

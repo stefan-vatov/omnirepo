@@ -65,6 +65,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/replay.rs",
         "src/lifecycle/run_record.rs",
         "src/managed_content/mod.rs",
+        "src/managed_content/compare.rs",
         "src/managed_content/transaction.rs",
         "src/platform/mod.rs",
         "src/platform/authority/mod.rs",
