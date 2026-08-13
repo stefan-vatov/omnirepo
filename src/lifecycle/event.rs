@@ -173,6 +173,15 @@ impl EvidenceRef {
         if bytes > MAX_EVIDENCE_BYTES {
             return Err(EventError::EvidenceBounds { path });
         }
+        // Control characters, newlines, ANSI escapes, and JSON metacharacters
+        // must stay inert: the exact JSONL render must never be injectable
+        // through an evidence reference.
+        if path
+            .bytes()
+            .any(|byte| byte < 0x20 || byte == 0x7f || byte == b'"' || byte == b'\\')
+        {
+            return Err(EventError::UnsafeEvidencePath { path });
+        }
         let lowered = path.to_ascii_lowercase();
         for marker in [
             "token",
@@ -750,6 +759,9 @@ pub enum EventError {
     SecretBearingEvidence {
         path: String,
     },
+    UnsafeEvidencePath {
+        path: String,
+    },
 }
 
 impl fmt::Display for EventError {
@@ -785,6 +797,12 @@ impl fmt::Display for EventError {
             }
             Self::SecretBearingEvidence { path } => {
                 write!(formatter, "evidence reference may carry secrets: {path}")
+            }
+            Self::UnsafeEvidencePath { path } => {
+                write!(
+                    formatter,
+                    "evidence reference contains unsafe characters: {path}"
+                )
             }
         }
     }

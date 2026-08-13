@@ -347,6 +347,28 @@ fn evidence_respects_bounds_and_redaction_policy() {
 }
 
 #[test]
+fn evidence_rejects_control_newline_ansi_and_json_metacharacters() {
+    // Control/newline/ANSI injection must stay inert: the exact JSONL render
+    // can never be extended through an evidence reference.
+    for hostile in [
+        "target/evidence/evil\n}\\u002c\"type\":\"terminal\"",
+        "target/evidence\u{1b}[31mred.log",
+        "target/evidence/tab\u{9}bed.log",
+        "target/evidence/quote\"boom.log",
+        "target/evidence/back\\slash.log",
+        "target/evidence/del\u{7f}ete.log",
+    ] {
+        assert!(
+            matches!(
+                EvidenceRef::new(EvidenceKind::Git, hostile, 8),
+                Err(EventError::UnsafeEvidencePath { .. })
+            ),
+            "hostile evidence path must be rejected: {hostile:?}"
+        );
+    }
+}
+
+#[test]
 fn canonical_identities_are_reused_exactly_in_render_and_parse() {
     let id = "2026-08-13T16:00:00.000000000Z-deadbeefdeadbeefdeadbeefdeadbeef";
     let event = JournalEvent::RunIntent {

@@ -212,3 +212,126 @@ fn replay_never_reads_beyond_the_bounded_size() {
     let _ = fs::remove_file(&huge);
     assert!(matches!(error, ReplayError::Read { .. }));
 }
+
+#[test]
+fn crash_boundary_truncation_at_every_line_keeps_the_prefix_valid() {
+    let (_home, mut record, record_path, _actual_run_id) = fixture_record();
+    // The record already carries the invocation intent (checkpoint 0); build
+    // the appended tail: repository intent, repository result, evidence,
+    // terminal.
+    let lines = vec![
+        crate::lifecycle::event::JournalEvent::RepositoryIntent {
+            checkpoint: 1,
+            run_id: run_id(),
+            repository_id: "destination-a".to_owned(),
+            operation: Operation::Synchronize,
+            attempt: 1,
+        }
+        .render(),
+        crate::lifecycle::event::JournalEvent::RepositoryResult {
+            checkpoint: 2,
+            run_id: run_id(),
+            repository_id: "destination-a".to_owned(),
+            operation: Operation::Synchronize,
+            attempt: 1,
+            outcome: Outcome::Success,
+        }
+        .render(),
+        crate::lifecycle::event::JournalEvent::Evidence {
+            checkpoint: 3,
+            run_id: run_id(),
+            repository_id: Some("destination-a".to_owned()),
+            evidence: crate::lifecycle::event::EvidenceRef::new(
+                crate::lifecycle::event::EvidenceKind::Git,
+                "target/evidence/verify-1.log",
+                128,
+            )
+            .expect("bounded evidence"),
+        }
+        .render(),
+        terminal(4, Outcome::Success).render(),
+    ];
+    for line in &lines {
+        record.append(line.as_bytes()).expect("append line");
+    }
+    drop(record);
+
+    let full = fs::read_to_string(&record_path).expect("read full record");
+    let full = full.trim_end_matches('\n');
+    // Truncate the file after every line boundary: the valid prefix must
+    // always replay, never claim success when the run is not terminal, and
+    // repeated replays of the same truncation must be identical.
+    let offsets: Vec<usize> = full
+        .match_indices('\n')
+        .map(|(index, _)| index + 1)
+        .collect();
+    for cut in offsets {
+        let truncated = &full[..cut];
+        let path = record_path.with_extension(format!("trunc-{cut}.log"));
+        fs::write(&path, truncated).expect("write truncated record");
+        let first = replay(&path).expect("replay truncated");
+        let second = replay(&path).expect("repeat replay");
+        assert_eq!(first, second, "replay must be identical for cut {cut}");
+        let terminal_present = truncated.ends_with(lines[3].trim_end());
+        assert_eq!(
+            first.complete, terminal_present,
+            "cut {cut}: complete exactly when the terminal line is fully present"
+        );
+        assert!(
+            first.events.len() <= 4,
+            "cut {cut}: at most the four authored tail events replay"
+        );
+        let _ = fs::remove_file(&path);
+    }
+}
+
+#[test]
+fn post_failure_evidence_survives_and_never_claims_success() {
+    let (_home, mut record, record_path, _actual_run_id) = fixture_record();
+    // The record already carries the invocation intent; append a repository
+    // intent, evidence, then a truncated terminal: the evidence replays, the
+    // run stays incomplete.
+    let repo = crate::lifecycle::event::JournalEvent::RepositoryIntent {
+        checkpoint: 1,
+        run_id: run_id(),
+        repository_id: "destination-a".to_owned(),
+        operation: Operation::Synchronize,
+        attempt: 1,
+    }
+    .render();
+    record
+        .append(repo.as_bytes())
+        .expect("append repository intent");
+    let evidence = crate::lifecycle::event::JournalEvent::Evidence {
+        checkpoint: 2,
+        run_id: run_id(),
+        repository_id: Some("destination-a".to_owned()),
+        evidence: crate::lifecycle::event::EvidenceRef::new(
+            crate::lifecycle::event::EvidenceKind::Git,
+            "target/evidence/push-evidence.log",
+            64,
+        )
+        .expect("bounded evidence"),
+    }
+    .render();
+    record.append(evidence.as_bytes()).expect("append evidence");
+    record
+        .append(b"{\"version\":1,\"checkpoint\":3,\"run_id\":\"")
+        .expect("append truncated terminal");
+    drop(record);
+
+    let result = replay(&record_path).expect("replay");
+    assert!(
+        !result.complete,
+        "truncated terminal must not claim success"
+    );
+    assert_eq!(result.events.len(), 3, "evidence replays with the prefix");
+    assert!(matches!(result.tail, TailStatus::Truncated { line: 4 }));
+    assert!(
+        result
+            .events
+            .iter()
+            .any(|event| matches!(event, JournalEvent::Evidence { .. })),
+        "evidence must survive the failure"
+    );
+}
