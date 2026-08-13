@@ -13,11 +13,14 @@ mod event;
 mod fleet_permits;
 mod invocation;
 mod journal;
+mod nested_permits;
+mod remote_push;
 mod remote_target;
 mod replace;
 mod replay;
 mod run_record;
 mod source_catalog;
+mod source_extraction;
 mod stages;
 mod transaction_evidence;
 

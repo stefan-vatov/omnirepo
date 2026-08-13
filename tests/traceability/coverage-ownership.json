@@ -69,6 +69,22 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/lifecycle/nested_permits.rs",
+      "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/remote_push.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/source_extraction.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/source/extraction.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/lifecycle/commit_journal.rs",
       "row_id": "behavior-git-delivery"
     },
