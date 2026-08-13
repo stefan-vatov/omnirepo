@@ -117,6 +117,18 @@
       "row_id": "behavior-configuration-authority"
     },
     {
+      "path": "src/managed_content/partial_scan.rs",
+      "row_id": "behavior-partial-section-sync"
+    },
+    {
+      "path": "src/managed_content/whole_file.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/preflight.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
       "path": "src/lifecycle/sync_plan.rs",
       "row_id": "behavior-source-materialization"
     },

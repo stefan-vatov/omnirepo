@@ -20,6 +20,7 @@ mod journal;
 mod nested_permits;
 mod plan_builder;
 mod plan_selection;
+mod preflight;
 mod push_reconcile;
 mod record_finalize;
 mod remote_push;

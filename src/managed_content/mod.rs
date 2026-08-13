@@ -2,7 +2,9 @@
 
 mod compare;
 mod delimiters;
+mod partial_scan;
 mod transaction;
+mod whole_file;
 
 pub(crate) use transaction::{TempCandidate, TransactionPlan};
 
