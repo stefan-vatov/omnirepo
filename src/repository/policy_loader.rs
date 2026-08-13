@@ -12,7 +12,8 @@
 #![allow(dead_code)]
 
 use super::policy::{
-    CommandPolicy, ManagedItemId, PolicyError, RepositoryPolicy, SchemaVersion, SelectionPolicy,
+    CommandPolicy, ManagedItemId, PolicyError, PolicyIdentity, RepositoryPolicy,
+    RepositoryPolicySnapshot, RepositoryPolicyState, SchemaVersion, SelectionPolicy,
     VerificationCommand,
 };
 use crate::configuration::{YValue, parse_yaml_subset};
@@ -297,4 +298,57 @@ fn load_ids(
             })
         })
         .collect()
+}
+
+/// Load the canonical policy as an immutable snapshot under the explicit
+/// truth-table state machine.  Absence stays absence; policy-invalid maps
+/// to `Invalid`; loader-level errors (alias, non-regular, competing, legacy,
+/// permission, malformed, unsupported version) stay typed errors and are
+/// never absence or fallback.
+pub fn load_policy_state(root: &Path) -> Result<RepositoryPolicyState, PolicyLoadError> {
+    let canonical = root.join(POLICY_FILE_NAME);
+    let (policy, content) = match load_policy(root)? {
+        PolicyPresence::Absent => return Ok(RepositoryPolicyState::Absent),
+        PolicyPresence::Present(policy) => {
+            // Re-read the exact bytes for the identity hash; the canonical
+            // file was already validated as regular and unaliased above.
+            let content = fs::read(&canonical).map_err(|error| PolicyLoadError::Permission {
+                path: canonical.clone(),
+                reason: error.to_string(),
+            })?;
+            (policy, content)
+        }
+    };
+    let identity = PolicyIdentity::from_bytes(content_identity(&content));
+    Ok(RepositoryPolicyState::present(identity, policy))
+}
+
+/// Stable deterministic content identity (FNV-1a 64 over the bytes, zero
+/// padded to the 32-byte identity).  Used to revalidate that a later read
+/// still observes the same policy file.
+fn content_identity(content: &[u8]) -> [u8; 32] {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in content {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    let mut identity = [0_u8; 32];
+    identity[..8].copy_from_slice(&hash.to_be_bytes());
+    identity
+}
+
+/// Load the canonical policy and freeze its snapshot identity for
+/// revalidation against a later observed identity.
+pub fn load_snapshot(root: &Path) -> Result<RepositoryPolicySnapshot, PolicyLoadError> {
+    match load_policy_state(root)? {
+        RepositoryPolicyState::Absent => Err(PolicyLoadError::NotRegular {
+            path: root.join(POLICY_FILE_NAME),
+        }),
+        RepositoryPolicyState::Present(snapshot) => Ok(snapshot),
+        RepositoryPolicyState::Invalid(error) => Err(PolicyLoadError::Invalid {
+            path: root.join(POLICY_FILE_NAME),
+            error,
+        }),
+        RepositoryPolicyState::Changed(_) => unreachable!("fresh load cannot observe a change"),
+    }
 }

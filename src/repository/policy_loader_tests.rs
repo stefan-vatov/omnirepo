@@ -5,7 +5,7 @@
 use super::policy::{CommandPolicy, RepositoryPolicy, SelectionPolicy};
 use super::policy_loader::{
     COMPETING_FILE_NAME, LEGACY_FILE_NAME, POLICY_FILE_NAME, PolicyLoadError, PolicyPresence,
-    load_policy,
+    load_policy, load_policy_state,
 };
 use std::{fs, path::Path};
 
@@ -202,4 +202,86 @@ fn repository_policy_never_grants_fleet_or_source_authority() {
     assert!(!rendered.contains("fleet"), "{rendered}");
     assert!(!rendered.contains("source"), "{rendered}");
     assert!(!rendered.contains("priority"), "{rendered}");
+}
+
+#[test]
+fn policy_state_maps_the_explicit_truth_table() {
+    let root = fixture_root();
+    // Absent stays absent.
+    assert_eq!(
+        load_policy_state(root.path()).expect("load"),
+        super::policy::RepositoryPolicyState::Absent
+    );
+    // Present with omitted selectors selects nothing.
+    write_policy(root.path(), "version: 1\n");
+    let state = load_policy_state(root.path()).expect("load");
+    let super::policy::RepositoryPolicyState::Present(snapshot) = state else {
+        panic!("expected present state");
+    };
+    assert!(snapshot.policy().selection().is_omitted());
+    assert!(snapshot.policy().selection().selects_nothing());
+    // Exclusion wins over allow.
+    write_policy(
+        root.path(),
+        "version: 1\nall: true\nallow: [docs]\nexclude: [docs]\n",
+    );
+    let state = load_policy_state(root.path()).expect("load");
+    let super::policy::RepositoryPolicyState::Present(snapshot) = state else {
+        panic!("expected present state");
+    };
+    let selection = snapshot.policy().selection();
+    assert!(selection.all());
+    assert_eq!(selection.allow().len(), 1);
+    assert_eq!(selection.exclude().len(), 1);
+    assert!(!selection.selects_nothing());
+    // Commands retain exact argv order and representation.
+    write_policy(
+        root.path(),
+        "version: 1\ncommands:\n  - [verify, --check]\n  - [git, status]\n",
+    );
+    let state = load_policy_state(root.path()).expect("load");
+    let super::policy::RepositoryPolicyState::Present(snapshot) = state else {
+        panic!("expected present state");
+    };
+    let commands = snapshot.policy().commands().as_slice().expect("commands");
+    assert_eq!(commands.len(), 2);
+    assert_eq!(commands[0].argv(), &["verify", "--check"]);
+    assert_eq!(commands[1].argv(), &["git", "status"]);
+    // No machine authority field is accepted.
+    write_policy(
+        root.path(),
+        "version: 1\nconcurrency:\n  max_repositories: 4\n",
+    );
+    let error = load_policy_state(root.path()).expect_err("machine field must fail");
+    assert!(
+        matches!(error, PolicyLoadError::Malformed { .. }),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn snapshot_identity_changes_with_content_and_revalidates() {
+    let root = fixture_root();
+    write_policy(root.path(), "version: 1\nall: true\n");
+    let first = load_policy_state(root.path()).expect("load");
+    let super::policy::RepositoryPolicyState::Present(first) = first else {
+        panic!("expected present");
+    };
+    first
+        .revalidate(first.identity())
+        .expect("same identity passes");
+
+    write_policy(root.path(), "version: 1\nall: false\n");
+    let second = load_policy_state(root.path()).expect("reload");
+    let super::policy::RepositoryPolicyState::Present(second) = second else {
+        panic!("expected present");
+    };
+    assert_ne!(first.identity(), second.identity());
+    assert!(
+        matches!(
+            first.revalidate(second.identity()),
+            Err(super::policy::PolicySnapshotError::Changed { .. })
+        ),
+        "changed content must fail revalidation"
+    );
 }

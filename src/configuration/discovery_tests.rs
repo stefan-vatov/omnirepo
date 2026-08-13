@@ -206,3 +206,80 @@ fn canonical_path_is_exact_and_never_scans() {
         home.path().join(CONFIG_DIRECTORY).join(CONFIG_FILE_NAME)
     );
 }
+
+#[test]
+fn unknown_and_destination_policy_fields_are_rejected() {
+    let home = fixture_home();
+    // Destination-policy and ad-hoc authority fields must never be accepted
+    // into machine authority.
+    for hostile in [
+        "version: 1\ndestinations:\n  - id: x\n",
+        "version: 1\ncommands:\n  - [verify]\n",
+        "version: 1\nall: true\n",
+        "version: 1\nad_hoc_source: https://example.com/x.git\n",
+    ] {
+        write_config(home.path(), hostile);
+        let error = discover(home.path()).expect_err("hostile field must fail");
+        assert!(
+            matches!(error, DiscoveryError::Malformed { .. }),
+            "hostile config {hostile:?} produced {error:?}"
+        );
+    }
+}
+
+#[test]
+fn duplicate_yaml_keys_are_rejected() {
+    let home = fixture_home();
+    write_config(home.path(), "version: 1\nversion: 2\n");
+    let error = discover(home.path()).expect_err("duplicate keys must fail");
+    assert!(
+        matches!(error, DiscoveryError::Malformed { .. }),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn cross_field_validation_is_typed_and_contextual() {
+    let home = fixture_home();
+    // Remote source without a cache root (cross-field rule).
+    write_config(
+        home.path(),
+        "version: 1\nsources:\n  - id: upstream\n    location: https://example.com/repo.git\n",
+    );
+    let error = discover(home.path()).expect_err("missing cache root must fail");
+    assert!(matches!(error, DiscoveryError::Invalid { .. }), "{error:?}");
+    let message = error.to_string();
+    assert!(
+        message.contains("remote sources require a machine cache root"),
+        "{message}"
+    );
+
+    // Concurrency above the machine ceiling.
+    write_config(
+        home.path(),
+        "version: 1\nconcurrency:\n  max_repositories: 33\n  max_child_work: 8\n",
+    );
+    let error = discover(home.path()).expect_err("over-limit concurrency must fail");
+    assert!(matches!(error, DiscoveryError::Invalid { .. }), "{error:?}");
+
+    // Repair attempts above the ceiling.
+    write_config(home.path(), "version: 1\nrepair:\n  max_attempts: 9\n");
+    let error = discover(home.path()).expect_err("over-limit repair must fail");
+    assert!(matches!(error, DiscoveryError::Invalid { .. }), "{error:?}");
+}
+
+#[test]
+fn repository_and_source_order_is_preserved_exactly() {
+    let home = fixture_home();
+    write_config(
+        home.path(),
+        "version: 1\nrepositories:\n  - id: zeta\n    path: /srv/z\n  - id: alpha\n    path: /srv/a\nsources:\n  - id: second\n    location: /srv/m2\n  - id: first\n    location: /srv/m1\n",
+    );
+    let Discovery::Present(config) = discover(home.path()).expect("valid config") else {
+        panic!("expected present config");
+    };
+    assert_eq!(config.repositories()[0].id().as_str(), "zeta");
+    assert_eq!(config.repositories()[1].id().as_str(), "alpha");
+    assert_eq!(config.sources()[0].id().as_str(), "second");
+    assert_eq!(config.sources()[1].id().as_str(), "first");
+}

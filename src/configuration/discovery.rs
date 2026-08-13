@@ -175,6 +175,20 @@ fn build_configuration(path: &Path, value: YValue) -> Result<MachineConfiguratio
         version: version_number,
     })?;
 
+    // The machine schema is closed: unknown fields — including any
+    // destination-policy or ad-hoc authority field — are rejected.
+    for (key, _) in &object {
+        if !matches!(
+            key.as_str(),
+            "version" | "repositories" | "sources" | "cache_root" | "concurrency" | "repair"
+        ) {
+            return Err(DiscoveryError::Malformed {
+                path: path.to_path_buf(),
+                reason: format!("unknown machine configuration field {key:?}"),
+            });
+        }
+    }
+
     let repositories = map_get(&object, "repositories")
         .map(|value| load_repositories(path, value))
         .transpose()?
