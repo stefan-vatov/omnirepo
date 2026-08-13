@@ -28,6 +28,26 @@ Every change must pass:
 All Cargo validation commands that resolve dependencies must use `--locked`,
 so validation fails rather than updating the committed lockfile.
 
+## Tracker discipline
+
+Beads are updated as they are worked. Every status change, evidence comment,
+and dependency change is recorded through `br` at the moment the work
+happens, never in a batch at the end. Tracker reads use `br` or the `bv`
+robot commands (`--robot-next`, `--robot-triage`, `--robot-plan`); they never
+depend on exported pages, cached viewer snapshots, or hand-edited copies of
+tracker data. When a read and a live `br`/`bv` query disagree, the live query
+wins and the stale source is discarded.
+
+## Agent collaboration
+
+Agents communicate exclusively through Agent Mail (`am`). Every message
+between coordinating and worker agents is sent and acknowledged through
+`am`; ad-hoc chat channels, unlogged file drops, and silent edits to shared
+files without a reservation are not coordination. Overlapping file edits are
+coordinated with `am file_reservations` before any write. Each worker's
+outcome is delivered as an `am` handoff message, never as an unrecorded
+side effect.
+
 ## Coverage
 
 Coverage is measured across the workspace, all targets, and all features with
