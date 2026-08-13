@@ -19,18 +19,27 @@ fn run_in_isolated_child(test_name: &str) -> bool {
     if std::env::var_os(CLOSED_DESCRIPTOR_CHILD).is_some() {
         return false;
     }
-    let status = Command::new(std::env::current_exe().expect("locate authority test binary"))
+    let output = Command::new(std::env::current_exe().expect("locate authority test binary"))
         .arg(test_name)
         .arg("--exact")
         .arg("--nocapture")
         .env(CLOSED_DESCRIPTOR_CHILD, "1")
-        .status()
+        .output()
         .expect("run isolated authority descriptor test");
+    let summary = String::from_utf8_lossy(&output.stdout);
     assert!(
-        status.success(),
-        "isolated authority test failed: {test_name}"
+        output.status.success() && summary.contains("1 passed"),
+        "isolated authority test must run exactly one test: {test_name}\n{summary}"
     );
     true
+}
+
+#[test]
+#[should_panic(expected = "must run exactly one test")]
+fn isolated_child_helper_fails_on_wrong_selection() {
+    run_in_isolated_child(
+        "platform::authority::tests::coverage_tests::revalidation::no_such_descriptor_test",
+    );
 }
 
 struct ClosedFile {
