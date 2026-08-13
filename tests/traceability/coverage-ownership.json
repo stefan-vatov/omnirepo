@@ -81,6 +81,18 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/lifecycle/scheduler.rs",
+      "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/push_reconcile.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/source/item_resolution.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/source/extraction.rs",
       "row_id": "behavior-source-materialization"
     },

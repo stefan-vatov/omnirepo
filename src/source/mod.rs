@@ -3,6 +3,7 @@
 mod acquisition;
 mod declarations;
 mod extraction;
+mod item_resolution;
 mod publish;
 mod snapshot;
 
@@ -11,6 +12,12 @@ pub(crate) use extraction::{
     ExtractedPayload, ExtractionError, PayloadKind, extract_payload, validate_locator,
 };
 pub(crate) use snapshot::{RevisionId, SourceId};
+
+#[cfg(test)]
+pub(crate) use item_resolution::{
+    CollisionKind, ItemDeclaration, ItemKind, LoserRef, ResolutionError, ResolvedItem,
+    resolve_items,
+};
 
 #[cfg(test)]
 pub(crate) use declarations::DECLARATION_VERSION;
@@ -26,6 +33,9 @@ mod declarations_tests;
 
 #[cfg(test)]
 mod extraction_tests;
+
+#[cfg(test)]
+mod item_resolution_tests;
 
 #[cfg(test)]
 mod publish_tests;
