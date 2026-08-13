@@ -2,6 +2,8 @@
 
 #![allow(dead_code)]
 
+mod adapters;
+mod admission;
 mod event;
 mod invocation;
 mod journal;

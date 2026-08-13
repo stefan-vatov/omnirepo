@@ -41,6 +41,18 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/repository/operation_tree.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/adapters.rs",
+      "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/admission.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
       "path": "src/lifecycle/run_record.rs",
       "row_id": "behavior-run-record"
     },
