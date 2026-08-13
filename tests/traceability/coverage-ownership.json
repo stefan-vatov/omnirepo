@@ -61,6 +61,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/source_catalog.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/lifecycle/commit_journal.rs",
       "row_id": "behavior-git-delivery"
     },
@@ -146,6 +150,10 @@
     },
     {
       "path": "src/source/acquisition.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/source/declarations.rs",
       "row_id": "behavior-source-materialization"
     },
     {

@@ -15,6 +15,7 @@ mod journal;
 mod replace;
 mod replay;
 mod run_record;
+mod source_catalog;
 mod stages;
 mod transaction_evidence;
 

@@ -71,6 +71,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/cancellation.rs",
         "src/lifecycle/agent_framing.rs",
         "src/lifecycle/commit_journal.rs",
+        "src/lifecycle/source_catalog.rs",
         "src/lifecycle/stages.rs",
         "src/lifecycle/transaction_evidence.rs",
         "src/lifecycle/run_record.rs",
@@ -91,6 +92,7 @@ fn product_package_contains_runtime_only_files() {
         "src/repository/state.rs",
         "src/source/mod.rs",
         "src/source/acquisition.rs",
+        "src/source/declarations.rs",
         "src/source/publish.rs",
         "src/source/snapshot.rs",
         // Cargo injects these two metadata files while packaging. They are
