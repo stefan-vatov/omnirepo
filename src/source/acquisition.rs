@@ -200,8 +200,13 @@ pub(crate) fn acquire_remote(
         }
     }
 
+    // A per-source lock serializes concurrent acquisitions of the same
+    // source: staging init, remote check, and fetch form one critical
+    // section, so peers converge instead of corrupting each other's staging.
+    let _guard = SourceLock::acquire(cache_root, source.id().as_str())?;
     ensure_staging_repo(&staging, url)?;
     let revision_text = fetch_with_retries(&staging, url, config)?;
+    drop(_guard);
     let revision = RevisionId::new(revision_text).map_err(AcquireError::Identity)?;
     let snapshot_id = SnapshotId::new("remote-snapshot").map_err(AcquireError::Identity)?;
     let cache = CacheKey::new(staging.display().to_string()).map_err(AcquireError::Identity)?;
@@ -482,4 +487,50 @@ fn redact_credentials(text: &str) -> String {
         index += character.len_utf8();
     }
     output
+}
+
+/// Bounded per-source acquisition lock: exclusive-create a lock file and
+/// retry with a short backoff until the peer releases it or the budget is
+/// exhausted.  Dropping the guard removes the lock.
+struct SourceLock {
+    path: PathBuf,
+}
+
+impl SourceLock {
+    fn acquire(cache_root: &Path, source_id: &str) -> Result<Self, AcquireError> {
+        let path = cache_root.join(format!(".{source_id}.lock"));
+        let deadline = Instant::now() + Duration::from_secs(30);
+        loop {
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(_) => return Ok(Self { path }),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    if Instant::now() >= deadline {
+                        return Err(AcquireError::Cache {
+                            reason: format!(
+                                "timed out waiting for the source lock {}",
+                                path.display()
+                            ),
+                        });
+                    }
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                Err(error) => {
+                    return Err(AcquireError::Io {
+                        path: path.clone(),
+                        reason: error.to_string(),
+                    });
+                }
+            }
+        }
+    }
+}
+
+impl Drop for SourceLock {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }

@@ -3,10 +3,12 @@
 #![allow(dead_code, unused_imports)]
 
 use super::acquisition::{AcquireConfig, AcquireError, acquire, acquire_remote};
+use super::publish::{PublishOutcome, publish};
 use super::snapshot::{RevisionId, SourceId, SourceIdentity};
 use crate::configuration::{
     AbsolutePath, SourceId as ConfigSourceId, SourceLocation, SourceReference,
 };
+use std::thread;
 use std::{fs, path::Path, path::PathBuf, process::Command};
 
 fn fixture_base() -> PathBuf {
@@ -307,4 +309,254 @@ fn git_text(root: &Path, args: &[&str]) -> String {
         .expect("stdout is UTF-8")
         .trim()
         .to_owned()
+}
+
+#[test]
+fn offline_first_fetch_is_typed_and_leaves_no_snapshot() {
+    let base = fixture_base();
+    let fixture = tempfile::Builder::new()
+        .prefix("acquire-offline-")
+        .tempdir_in(&base)
+        .expect("fixture");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    let url = "https://127.0.0.1:1/unreachable.git";
+    let identity = SourceIdentity::new(SourceId::new("upstream").expect("id"), url.to_owned())
+        .expect("identity");
+    let error = acquire_remote(&identity, url, &AcquireConfig::new(&cache))
+        .expect_err("offline fetch must fail");
+    assert!(
+        matches!(
+            error,
+            AcquireError::Network { .. } | AcquireError::Authentication { .. }
+        ),
+        "{error:?}"
+    );
+    // The fetch never succeeded: FETCH_HEAD may hold an error stub, but no
+    // revision may resolve from it — the staging is not authoritative.
+    let output = Command::new("git")
+        .args(["rev-parse", "--verify", "FETCH_HEAD^{commit}"])
+        .current_dir(cache.join("upstream"))
+        .output()
+        .expect("rev-parse");
+    assert!(!output.status.success(), "no revision may be pinned");
+}
+
+#[test]
+fn offline_refresh_fails_typed_and_previous_snapshot_remains_readable() {
+    let (fixture, _bare, url) = remote_fixture("acquire-refresh");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    let config = AcquireConfig::new(&cache);
+    let identity =
+        SourceIdentity::new(SourceId::new("upstream").expect("id"), url.clone()).expect("identity");
+    let first = acquire_remote(&identity, &url, &config).expect("first acquire");
+    // Publish the snapshot so readers have a pinned path.
+    let store = fixture.path().join("snapshots");
+    fs::create_dir_all(&store).expect("create store");
+    let staging = cache.join("upstream");
+    let outcome = publish(&staging, &identity, first.revision(), &store).expect("publish");
+    assert!(matches!(outcome, PublishOutcome::Published(_)));
+    let pinned = store.join("upstream").join(first.revision().as_str());
+    assert!(
+        pinned.is_dir(),
+        "readers pin the immutable snapshot directory"
+    );
+    let pinned_revision = git_text(&pinned, &["rev-parse", "--verify", "FETCH_HEAD^{commit}"]);
+    assert_eq!(
+        pinned_revision,
+        first.revision().as_str(),
+        "the exact revision is pinned"
+    );
+
+    // A refresh against an unreachable remote fails typed; the published
+    // snapshot stays readable (no silent promotion or stale-cache authority).
+    let offline_url = "https://127.0.0.1:1/unreachable.git";
+    let error = acquire_remote(&identity, offline_url, &config).expect_err("refresh fails");
+    assert!(
+        matches!(
+            error,
+            AcquireError::Network { .. } | AcquireError::Authentication { .. }
+        ),
+        "{error:?}"
+    );
+    assert_eq!(
+        git_text(&pinned, &["show", "FETCH_HEAD:remote.txt"]),
+        "remote authoritative"
+    );
+}
+
+#[test]
+fn unavailable_priority_source_is_retained_as_explicit_failure() {
+    let base = fixture_base();
+    let fixture = tempfile::Builder::new()
+        .prefix("acquire-priority-")
+        .tempdir_in(&base)
+        .expect("fixture");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    // A higher-priority source that cannot be acquired stays an explicit
+    // failure: no snapshot is produced and nothing is silently promoted.
+    let higher = SourceIdentity::new(
+        SourceId::new("higher").expect("id"),
+        "https://127.0.0.1:1/unreachable.git".to_owned(),
+    )
+    .expect("identity");
+    let error = acquire_remote(
+        &higher,
+        "https://127.0.0.1:1/unreachable.git",
+        &AcquireConfig::new(&cache),
+    )
+    .expect_err("unavailable higher source must fail");
+    assert!(matches!(error, AcquireError::Network { .. }), "{error:?}");
+    let output = Command::new("git")
+        .args(["rev-parse", "--verify", "FETCH_HEAD^{commit}"])
+        .current_dir(cache.join("higher"))
+        .output()
+        .expect("rev-parse");
+    assert!(!output.status.success(), "no revision may be pinned");
+    // The failure is explicit in the typed error, never a silent fallback.
+    assert!(!error.to_string().contains("lower"), "{error}");
+}
+
+#[test]
+fn hostile_source_mechanisms_never_execute_during_acquisition() {
+    let (fixture, _bare, url) = remote_fixture("acquire-hostile");
+    // Plant hostile mechanisms in the REMOTE (source-controlled) repository:
+    // a hook, an fsmonitor config, and a pager config.  Acquisition fetches
+    // with the explicit URL and sanitized environment, so none may execute.
+    let work = fixture.path().join("hostile-work");
+    let clone = Command::new("git")
+        .args(["clone", "--quiet", &url])
+        .arg(&work)
+        .output()
+        .expect("clone");
+    assert!(clone.status.success(), "clone failed: {clone:?}");
+    git(&work, &["config", "user.name", "Acquire"]);
+    git(&work, &["config", "user.email", "acquire@example.test"]);
+    // Pushed, source-controlled mechanisms: an executable hook and a filter
+    // attribute that would run on checkout.  The acquisition never checks
+    // out and never runs hooks, so neither may execute.
+    write(&work, "a.txt", "a\n");
+    fs::create_dir_all(work.join(".git/hooks")).expect("hooks dir");
+    fs::write(
+        work.join(".git/hooks/post-fetch"),
+        "#!/bin/sh\ntouch /tmp/omnirepo-hostile-hook-executed\n",
+    )
+    .expect("hook");
+    fs::write(work.join(".gitattributes"), "*.dat filter=hostile\n").expect("attributes");
+    fs::write(
+        work.join("evil-filter.sh"),
+        "#!/bin/sh\ntouch /tmp/omnirepo-hostile-filter-executed\n",
+    )
+    .expect("filter script");
+    git(
+        &work,
+        &["config", "filter.hostile.smudge", "evil-filter.sh"],
+    );
+    git(&work, &["config", "filter.hostile.clean", "cat"]);
+    git(&work, &["config", "filter.hostile.required", "true"]);
+    write(&work, "payload.dat", "smudged content\n");
+    git(&work, &["add", "."]);
+    git(&work, &["commit", "--quiet", "--message", "hostile"]);
+    // The worktree-local fsmonitor/pager configs are set only after the
+    // commit so the test itself never triggers them; they are not pushed.
+    fs::write(
+        work.join("evil-fsmonitor.sh"),
+        "#!/bin/sh\ntouch /tmp/omnirepo-hostile-fsmonitor-executed\n",
+    )
+    .expect("fsmonitor script");
+    fs::write(
+        work.join("evil-pager.sh"),
+        "#!/bin/sh\ntouch /tmp/omnirepo-hostile-pager-executed\n",
+    )
+    .expect("pager script");
+    git(&work, &["config", "core.fsmonitor", "evil-fsmonitor.sh"]);
+    git(&work, &["config", "pager.status", "evil-pager.sh"]);
+    for marker in [
+        "/tmp/omnirepo-hostile-hook-executed",
+        "/tmp/omnirepo-hostile-filter-executed",
+        "/tmp/omnirepo-hostile-fsmonitor-executed",
+        "/tmp/omnirepo-hostile-pager-executed",
+    ] {
+        let _ = fs::remove_file(marker);
+    }
+    let push = Command::new("git")
+        .args(["push", "--quiet", &url, "main"])
+        .current_dir(&work)
+        .output()
+        .expect("push");
+    assert!(push.status.success(), "push failed: {push:?}");
+
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    let identity =
+        SourceIdentity::new(SourceId::new("upstream").expect("id"), url.clone()).expect("identity");
+    let snapshot = acquire_remote(&identity, &url, &AcquireConfig::new(&cache)).expect("acquire");
+    assert_eq!(snapshot.source().id().as_str(), "upstream");
+    assert!(
+        !Path::new("/tmp/omnirepo-hostile-hook-executed").exists(),
+        "source-controlled hooks must not execute"
+    );
+    assert!(
+        !Path::new("/tmp/omnirepo-hostile-filter-executed").exists(),
+        "source-controlled filters must not execute"
+    );
+    assert!(
+        !Path::new("/tmp/omnirepo-hostile-fsmonitor-executed").exists(),
+        "source-controlled fsmonitor must not execute"
+    );
+    assert!(
+        !Path::new("/tmp/omnirepo-hostile-pager-executed").exists(),
+        "source-controlled pager must not execute"
+    );
+}
+
+#[test]
+fn concurrent_same_revision_acquisition_publishes_exactly_one_snapshot() {
+    let (fixture, _bare, url) = remote_fixture("acquire-concurrent");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    let store = fixture.path().join("snapshots");
+    fs::create_dir_all(&store).expect("create store");
+    let identity =
+        SourceIdentity::new(SourceId::new("upstream").expect("id"), url.clone()).expect("identity");
+    let config = AcquireConfig::new(&cache);
+
+    let handles: Vec<_> = (0..4)
+        .map(|_| {
+            let identity = identity.clone();
+            let url = url.clone();
+            let config = config.clone();
+            let cache = cache.clone();
+            let store = store.clone();
+            std::thread::spawn(move || {
+                let snapshot = acquire_remote(&identity, &url, &config).expect("acquire");
+                let staging = cache.join("upstream");
+                let outcome =
+                    publish(&staging, &identity, snapshot.revision(), &store).expect("publish");
+                (snapshot, outcome)
+            })
+        })
+        .collect();
+    let mut revisions = Vec::new();
+    let mut published = 0;
+    let mut reused = 0;
+    for handle in handles {
+        let (snapshot, outcome) = handle.join().expect("worker");
+        revisions.push(snapshot.revision().as_str().to_owned());
+        match outcome {
+            PublishOutcome::Published(_) => published += 1,
+            PublishOutcome::Reused(_) => reused += 1,
+        }
+    }
+    revisions.dedup();
+    assert_eq!(revisions.len(), 1, "all workers pin the same revision");
+    assert!(published >= 1, "exactly one publisher expected");
+    assert!(published + reused == 4, "every worker converges");
+    // Exactly one complete snapshot directory is authoritative.
+    let targets: Vec<_> = fs::read_dir(store.join("upstream"))
+        .expect("store")
+        .collect();
+    assert_eq!(targets.len(), 1, "exactly one complete snapshot");
 }
