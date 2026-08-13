@@ -238,6 +238,7 @@ pub enum JournalEvent {
         run_id: String,
         repository_id: Option<String>,
         evidence: EvidenceRef,
+        stage: Option<&'static str>,
     },
     Cancelled {
         checkpoint: Checkpoint,
@@ -317,12 +318,14 @@ impl JournalEvent {
                 run_id,
                 repository_id,
                 evidence,
+                stage,
                 ..
             } => Self::Evidence {
                 checkpoint,
                 run_id: run_id.clone(),
                 repository_id: repository_id.clone(),
                 evidence: evidence.clone(),
+                stage: *stage,
             },
             Self::Cancelled { run_id, .. } => Self::Cancelled {
                 checkpoint,
@@ -396,14 +399,18 @@ impl JournalEvent {
             Self::Evidence {
                 repository_id,
                 evidence,
+                stage,
                 ..
             } => {
                 let repository = repository_id
                     .as_ref()
                     .map(|id| format!(",\"repository_id\":\"{id}\""))
                     .unwrap_or_default();
+                let stage = stage
+                    .map(|label| format!(",\"stage\":\"{label}\""))
+                    .unwrap_or_default();
                 base(&format!(
-                    ",\"type\":\"evidence\",\"kind\":\"{}\"{repository},\"path\":\"{}\",\"bytes\":{}",
+                    ",\"type\":\"evidence\",\"kind\":\"{}\"{repository}{stage},\"path\":\"{}\",\"bytes\":{}",
                     evidence.kind.name(),
                     evidence.path,
                     evidence.bytes
@@ -482,11 +489,20 @@ impl JournalEvent {
                 let path = required_string(&fields, "path")?;
                 let bytes = required_number(&fields, "bytes")?;
                 let repository_id = field(&fields, "repository_id").map(str::to_owned);
+                let stage = field(&fields, "stage").map(str::to_owned);
+                let stage = match stage.as_deref() {
+                    None | Some("compare" | "write" | "publish" | "cleanup") => stage,
+                    Some(other) => {
+                        return Err(EventError::UnknownStage(other.to_owned()));
+                    }
+                };
+                let stage: Option<&'static str> = stage.as_deref().and_then(static_stage);
                 Ok(Self::Evidence {
                     checkpoint,
                     run_id,
                     repository_id,
                     evidence: EvidenceRef::new(kind, path, bytes)?,
+                    stage,
                 })
             }
             "cancelled" => Ok(Self::Cancelled { checkpoint, run_id }),
@@ -497,6 +513,17 @@ impl JournalEvent {
             }),
             other => Err(EventError::UnknownType(other.to_owned())),
         }
+    }
+}
+
+/// Map a validated evidence stage label to its static form.
+fn static_stage(label: &str) -> Option<&'static str> {
+    match label {
+        "compare" => Some("compare"),
+        "write" => Some("write"),
+        "publish" => Some("publish"),
+        "cleanup" => Some("cleanup"),
+        _ => None,
     }
 }
 

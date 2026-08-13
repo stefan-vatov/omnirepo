@@ -37,6 +37,10 @@
       "row_id": "behavior-whole-file-sync"
     },
     {
+      "path": "src/lifecycle/transaction_evidence.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
       "path": "src/lifecycle/run_record.rs",
       "row_id": "behavior-run-record"
     },

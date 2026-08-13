@@ -8,5 +8,6 @@ mod journal;
 mod replace;
 mod replay;
 mod run_record;
+mod transaction_evidence;
 
 pub(crate) use invocation::run_invocation;

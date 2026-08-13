@@ -83,6 +83,7 @@ fn every_variant_renders_and_parses_round_trip() {
                 128,
             )
             .expect("bounded evidence"),
+            stage: None,
         },
         JournalEvent::Cancelled {
             checkpoint: 5,
@@ -294,6 +295,7 @@ fn snapshot_and_evidence_require_a_running_run() {
             repository_id: None,
             evidence: EvidenceRef::new(EvidenceKind::Process, "target/evidence/run.log", 32)
                 .expect("bounded evidence"),
+            stage: None,
         },
     );
     record_ok(&mut log, &terminal(3, Outcome::Success));
@@ -305,6 +307,7 @@ fn snapshot_and_evidence_require_a_running_run() {
             repository_id: None,
             evidence: EvidenceRef::new(EvidenceKind::Process, "target/evidence/late.log", 32)
                 .expect("bounded evidence"),
+            stage: None,
         },
         "terminal run",
     );

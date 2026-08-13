@@ -247,6 +247,7 @@ fn crash_boundary_truncation_at_every_line_keeps_the_prefix_valid() {
                 128,
             )
             .expect("bounded evidence"),
+            stage: None,
         }
         .render(),
         terminal(4, Outcome::Success).render(),
@@ -312,6 +313,7 @@ fn post_failure_evidence_survives_and_never_claims_success() {
             64,
         )
         .expect("bounded evidence"),
+        stage: None,
     }
     .render();
     record.append(evidence.as_bytes()).expect("append evidence");

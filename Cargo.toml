@@ -46,6 +46,7 @@ exclude = [
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/replace/replace_tests.rs",
+    "src/lifecycle/transaction_evidence/transaction_evidence_tests.rs",
     "src/lifecycle/run_record/run_record_tests.rs",
     "cog.toml",
     "Cargo.toml.orig",
