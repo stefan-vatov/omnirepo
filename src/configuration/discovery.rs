@@ -221,6 +221,14 @@ fn build_configuration(path: &Path, value: YValue) -> Result<MachineConfiguratio
         )
         .expect("defaults are valid"),
         Some(YValue::Map(map)) => {
+            for (key, _) in map {
+                if !matches!(key.as_str(), "max_repositories" | "max_child_work") {
+                    return Err(DiscoveryError::Malformed {
+                        path: path.to_path_buf(),
+                        reason: format!("unknown concurrency field {key:?}"),
+                    });
+                }
+            }
             let max_repositories = map_get(map, "max_repositories")
                 .and_then(YValue::as_u64)
                 .ok_or_else(|| DiscoveryError::Malformed {
@@ -259,6 +267,14 @@ fn build_configuration(path: &Path, value: YValue) -> Result<MachineConfiguratio
         None => RepairControls::new(Vec::new(), super::DEFAULT_REPAIR_ATTEMPTS)
             .expect("defaults are valid"),
         Some(YValue::Map(map)) => {
+            for (key, _) in map {
+                if !matches!(key.as_str(), "priority" | "max_attempts") {
+                    return Err(DiscoveryError::Malformed {
+                        path: path.to_path_buf(),
+                        reason: format!("unknown repair field {key:?}"),
+                    });
+                }
+            }
             let priority = map_get(map, "priority")
                 .map(|value| {
                     let items = value.as_list().ok_or_else(|| DiscoveryError::Malformed {
@@ -338,6 +354,14 @@ fn load_repositories(
                     reason: "repository entries must be mappings".to_owned(),
                 });
             };
+            for (key, _) in map {
+                if !matches!(key.as_str(), "id" | "path" | "tags") {
+                    return Err(DiscoveryError::Malformed {
+                        path: path.to_path_buf(),
+                        reason: format!("unknown repository field {key:?}"),
+                    });
+                }
+            }
             let id = map_get(map, "id")
                 .and_then(YValue::as_str)
                 .ok_or_else(|| DiscoveryError::Malformed {
@@ -406,6 +430,14 @@ fn load_sources(path: &Path, value: &YValue) -> Result<Vec<SourceReference>, Dis
                     reason: "source entries must be mappings".to_owned(),
                 });
             };
+            for (key, _) in map {
+                if !matches!(key.as_str(), "id" | "location") {
+                    return Err(DiscoveryError::Malformed {
+                        path: path.to_path_buf(),
+                        reason: format!("unknown source field {key:?}"),
+                    });
+                }
+            }
             let id = map_get(map, "id")
                 .and_then(YValue::as_str)
                 .ok_or_else(|| DiscoveryError::Malformed {

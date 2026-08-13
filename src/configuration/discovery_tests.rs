@@ -283,3 +283,92 @@ fn repository_and_source_order_is_preserved_exactly() {
     assert_eq!(config.sources()[0].id().as_str(), "second");
     assert_eq!(config.sources()[1].id().as_str(), "first");
 }
+
+#[test]
+fn full_optional_surface_round_trips_without_loss() {
+    let home = fixture_home();
+    // Every optional field present: the loader must preserve all values and
+    // the declared order exactly.
+    write_config(
+        home.path(),
+        "version: 1\nrepositories:\n  - id: a\n    path: /srv/a\n    tags: [prod, edge]\n  - id: b\n    path: /srv/b\n    tags: []\nsources:\n  - id: mirror\n    location: /srv/mirror\n  - id: upstream\n    location: https://example.com/repo.git\ncache_root: /var/cache/omnirepo\nconcurrency:\n  max_repositories: 1\n  max_child_work: 64\nrepair:\n  priority: [claude-code, codex, pi]\n  max_attempts: 3\n",
+    );
+    let Discovery::Present(config) = discover(home.path()).expect("valid config") else {
+        panic!("expected present config");
+    };
+    assert_eq!(config.version().value(), 1);
+    assert_eq!(config.repositories().len(), 2);
+    assert_eq!(config.repositories()[0].tags().len(), 2);
+    assert_eq!(config.repositories()[0].tags()[1].as_str(), "edge");
+    assert!(config.repositories()[1].tags().is_empty());
+    assert_eq!(config.sources()[0].id().as_str(), "mirror");
+    assert_eq!(config.sources()[1].id().as_str(), "upstream");
+    assert_eq!(
+        config.cache_root().expect("cache").as_str(),
+        "/var/cache/omnirepo"
+    );
+    assert_eq!(config.concurrency().max_repositories(), 1);
+    assert_eq!(config.concurrency().max_child_work(), 64);
+    assert_eq!(config.repair().max_attempts(), 3);
+    assert_eq!(config.repair().priority().len(), 3);
+}
+
+#[test]
+fn schema_v1_compatibility_remains_stable() {
+    let home = fixture_home();
+    // The canonical v1 shape (the shape setup will write) parses as-is.
+    write_config(home.path(), "version: 1\nrepositories: []\nsources: []\n");
+    let Discovery::Present(config) = discover(home.path()).expect("v1 config") else {
+        panic!("expected present config");
+    };
+    assert!(config.repositories().is_empty());
+    assert!(config.sources().is_empty());
+    assert!(config.cache_root().is_none());
+}
+
+#[test]
+fn authority_negative_fixtures_fail_at_the_decided_stage() {
+    let home = fixture_home();
+    // Values outside every decided range and smuggled authority shapes must
+    // fail at parse/validation, never be normalized or accepted.
+    for hostile in [
+        "version: 1\nconcurrency:\n  max_repositories: 0\n  max_child_work: 8\n",
+        "version: 1\nconcurrency:\n  max_repositories: 4\n  max_child_work: 0\n",
+        "version: 1\nrepair:\n  max_attempts: 4\n",
+        "version: 1\ncache_root: relative/cache\n",
+        "version: 1\ncache_root: /var/cache/../escape\n",
+        "version: 1\nsources:\n  - id: bad\n    location: git://example.com/x.git\n",
+        "version: 1\nrepositories:\n  - id: a\n    path: /srv/a\n  - id: a\n    path: /srv/b\n",
+        "version: 1\nsources:\n  - id: a\n    location: /srv/m\n  - id: b\n    location: /srv/m\n",
+    ] {
+        write_config(home.path(), hostile);
+        let error = discover(home.path()).expect_err("hostile fixture must fail");
+        assert!(
+            matches!(
+                error,
+                DiscoveryError::Malformed { .. } | DiscoveryError::Invalid { .. }
+            ),
+            "hostile fixture {hostile:?} produced {error:?}"
+        );
+    }
+}
+
+#[test]
+fn no_fixture_grants_repository_local_or_ambient_authority() {
+    let home = fixture_home();
+    // Repository-local policy fields and ambient scanning shapes are never
+    // accepted into machine authority.
+    for hostile in [
+        "version: 1\nrepositories:\n  - id: a\n    path: /srv/a\n    commands:\n      - [verify]\n",
+        "version: 1\nsources:\n  - id: a\n    location: /srv/m\n    all: true\n",
+        "version: 1\nworking_directory: /srv\n",
+        "version: 1\nscan: true\n",
+    ] {
+        write_config(home.path(), hostile);
+        let error = discover(home.path()).expect_err("authority-smuggling fixture must fail");
+        assert!(
+            matches!(error, DiscoveryError::Malformed { .. }),
+            "fixture {hostile:?} produced {error:?}"
+        );
+    }
+}
