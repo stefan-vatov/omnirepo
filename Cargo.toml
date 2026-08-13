@@ -29,6 +29,8 @@ exclude = [
     "coverage",
     "tests",
     "src/configuration/unit_tests.rs",
+    "src/configuration/discovery_tests.rs",
+    "src/configuration/yaml_subset_tests.rs",
     "src/managed_content/transaction_tests.rs",
     "src/source/snapshot_tests.rs",
     "src/repository/policy_tests.rs",

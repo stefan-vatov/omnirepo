@@ -14,6 +14,15 @@ use std::{error::Error, fmt};
 #[cfg(test)]
 mod unit_tests;
 
+mod discovery;
+mod yaml_subset;
+
+#[cfg(test)]
+mod discovery_tests;
+
+#[cfg(test)]
+mod yaml_subset_tests;
+
 /// Constitutional synchronization surface. The owner-approved command tree
 /// (.27) is exactly `sync`, `setup`, and `validate`; there is no `migrate`
 /// command in the first constitutional release, and legacy general surfaces

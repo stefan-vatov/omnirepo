@@ -5,6 +5,14 @@
       "row_id": "behavior-configuration-authority"
     },
     {
+      "path": "src/configuration/discovery.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
+      "path": "src/configuration/yaml_subset.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
       "path": "src/lifecycle/mod.rs",
       "row_id": "behavior-run-record"
     },

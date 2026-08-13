@@ -56,6 +56,8 @@ fn product_package_contains_runtime_only_files() {
         "README.md",
         "src/main.rs",
         "src/configuration/mod.rs",
+        "src/configuration/discovery.rs",
+        "src/configuration/yaml_subset.rs",
         "src/lifecycle/mod.rs",
         "src/lifecycle/event.rs",
         "src/lifecycle/invocation.rs",
