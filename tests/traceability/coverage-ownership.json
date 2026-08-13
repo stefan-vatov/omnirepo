@@ -73,6 +73,10 @@
       "row_id": "behavior-repository-policy"
     },
     {
+      "path": "src/repository/policy_loader.rs",
+      "row_id": "behavior-repository-policy"
+    },
+    {
       "path": "src/repository/state.rs",
       "row_id": "failure-synchronization"
     },

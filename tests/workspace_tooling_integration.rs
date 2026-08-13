@@ -72,6 +72,7 @@ fn product_package_contains_runtime_only_files() {
         "src/repository/mod.rs",
         "src/repository/capture.rs",
         "src/repository/policy.rs",
+        "src/repository/policy_loader.rs",
         "src/repository/state.rs",
         "src/source/mod.rs",
         "src/source/snapshot.rs",

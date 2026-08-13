@@ -35,6 +35,7 @@ exclude = [
     "src/managed_content/compare_tests.rs",
     "src/source/snapshot_tests.rs",
     "src/repository/capture_tests.rs",
+    "src/repository/policy_loader_tests.rs",
     "src/repository/policy_tests.rs",
     "src/repository/state_tests.rs",
     "src/platform/authority/tests.rs",
