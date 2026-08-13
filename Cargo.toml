@@ -53,6 +53,7 @@ exclude = [
     "src/source/acquisition/acquisition_concurrency_tests.rs",
     "src/source/declarations_tests.rs",
     "src/lifecycle/source_catalog/source_catalog_tests.rs",
+    "src/lifecycle/remote_target/remote_target_tests.rs",
     "src/lifecycle/adapters/adapters_hostile_tests.rs",
     "src/lifecycle/admission/admission_concurrency_tests.rs",
     "src/lifecycle/agent_confinement/agent_confinement_tests.rs",

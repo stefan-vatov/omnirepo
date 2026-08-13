@@ -74,6 +74,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/source_catalog.rs",
         "src/lifecycle/stages.rs",
         "src/lifecycle/transaction_evidence.rs",
+        "src/lifecycle/remote_target.rs",
         "src/lifecycle/run_record.rs",
         "src/managed_content/mod.rs",
         "src/managed_content/compare.rs",

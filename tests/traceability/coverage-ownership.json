@@ -89,6 +89,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/remote_target.rs",
+      "row_id": "behavior-git-delivery"
+    },
+    {
       "path": "src/main.rs",
       "row_id": "command-sync"
     },

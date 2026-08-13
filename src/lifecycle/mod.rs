@@ -12,6 +12,7 @@ mod commit_journal;
 mod event;
 mod invocation;
 mod journal;
+mod remote_target;
 mod replace;
 mod replay;
 mod run_record;
