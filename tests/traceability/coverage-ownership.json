@@ -85,6 +85,10 @@
       "row_id": "behavior-source-materialization"
     },
     {
+      "path": "src/source/acquisition.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/source/snapshot.rs",
       "row_id": "behavior-source-materialization"
     }

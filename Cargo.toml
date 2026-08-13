@@ -33,6 +33,7 @@ exclude = [
     "src/configuration/yaml_subset_tests.rs",
     "src/managed_content/transaction_tests.rs",
     "src/managed_content/compare_tests.rs",
+    "src/source/acquisition_tests.rs",
     "src/source/snapshot_tests.rs",
     "src/repository/capture_tests.rs",
     "src/repository/policy_loader_tests.rs",
