@@ -285,3 +285,61 @@ fn snapshot_identity_changes_with_content_and_revalidates() {
         "changed content must fail revalidation"
     );
 }
+
+#[test]
+fn frozen_identity_detects_atomic_replacement() {
+    let root = fixture_root();
+    write_policy(root.path(), "version: 1\nall: true\n");
+    let state = load_policy_state(root.path()).expect("load");
+    let super::policy::RepositoryPolicyState::Present(snapshot) = state else {
+        panic!("expected present");
+    };
+    // An atomic replacement (rename over the canonical path) changes the
+    // content; the frozen identity must detect it.
+    let replacement = root.path().join("replacement.yaml");
+    fs::write(&replacement, "version: 1\nall: false\n").expect("write replacement");
+    fs::rename(&replacement, root.path().join(POLICY_FILE_NAME)).expect("replace");
+    let reloaded = load_policy_state(root.path()).expect("reload");
+    let super::policy::RepositoryPolicyState::Present(reloaded) = reloaded else {
+        panic!("expected present");
+    };
+    assert_ne!(snapshot.identity(), reloaded.identity());
+    assert!(
+        matches!(
+            snapshot.revalidate(reloaded.identity()),
+            Err(super::policy::PolicySnapshotError::Changed { .. })
+        ),
+        "atomic replacement must be detected by the frozen identity"
+    );
+}
+
+#[test]
+fn peers_load_independently_without_cross_contamination() {
+    let first_root = fixture_root();
+    let second_root = fixture_root();
+    // Peer one has an intentional policy; peer two has true absence.
+    write_policy(first_root.path(), "version: 1\nall: true\n");
+    let first_state = load_policy_state(first_root.path()).expect("peer one");
+    let second_state = load_policy_state(second_root.path()).expect("peer two");
+    assert!(matches!(
+        first_state,
+        super::policy::RepositoryPolicyState::Present(_)
+    ));
+    assert_eq!(second_state, super::policy::RepositoryPolicyState::Absent);
+    // Peer two's absence is not affected by peer one's presence or vice
+    // versa: each root resolves only its own canonical file.
+    assert!(!second_root.path().join(POLICY_FILE_NAME).exists());
+}
+
+#[test]
+fn present_invalid_policy_fails_the_repository_never_absence() {
+    let root = fixture_root();
+    write_policy(root.path(), "version: 1\nallow: [docs, docs]\n");
+    // Present-invalid is a typed failure of the load — never absence, never
+    // a silent fallback to inference.
+    let error = load_policy_state(root.path()).expect_err("present-invalid must fail");
+    assert!(
+        matches!(error, PolicyLoadError::Invalid { .. }),
+        "{error:?}"
+    );
+}
