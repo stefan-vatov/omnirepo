@@ -58,6 +58,8 @@ exclude = [
     "src/source/extraction_tests.rs",
     "src/lifecycle/scheduler/scheduler_tests.rs",
     "src/lifecycle/run_summary/run_summary_tests.rs",
+    "src/lifecycle/record_finalize/record_finalize_tests.rs",
+    "src/lifecycle/plan_selection/plan_selection_tests.rs",
     "src/lifecycle/sync_plan/sync_plan_tests.rs",
     "src/lifecycle/push_reconcile/push_reconcile_tests.rs",
     "src/source/item_resolution_tests.rs",

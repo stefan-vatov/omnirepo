@@ -89,6 +89,14 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/record_finalize.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/plan_selection.rs",
+      "row_id": "behavior-source-materialization"
+    },
+    {
       "path": "src/lifecycle/sync_plan.rs",
       "row_id": "behavior-source-materialization"
     },
