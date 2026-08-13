@@ -138,3 +138,6 @@ fn catalog_source(state: &CatalogState) -> Option<&SourceId> {
 
 #[cfg(test)]
 mod plan_builder_tests;
+
+#[cfg(test)]
+mod plan_fixture_tests;

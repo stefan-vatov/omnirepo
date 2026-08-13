@@ -12,6 +12,32 @@ use super::run_summary::{RepoOutcome, RunSummary, SummaryStatus};
 /// The machine projection schema.
 pub const PROJECTION_SCHEMA: &str = "omnirepo.terminal-projection.v1";
 
+/// Sanitize an identifier for projection: strip ANSI escape sequences and
+/// every control character (including newlines), so no injection or
+/// interleaving is possible.
+pub fn sanitize_id(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut in_escape = false;
+    for character in input.chars() {
+        if in_escape {
+            if ('@'..='~').contains(&character) {
+                in_escape = false;
+            }
+            continue;
+        }
+        if character == '\u{1b}' {
+            in_escape = true;
+            continue;
+        }
+        let code = character as u32;
+        if code < 0x20 || code == 0x7f {
+            continue;
+        }
+        output.push(character);
+    }
+    output
+}
+
 /// Render the human terminal projection.
 ///
 /// Success: zero or one concise line (decided by the caller via
@@ -47,7 +73,7 @@ pub fn render_human(
                 .repositories
                 .iter()
                 .filter_map(|entry| match &entry.outcome {
-                    RepoOutcome::Failure { .. } => Some(entry.repository.as_str()),
+                    RepoOutcome::Failure { .. } => Some(sanitize_id(&entry.repository)),
                     _ => None,
                 })
                 .collect::<Vec<_>>()
@@ -76,9 +102,10 @@ pub fn render_machine(summary: &RunSummary, record_available: bool) -> String {
             RepoOutcome::Failure { .. } => "failure",
             RepoOutcome::Cancelled => "cancelled",
         };
+        let repository = sanitize_id(&entry.repository);
+        let evidence = sanitize_id(&entry.evidence);
         out.push_str(&format!(
-            "{{\"repo\":\"{}\",\"outcome\":\"{outcome}\",\"evidence\":\"{}\"}}\n",
-            entry.repository, entry.evidence
+            "{{\"repo\":\"{repository}\",\"outcome\":\"{outcome}\",\"evidence\":\"{evidence}\"}}\n"
         ));
     }
     out
@@ -95,3 +122,6 @@ fn status_label(status: SummaryStatus) -> &'static str {
 
 #[cfg(test)]
 mod terminal_projection_tests;
+
+#[cfg(test)]
+mod summary_fixture_tests;

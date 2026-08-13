@@ -62,6 +62,8 @@ exclude = [
     "src/lifecycle/plan_selection/plan_selection_tests.rs",
     "src/lifecycle/terminal_projection/terminal_projection_tests.rs",
     "src/lifecycle/plan_builder/plan_builder_tests.rs",
+    "src/lifecycle/terminal_projection/summary_fixture_tests.rs",
+    "src/lifecycle/plan_builder/plan_fixture_tests.rs",
     "src/lifecycle/sync_plan/sync_plan_tests.rs",
     "src/lifecycle/push_reconcile/push_reconcile_tests.rs",
     "src/source/item_resolution_tests.rs",
