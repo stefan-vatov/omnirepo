@@ -4,4 +4,5 @@
 
 mod event;
 mod journal;
+mod replay;
 mod run_record;

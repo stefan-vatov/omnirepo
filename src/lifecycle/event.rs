@@ -506,6 +506,11 @@ impl EventLog {
         Self::default()
     }
 
+    /// True when the run reached a terminal or cancelled state.
+    pub(crate) fn is_terminal(&self) -> bool {
+        self.terminal || self.cancelled
+    }
+
     /// Accept one event, enforcing version, monotonic checkpoints, and the
     /// run/repository transition rules.  On error the log state is unchanged.
     pub fn record(&mut self, event: &JournalEvent) -> Result<(), EventError> {

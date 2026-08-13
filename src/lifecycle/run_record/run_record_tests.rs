@@ -104,7 +104,7 @@ fn creates_exclusive_private_versioned_intent_record() {
     let contents = fs::read_to_string(record.path()).expect("read JSONL intent");
     assert_eq!(
         contents,
-        "{\"version\":1,\"type\":\"run_intent\",\"run_id\":\"20250801T160000Z-000102030405060708090a0b0c0d0e0f\",\"created_at\":\"20250801T160000Z\",\"stage\":\"invocation\",\"status\":\"started\"}\n",
+        "{\"version\":1,\"checkpoint\":0,\"run_id\":\"20250801T160000Z-000102030405060708090a0b0c0d0e0f\",\"type\":\"run_intent\",\"stage\":\"invocation\",\"status\":\"started\"}\n",
         "the first JSONL record has stable field order and exact bytes"
     );
 }

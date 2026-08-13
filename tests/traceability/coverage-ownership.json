@@ -17,6 +17,10 @@
       "row_id": "behavior-run-record"
     },
     {
+      "path": "src/lifecycle/replay.rs",
+      "row_id": "behavior-run-record"
+    },
+    {
       "path": "src/lifecycle/run_record.rs",
       "row_id": "behavior-run-record"
     },

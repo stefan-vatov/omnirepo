@@ -326,9 +326,8 @@ fn map_create_error(path: &Path, error: PathError) -> RunRecordError {
 
 fn initial_intent_line(id: &RunId) -> String {
     format!(
-        "{{\"version\":{JOURNAL_VERSION},\"type\":\"run_intent\",\"run_id\":\"{}\",\"created_at\":\"{}\",\"stage\":\"invocation\",\"status\":\"started\"}}\n",
-        id,
-        id.timestamp()
+        "{{\"version\":{JOURNAL_VERSION},\"checkpoint\":0,\"run_id\":\"{}\",\"type\":\"run_intent\",\"stage\":\"invocation\",\"status\":\"started\"}}\n",
+        id
     )
 }
 
