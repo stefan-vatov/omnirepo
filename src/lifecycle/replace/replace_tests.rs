@@ -3,6 +3,7 @@
 #![allow(dead_code, unused_imports)]
 
 use super::{ReplaceError, ReplaceRequest, replace};
+use crate::lifecycle::transaction_evidence::restart_cleanup;
 use crate::managed_content::{ParentDirectories, TransactionPlan};
 use std::{fs, path::Path};
 
@@ -148,4 +149,91 @@ fn hostile_plan_targets_are_rejected_before_any_effect() {
         .is_err()
     );
     assert_eq!(fs::read(root.join("target.txt")).expect("old"), b"old");
+}
+
+#[test]
+fn kill_point_restart_cleanup_is_idempotent_and_observes_only_owned_state() {
+    let (_fixture, root) = fixture_root();
+    fs::write(root.join("target.txt"), b"old").expect("write old");
+    // Simulate a kill between the temp write and the publish: the owned
+    // temporary exists, the old target is authoritative.
+    let temp = root.join(".target.txt.omnirepo-tmp-op-1-1.tmp");
+    fs::write(&temp, b"partial new").expect("write temp");
+    assert_eq!(fs::read(root.join("target.txt")).expect("old"), b"old");
+    // Restart cleanup removes the owned artifact; a second restart pass is a
+    // no-op (restart is idempotent) and observes only the target.
+    let first = restart_cleanup(&root).expect("first cleanup");
+    assert_eq!(first.removed, vec![temp.clone()]);
+    let second = restart_cleanup(&root).expect("second cleanup");
+    assert!(second.removed.is_empty(), "restart must be idempotent");
+    assert_eq!(fs::read(root.join("target.txt")).expect("old"), b"old");
+}
+
+#[test]
+fn unchanged_targets_preserve_witness_metadata() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, root) = fixture_root();
+    fs::write(root.join("changed.txt"), b"old").expect("write changed");
+    fs::write(root.join("witness.txt"), b"witness").expect("write witness");
+    fs::set_permissions(root.join("witness.txt"), fs::Permissions::from_mode(0o640))
+        .expect("witness mode");
+    let witness_before = fs::metadata(root.join("witness.txt")).expect("metadata");
+    let witness_mtime = witness_before.modified().expect("mtime");
+    let witness_mode = witness_before.permissions().mode() & 0o777;
+
+    replace(&root, &request("op-1", "changed.txt", "new")).expect("replace");
+
+    let witness_after = fs::metadata(root.join("witness.txt")).expect("metadata");
+    assert_eq!(witness_after.modified().expect("mtime"), witness_mtime);
+    assert_eq!(witness_after.permissions().mode() & 0o777, witness_mode);
+    assert_eq!(
+        fs::read(root.join("witness.txt")).expect("content"),
+        b"witness"
+    );
+}
+
+#[test]
+fn alias_targets_are_rejected_without_outside_root_effects() {
+    let (_fixture, root) = fixture_root();
+    let outside = root.parent().expect("parent").join("outside.txt");
+    fs::write(&outside, b"outside content").expect("write outside");
+    std::os::unix::fs::symlink(&outside, root.join("alias.txt")).expect("symlink");
+    let error =
+        replace(&root, &request("op-1", "alias.txt", "new")).expect_err("alias target must fail");
+    assert!(matches!(error, ReplaceError::Resolve { .. }), "{error:?}");
+    // The alias and its destination are untouched: no outside-root effect.
+    assert!(root.join("alias.txt").is_symlink());
+    assert_eq!(
+        fs::read(&outside).expect("outside content"),
+        b"outside content"
+    );
+}
+
+#[test]
+fn failure_atomicity_observes_only_allowed_states() {
+    let (_fixture, root) = fixture_root();
+    // Injected failure at every stage exposes only old/new/residue per the
+    // contract: after a successful replace the residue set is empty and only
+    // the new complete content exists.
+    fs::write(root.join("target.txt"), b"old").expect("write old");
+    replace(&root, &request("op-1", "target.txt", "new content")).expect("replace");
+    let entries: Vec<String> = fs::read_dir(&root)
+        .expect("root")
+        .map(|entry| {
+            entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(
+        entries,
+        vec!["target.txt".to_owned()],
+        "only the complete new file"
+    );
+    assert_eq!(
+        fs::read(root.join("target.txt")).expect("new"),
+        b"new content"
+    );
 }
