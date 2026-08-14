@@ -97,6 +97,7 @@ exclude = [
     "src/lifecycle/release_build/release_build_tests.rs",
     "src/lifecycle/release_platform/release_platform_tests.rs",
     "src/lifecycle/release_verify/release_verify_tests.rs",
+    "src/lifecycle/release_trigger/release_trigger_tests.rs",
     "src/lifecycle/repair_fallback/repair_fallback_tests.rs",
     "src/lifecycle/repair_fold/repair_fold_tests.rs",
     "src/lifecycle/migration_decision/migration_decision_tests.rs",

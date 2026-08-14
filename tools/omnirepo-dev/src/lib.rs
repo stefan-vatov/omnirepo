@@ -12,6 +12,7 @@ pub mod planner;
 pub mod quality;
 pub mod test_suite;
 pub mod transition_matrix;
+pub mod trigger;
 pub mod viewer;
 
 #[cfg(test)]
@@ -66,6 +67,7 @@ where
         [command, rest @ ..] if command == "changed-coverage" => run_changed_coverage(rest),
         [command, rest @ ..] if command == "transition-matrix" => run_transition_matrix(rest),
         [command, rest @ ..] if command == "viewer" => run_viewer(rest),
+        [command, rest @ ..] if command == "trigger" => trigger::run_trigger(rest),
         [command, ..] => CommandOutput {
             stdout: String::new(),
             stderr: format!("omnirepo-dev: unsupported developer command: {command}\n"),

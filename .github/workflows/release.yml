@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Exact source SHA to release'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: exact-SHA release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Check out the exact SHA
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.inputs.commit || github.sha }}
+
+      - name: Install Rust 1.86
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - name: Verify the exact-SHA trigger
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- trigger
+          --repo-root . --tag "${{ github.ref_name }}" --commit "${{ github.event.inputs.commit || github.sha }}"
+
+      - name: Build the locked package
+        run: cargo package --locked --manifest-path Cargo.toml
+
+      - name: Build the platform bundle
+        run: cargo build --release --locked
