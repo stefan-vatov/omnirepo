@@ -52,6 +52,7 @@ mod repair_deliver;
 mod repair_delta;
 mod repair_execute;
 mod repair_fallback;
+mod repair_fold;
 mod repair_reapply;
 mod repair_reserve;
 mod repair_selection;
