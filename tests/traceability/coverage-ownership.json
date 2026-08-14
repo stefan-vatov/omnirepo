@@ -427,6 +427,10 @@
     {
       "path": "src/lifecycle/repair_delta.rs",
       "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/repair_reapply.rs",
+      "row_id": "behavior-repair-causation"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

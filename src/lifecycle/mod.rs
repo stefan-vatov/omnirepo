@@ -50,6 +50,7 @@ mod repair_causation;
 mod repair_classify;
 mod repair_delta;
 mod repair_execute;
+mod repair_reapply;
 mod repair_reserve;
 mod repair_snapshot;
 mod replace;

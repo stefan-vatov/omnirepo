@@ -13,6 +13,8 @@ mod transaction;
 mod whole_file;
 
 pub(crate) use compare::CompareOutcome;
+pub(crate) use delimiters::{DelimiterError, DelimiterSyntax, lookup_by_extension};
+pub(crate) use representation::{Representation, check_exact_representation};
 pub(crate) use transaction::{TempCandidate, TransactionPlan};
 
 #[cfg(test)]
