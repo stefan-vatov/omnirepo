@@ -57,6 +57,7 @@ mod fleet_declarations;
 mod fleet_fanout;
 mod fleet_generators;
 mod fleet_permits;
+mod fleet_planning;
 mod fleet_policy;
 mod fleet_profile;
 mod fleet_scenarios;

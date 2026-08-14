@@ -515,6 +515,10 @@
     {
       "path": "src/lifecycle/fleet_binding.rs",
       "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/lifecycle/fleet_planning.rs",
+      "row_id": "behavior-fleet-progress"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
