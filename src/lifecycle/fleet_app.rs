@@ -24,6 +24,9 @@ mod fleet_composition_tests;
 
 #[cfg(test)]
 mod fleet_pass_tests;
+
+#[cfg(test)]
+mod application_contract_tests;
 use std::{error::Error, fmt};
 
 /// The internal application request.
