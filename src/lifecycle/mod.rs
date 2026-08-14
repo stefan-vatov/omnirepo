@@ -97,6 +97,7 @@ mod release_build;
 mod release_gates;
 mod release_manifest;
 mod release_platform;
+mod release_publish;
 mod release_tag;
 mod release_trigger;
 mod release_verify;
