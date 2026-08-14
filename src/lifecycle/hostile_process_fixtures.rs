@@ -165,7 +165,9 @@ pub fn hostile_process_corpus() -> Vec<ProcessFixtureSpec> {
 }
 
 /// Materialize one process fixture as an executable script below the
-/// harness root.
+/// harness root.  The script is written to a temporary name first and
+/// renamed into place, so a concurrent exec never sees a half-written
+/// file (ETXTBSY).
 pub fn materialize_process(
     fixture: &ProcessFixtureSpec,
     root: &Path,
@@ -176,23 +178,28 @@ pub fn materialize_process(
             path: target.display().to_string(),
         });
     }
-    fs::write(&target, fixture.script).map_err(|error| FixtureError::Io {
-        path: target.clone(),
+    let temporary = root.join(format!(".{}.tmp-{}", fixture.name, std::process::id()));
+    fs::write(&temporary, fixture.script).map_err(|error| FixtureError::Io {
+        path: temporary.clone(),
         reason: error.to_string(),
     })?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let metadata = fs::metadata(&target).map_err(|error| FixtureError::Io {
-            path: target.clone(),
+        let metadata = fs::metadata(&temporary).map_err(|error| FixtureError::Io {
+            path: temporary.clone(),
             reason: error.to_string(),
         })?;
         let mut permissions = metadata.permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions(&target, permissions).map_err(|error| FixtureError::Io {
-            path: target.clone(),
+        fs::set_permissions(&temporary, permissions).map_err(|error| FixtureError::Io {
+            path: temporary.clone(),
             reason: error.to_string(),
         })?;
     }
+    fs::rename(&temporary, &target).map_err(|error| FixtureError::Io {
+        path: target.clone(),
+        reason: error.to_string(),
+    })?;
     Ok(target)
 }
