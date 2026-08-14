@@ -73,6 +73,7 @@ exclude = [
     "src/lifecycle/fleet_binding/fleet_binding_tests.rs",
     "src/lifecycle/fleet_policy/fleet_policy_tests.rs",
     "src/lifecycle/fleet_planning/fleet_planning_tests.rs",
+    "src/lifecycle/fleet_composition/fleet_composition_tests.rs",
     "src/lifecycle/fleet_snapshot/fleet_snapshot_tests.rs",
     "src/lifecycle/fleet_app/fleet_composition_tests.rs",
     "src/lifecycle/fleet_app/fleet_pass_tests.rs",

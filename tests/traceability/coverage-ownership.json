@@ -523,6 +523,10 @@
     {
       "path": "src/lifecycle/fleet_snapshot.rs",
       "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/fleet_composition.rs",
+      "row_id": "behavior-fleet-progress"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
