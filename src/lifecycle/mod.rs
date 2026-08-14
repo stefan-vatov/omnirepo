@@ -49,6 +49,7 @@ mod fleet_collector;
 mod fleet_fanout;
 mod fleet_generators;
 mod fleet_permits;
+mod fleet_profile;
 mod fleet_scenarios;
 mod git_delivery;
 mod hostile_fixtures;

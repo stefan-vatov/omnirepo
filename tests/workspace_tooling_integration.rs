@@ -62,6 +62,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/event.rs",
         "src/lifecycle/fleet_permits.rs",
         "src/lifecycle/fleet_scenarios.rs",
+        "src/lifecycle/fleet_profile.rs",
         "src/lifecycle/fleet_generators.rs",
         "src/lifecycle/initial_pass.rs",
         "src/lifecycle/initial_sync.rs",
