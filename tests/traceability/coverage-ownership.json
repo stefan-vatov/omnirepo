@@ -499,6 +499,10 @@
     {
       "path": "src/lifecycle/output_guard.rs",
       "row_id": "command-sync"
+    },
+    {
+      "path": "src/lifecycle/fleet_catalog.rs",
+      "row_id": "behavior-source-materialization"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

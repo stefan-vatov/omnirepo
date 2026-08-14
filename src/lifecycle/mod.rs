@@ -50,6 +50,7 @@ mod diagnostics;
 mod event;
 mod exit_status;
 mod fleet_app;
+mod fleet_catalog;
 mod fleet_collector;
 mod fleet_fanout;
 mod fleet_generators;

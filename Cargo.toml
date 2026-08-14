@@ -68,6 +68,7 @@ exclude = [
     "src/lifecycle/platform_acceptance_tests.rs",
     "src/lifecycle/process_acceptance_tests.rs",
     "src/lifecycle/fleet_app/fleet_app_tests.rs",
+    "src/lifecycle/fleet_catalog/fleet_catalog_tests.rs",
     "src/lifecycle/fleet_app/fleet_composition_tests.rs",
     "src/lifecycle/fleet_app/fleet_pass_tests.rs",
     "src/lifecycle/fleet_app/application_contract_tests.rs",

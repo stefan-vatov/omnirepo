@@ -73,6 +73,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/fleet_fanout.rs",
         "src/lifecycle/fleet_collector.rs",
         "src/lifecycle/fleet_app.rs",
+        "src/lifecycle/fleet_catalog.rs",
         "src/lifecycle/repair_causation.rs",
         "src/lifecycle/repair_reserve.rs",
         "src/lifecycle/repair_snapshot.rs",
