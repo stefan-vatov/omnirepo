@@ -415,6 +415,10 @@
     {
       "path": "src/lifecycle/repair_reserve.rs",
       "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/repair_snapshot.rs",
+      "row_id": "behavior-repair-causation"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
