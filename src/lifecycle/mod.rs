@@ -9,6 +9,9 @@ mod admission;
 mod authority_integration_tests;
 
 #[cfg(test)]
+mod release_fixture_tests;
+
+#[cfg(test)]
 mod release_update_tests;
 
 #[cfg(test)]

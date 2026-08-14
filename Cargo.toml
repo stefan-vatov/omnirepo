@@ -164,6 +164,7 @@ exclude = [
     "src/lifecycle/agent_confinement/agent_confinement_tests.rs",
     "src/lifecycle/authority_integration_tests.rs",
     "src/lifecycle/authority_seam_tests.rs",
+    "src/lifecycle/release_fixture_tests.rs",
     "src/lifecycle/release_update_tests.rs",
     "src/lifecycle/setup_fixture_tests.rs",
     "src/lifecycle/agent_runtime/agent_runtime_tests.rs",
