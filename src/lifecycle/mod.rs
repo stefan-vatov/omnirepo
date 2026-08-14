@@ -52,6 +52,7 @@ mod exit_status;
 mod fleet_app;
 mod fleet_catalog;
 mod fleet_collector;
+mod fleet_declarations;
 mod fleet_fanout;
 mod fleet_generators;
 mod fleet_permits;
