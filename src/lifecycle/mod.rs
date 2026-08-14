@@ -8,6 +8,9 @@ mod admission;
 mod authority_integration_tests;
 
 #[cfg(test)]
+mod fleet_regression_tests;
+
+#[cfg(test)]
 mod process_acceptance_tests;
 
 #[cfg(test)]

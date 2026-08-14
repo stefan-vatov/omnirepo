@@ -61,6 +61,7 @@ exclude = [
     "src/lifecycle/fleet_fanout/fleet_fanout_tests.rs",
     "src/lifecycle/fleet_collector/fleet_collector_tests.rs",
     "src/lifecycle/fleet_fixture_tests.rs",
+    "src/lifecycle/fleet_regression_tests.rs",
     "src/lifecycle/hostile_acceptance_tests.rs",
     "src/lifecycle/evidence_hostile_tests.rs",
     "src/lifecycle/platform_acceptance_tests.rs",
