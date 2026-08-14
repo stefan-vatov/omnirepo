@@ -94,6 +94,7 @@ mod preflight;
 mod push_reconcile;
 mod record_finalize;
 mod release_build;
+mod release_gates;
 mod release_manifest;
 mod release_platform;
 mod release_trigger;

@@ -127,7 +127,7 @@ pub fn exact_identity(manifest: &CandidateManifest) -> String {
     )
 }
 
-fn content_hash(manifest: &CandidateManifest) -> String {
+pub(crate) fn content_hash(manifest: &CandidateManifest) -> String {
     let mut state = 0xcbf2_9ce4_8422_2325_u64;
     let mut absorb = |bytes: &[u8]| {
         for byte in bytes {

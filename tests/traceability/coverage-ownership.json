@@ -583,6 +583,10 @@
     {
       "path": "src/lifecycle/release_trigger.rs",
       "row_id": "behavior-packaging"
+    },
+    {
+      "path": "src/lifecycle/release_gates.rs",
+      "row_id": "behavior-packaging"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
