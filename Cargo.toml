@@ -136,6 +136,7 @@ exclude = [
     "src/lifecycle/admission/admission_concurrency_tests.rs",
     "src/lifecycle/agent_confinement/agent_confinement_tests.rs",
     "src/lifecycle/authority_integration_tests.rs",
+    "src/lifecycle/authority_seam_tests.rs",
     "src/lifecycle/agent_runtime/agent_runtime_tests.rs",
     "src/lifecycle/cancellation/cancellation_tests.rs",
     "src/lifecycle/command_spec/command_spec_tests.rs",
