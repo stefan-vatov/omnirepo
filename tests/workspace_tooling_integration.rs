@@ -71,6 +71,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/fleet_app.rs",
         "src/lifecycle/repair_causation.rs",
         "src/lifecycle/repair_reserve.rs",
+        "src/lifecycle/repair_fixture_tests.rs",
         "src/lifecycle/repair_classify.rs",
         "src/lifecycle/fleet_fixture_tests.rs",
         "src/lifecycle/verify_and_gate.rs",

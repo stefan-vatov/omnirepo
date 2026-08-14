@@ -8,6 +8,9 @@ mod admission;
 mod authority_integration_tests;
 
 #[cfg(test)]
+mod repair_fixture_tests;
+
+#[cfg(test)]
 mod fleet_fixture_tests;
 
 #[cfg(test)]
