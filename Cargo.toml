@@ -81,6 +81,7 @@ exclude = [
     "src/lifecycle/lifecycle_model/lifecycle_model_tests.rs",
     "src/lifecycle/model_generation/model_generation_tests.rs",
     "src/lifecycle/model_property_suite/model_property_suite_tests.rs",
+    "src/lifecycle/hostile_fixtures/hostile_fixtures_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/admission/admission_tests.rs",

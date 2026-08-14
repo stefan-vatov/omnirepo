@@ -34,6 +34,7 @@ mod fleet_collector;
 mod fleet_fanout;
 mod fleet_permits;
 mod git_delivery;
+mod hostile_fixtures;
 mod initial_pass;
 mod initial_sync;
 mod invocation;

@@ -463,6 +463,10 @@
     {
       "path": "src/lifecycle/model_property_suite.rs",
       "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/hostile_fixtures.rs",
+      "row_id": "behavior-containment"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
