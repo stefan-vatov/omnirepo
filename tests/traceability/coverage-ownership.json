@@ -1,6 +1,22 @@
 {
   "entries": [
     {
+      "path": "src/repository/state/state_tests_b.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/state_tests_a.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/managed_content/transaction/transaction_tests_b.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/managed_content/transaction/transaction_tests_a.rs",
+      "row_id": "behavior-verification"
+    },
+    {
       "path": "src/configuration/mod.rs",
       "row_id": "behavior-configuration-authority"
     },

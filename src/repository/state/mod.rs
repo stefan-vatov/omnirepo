@@ -46,3 +46,8 @@ pub(crate) use targets::{
     DirtyProvenance, EntryKind, FileIdentity, IndexEntry, IndexState, ManagedOwnership,
     ManagedTargetIdentity, TargetChange, WorktreeEntry, WorktreeState,
 };
+
+#[cfg(test)]
+mod state_tests_a;
+#[cfg(test)]
+mod state_tests_b;

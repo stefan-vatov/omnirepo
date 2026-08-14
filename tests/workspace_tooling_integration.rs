@@ -174,10 +174,8 @@ fn product_package_contains_runtime_only_files() {
     assert!(unexpected.is_empty(), "{package_message}");
     for path in [
         "src/configuration/unit_tests.rs",
-        "src/managed_content/transaction_tests.rs",
         "src/source/snapshot_tests.rs",
         "src/repository/policy_tests.rs",
-        "src/repository/state_tests.rs",
     ] {
         assert!(
             !listing.iter().any(|entry| entry == path),
