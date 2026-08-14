@@ -9,6 +9,7 @@
 #![allow(dead_code)]
 
 use crate::lifecycle::fleet_collector::MemberResult;
+use crate::lifecycle::fleet_fanout::RepoResult;
 use crate::lifecycle::plan_selection::Policy;
 use crate::lifecycle::repository_preflight::{RepoPreflight, preflight_repositories};
 use crate::lifecycle::sync_plan::PlanItem;
@@ -20,6 +21,9 @@ mod fleet_app_tests;
 
 #[cfg(test)]
 mod fleet_composition_tests;
+
+#[cfg(test)]
+mod fleet_pass_tests;
 use std::{error::Error, fmt};
 
 /// The internal application request.
@@ -229,6 +233,65 @@ fn catalog_source(state: &CatalogState) -> Option<&SourceId> {
         | CatalogState::Shadowed { source, .. }
         | CatalogState::Unavailable { source, .. } => Some(source),
     }
+}
+
+/// Run the composed fleet pass: lease admission per repository, bounded
+/// scheduling, and the injected per-repository runner.  No repository is
+/// named by this composition — the lease check and the runner are
+/// injected, so the pass has no repository-specific coupling.  A
+/// lease-denied repository is accounted as failed, never dropped.
+pub fn run_fleet_pass(
+    run_id: &str,
+    items: &[WorkItem],
+    limit: usize,
+    lease_check: &mut dyn FnMut(&str) -> bool,
+    runner: impl Fn(&WorkItem) -> RepoResult + Send + Sync + 'static,
+) -> Result<FleetResponse, ResponseError> {
+    if items.is_empty() {
+        return Err(ResponseError::EmptyResults);
+    }
+    // Lease admission: a denied repository is accounted as failed.
+    let mut admitted = Vec::new();
+    let mut ordered: Vec<(usize, MemberResult)> = Vec::new();
+    for (position, item) in items.iter().enumerate() {
+        let repository = match item {
+            WorkItem::Run { repository, .. } => repository.clone(),
+            WorkItem::Skip { repository, .. } => repository.clone(),
+        };
+        if lease_check(&repository) {
+            admitted.push((position, item.clone()));
+        } else {
+            ordered.push((
+                position,
+                MemberResult::Failed {
+                    repository,
+                    reason: "lease denied".to_owned(),
+                },
+            ));
+        }
+    }
+    // Bounded scheduling over the admitted items with the injected
+    // runner, then collect every result.
+    let admitted_items: Vec<WorkItem> = admitted.iter().map(|(_, item)| item.clone()).collect();
+    let report = crate::lifecycle::fleet_fanout::fan_out(&admitted_items, limit, runner);
+    for (run_position, result) in report.results.into_iter().enumerate() {
+        let (declared_position, _) = admitted[run_position];
+        let member = match result {
+            RepoResult::Delivered { repository, oid } => {
+                MemberResult::Delivered { repository, oid }
+            }
+            RepoResult::Failed { repository, reason } => {
+                MemberResult::Failed { repository, reason }
+            }
+            RepoResult::Skipped { repository, reason } => {
+                MemberResult::Skipped { repository, reason }
+            }
+        };
+        ordered.push((declared_position, member));
+    }
+    ordered.sort_by_key(|(position, _)| *position);
+    let results: Vec<MemberResult> = ordered.into_iter().map(|(_, member)| member).collect();
+    finalize_response(run_id, results, Vec::new())
 }
 
 /// Finalize the response: every initial result and the frozen repair
