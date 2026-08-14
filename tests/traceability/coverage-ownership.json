@@ -347,6 +347,10 @@
     {
       "path": "src/source/snapshot.rs",
       "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/lifecycle/command_spec.rs",
+      "row_id": "behavior-verification"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
