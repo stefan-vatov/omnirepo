@@ -45,6 +45,7 @@ mod fleet_app;
 mod fleet_collector;
 mod fleet_fanout;
 mod fleet_permits;
+mod fleet_scenarios;
 mod git_delivery;
 mod hostile_fixtures;
 mod hostile_process_fixtures;
