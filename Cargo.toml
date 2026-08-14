@@ -52,6 +52,7 @@ exclude = [
     "src/platform/authority/tests.rs",
     "src/platform/authority/tests/",
     "src/lifecycle/event/event_tests.rs",
+    "src/lifecycle/exit_status/exit_status_tests.rs",
     "src/lifecycle/initial_pass/initial_pass_tests.rs",
     "src/lifecycle/initial_sync/initial_sync_tests.rs",
     "src/lifecycle/verify_and_gate/verify_and_gate_tests.rs",

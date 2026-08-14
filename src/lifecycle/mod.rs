@@ -48,6 +48,7 @@ mod commit_journal;
 mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
+mod exit_status;
 mod fleet_app;
 mod fleet_collector;
 mod fleet_fanout;

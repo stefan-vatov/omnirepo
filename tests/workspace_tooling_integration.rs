@@ -60,6 +60,7 @@ fn product_package_contains_runtime_only_files() {
         "src/configuration/yaml_subset.rs",
         "src/lifecycle/mod.rs",
         "src/lifecycle/event.rs",
+        "src/lifecycle/exit_status.rs",
         "src/lifecycle/fleet_permits.rs",
         "src/lifecycle/fleet_scenarios.rs",
         "src/lifecycle/fleet_profile.rs",

@@ -491,6 +491,10 @@
     {
       "path": "src/lifecycle/acceptance_journeys.rs",
       "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/exit_status.rs",
+      "row_id": "command-sync"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
