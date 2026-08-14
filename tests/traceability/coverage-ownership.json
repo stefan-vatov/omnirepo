@@ -439,6 +439,10 @@
     {
       "path": "src/lifecycle/repair_selection.rs",
       "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/repair_fallback.rs",
+      "row_id": "behavior-repair-causation"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

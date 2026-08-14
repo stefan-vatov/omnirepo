@@ -76,6 +76,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/repair_reapply.rs",
         "src/lifecycle/repair_deliver.rs",
         "src/lifecycle/repair_selection.rs",
+        "src/lifecycle/repair_fallback.rs",
         "src/lifecycle/repair_execute.rs",
         "src/lifecycle/repair_fixture_tests.rs",
         "src/lifecycle/repair_classify.rs",
