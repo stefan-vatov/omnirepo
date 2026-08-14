@@ -117,17 +117,16 @@ fn legacy_and_migrate_commands_are_rejected_with_exit_two() {
 }
 
 #[test]
-fn constitutional_commands_fail_closed_until_the_lifecycle_lands() {
+fn sync_is_an_empty_fleet_success_until_a_machine_authority_exists() {
     let (home, workspace) = make_supported_home_and_workspace();
     // sync is a fleet run: it creates the durable record at the invocation
-    // boundary, records the failed dispatch, and exits with the invocation
-    // class until the application service lands.
+    // boundary; with no machine authority the fleet is empty, which is a
+    // success (the .27 contract) with a quiet stdout.
     let output = command(home.path(), workspace.path())
         .arg("sync")
         .assert()
-        .code(2)
-        .stderr(predicate::str::contains("sync failed"))
-        .stderr(predicate::str::contains("not available in this build"))
+        .code(0)
+        .stdout(predicate::str::is_empty())
         .stderr(predicate::str::contains("recorded at"));
     let stderr = String::from_utf8(output.get_output().stderr.clone()).expect("stderr is UTF-8");
     let records = fs::read_dir(home.path().join(".omnirepo/runs"))
@@ -159,12 +158,12 @@ fn constitutional_commands_fail_closed_until_the_lifecycle_lands() {
 }
 
 #[test]
-fn sync_record_is_durable_and_replays_as_a_complete_failed_run() {
+fn sync_record_is_durable_and_replays_as_a_complete_success_run() {
     let (home, workspace) = make_supported_home_and_workspace();
     command(home.path(), workspace.path())
         .arg("sync")
         .assert()
-        .code(2);
+        .code(0);
     let runs = home.path().join(".omnirepo/runs");
     let entries: Vec<std::path::PathBuf> = fs::read_dir(&runs)
         .expect("runs directory")
@@ -178,7 +177,7 @@ fn sync_record_is_durable_and_replays_as_a_complete_failed_run() {
     assert!(lines[0].contains("\"type\":\"run_intent\""), "{content}");
     assert!(lines[1].contains("\"checkpoint\":1"), "{content}");
     assert!(lines[1].contains("\"type\":\"terminal\""), "{content}");
-    assert!(lines[1].contains("\"outcome\":\"failed\""), "{content}");
+    assert!(lines[1].contains("\"outcome\":\"success\""), "{content}");
 }
 
 #[test]
@@ -204,14 +203,12 @@ fn output_json_flag_is_global_and_invalid_values_exit_two() {
     command(home.path(), workspace.path())
         .args(["--output", "json", "sync"])
         .assert()
-        .code(2)
-        .stderr(predicate::str::contains("not available in this build"));
+        .code(0);
     // Global flag after the subcommand.
     command(home.path(), workspace.path())
         .args(["sync", "--output", "json"])
         .assert()
-        .code(2)
-        .stderr(predicate::str::contains("not available in this build"));
+        .code(0);
     // Invalid value is an invocation error and creates no record.
     command(home.path(), workspace.path())
         .args(["--output", "bogus", "sync"])

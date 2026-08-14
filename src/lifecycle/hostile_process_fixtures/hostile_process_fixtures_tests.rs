@@ -112,6 +112,19 @@ fn run_with_retry(path: &Path, cwd: &Path) -> std::io::Result<std::process::Exit
     }
 }
 
+fn output_with_retry(path: &Path, cwd: &Path) -> std::io::Result<std::process::Output> {
+    let mut attempt = 0;
+    loop {
+        match Command::new(path).current_dir(cwd).output() {
+            Err(error) if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempt < 3 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(10 * attempt));
+            }
+            result => return result,
+        }
+    }
+}
+
 #[test]
 fn the_verifier_garbage_script_emits_bounded_garbage_to_stdout() {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -126,10 +139,7 @@ fn the_verifier_garbage_script_emits_bounded_garbage_to_stdout() {
         .find(|entry| entry.kind == ProcessFixtureKind::VerifierGarbage)
         .expect("garbage fixture");
     let path = materialize_process(garbage, fixture.path()).expect("materialize");
-    let output = Command::new(&path)
-        .current_dir(fixture.path())
-        .output()
-        .expect("run");
+    let output = output_with_retry(&path, fixture.path()).expect("run");
     assert!(
         !output.stdout.is_empty(),
         "the garbage verifier floods stdout"

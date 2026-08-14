@@ -17,6 +17,7 @@ mod unit_tests;
 mod discovery;
 mod yaml_subset;
 
+pub(crate) use discovery::{Discovery, discover};
 pub(crate) use yaml_subset::{YValue, parse_yaml_subset};
 
 #[cfg(test)]

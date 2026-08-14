@@ -14,8 +14,12 @@
 use super::event::{JournalEvent, Outcome};
 use super::journal::{Journal, JournalConfig, JournalHandle};
 use super::run_record::{RunRecord, RunRecordError};
-use crate::configuration::Command;
-use std::{error::Error, fmt, path::PathBuf};
+use crate::configuration::{Command, Discovery, discover};
+use std::{
+    error::Error,
+    fmt,
+    path::{Path, PathBuf},
+};
 
 /// Canonical application dispatch failure.
 #[derive(Debug)]
@@ -78,9 +82,10 @@ fn run_sync() -> u8 {
     let run_id = record.id().to_string();
     let record_path = record.path().to_path_buf();
     let mut journal = Journal::start(record, JournalConfig::default());
-    // Dispatch exactly one canonical initial application service.  The fleet
-    // slices (.68/.69) fill this seam; until then it fails closed.
-    let outcome = dispatch_application(&journal.handle);
+    // Dispatch exactly one canonical initial application service: an
+    // absent machine authority is an empty fleet, which is a success
+    // (the .27 contract); a configured fleet fails closed typed.
+    let outcome = dispatch_application(&journal.handle, &run_id, &home);
     let terminal = match outcome {
         Ok(()) => Outcome::Success,
         Err(_) => Outcome::Failed,
@@ -117,9 +122,23 @@ fn run_sync() -> u8 {
 
 /// The canonical initial application dispatch seam: exactly one service per
 /// fleet invocation, reached only after the run record exists and the
-/// journal is accepting events.
-fn dispatch_application(_journal: &JournalHandle) -> Result<(), ApplicationError> {
-    Err(ApplicationError::Unavailable)
+/// journal is accepting events.  An absent machine authority is an
+/// empty fleet (success per .27); a configured fleet fails closed typed
+/// without ambient scanning until the fleet composition lands.
+fn dispatch_application(
+    journal: &JournalHandle,
+    run_id: &str,
+    home: &Path,
+) -> Result<(), ApplicationError> {
+    let _ = (journal, run_id);
+    let discovery = discover(home).map_err(|_error| ApplicationError::Unavailable)?;
+    match discovery {
+        // Absent machine authority: the empty-fleet success contract.
+        Discovery::Absent => Ok(()),
+        // A configured fleet composes and runs the fleet pass in the
+        // application service; until then it fails closed typed.
+        Discovery::Present(_config) => Err(ApplicationError::Unavailable),
+    }
 }
 
 /// Resolve the canonical configuration home without ambient scanning.

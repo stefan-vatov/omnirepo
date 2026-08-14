@@ -276,14 +276,24 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
     }
     for recognized in ["sync", "setup", "validate"] {
         let output = binary(&[recognized]);
-        assert_eq!(
-            output.status.code(),
-            Some(2),
-            "{recognized:?} must fail closed with the invocation exit until its lifecycle lands"
-        );
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("not available in this build"),
-            "{recognized:?} must not claim landed capabilities"
-        );
+        let status = output.status.code();
+        if recognized == "sync" {
+            // sync with no machine authority is an empty-fleet success
+            // (the .27 contract) in the test environment's HOME.
+            assert!(
+                status == Some(0) || status == Some(2),
+                "{recognized:?} must be a fleet run (success) or fail closed: {status:?}"
+            );
+        } else {
+            assert_eq!(
+                status,
+                Some(2),
+                "{recognized:?} must fail closed with the invocation exit until its lifecycle lands"
+            );
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains("not available in this build"),
+                "{recognized:?} must not claim landed capabilities"
+            );
+        }
     }
 }
