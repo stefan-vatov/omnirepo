@@ -53,6 +53,7 @@ mod model_property_suite;
 mod nested_permits;
 mod plan_builder;
 mod plan_selection;
+mod platform_matrix;
 mod preflight;
 mod push_reconcile;
 mod record_finalize;

@@ -1,0 +1,102 @@
+//! Focused proof for the owner-selected supported-platform matrix.
+//!
+//! STRICT TDD: this test file was written and run RED before the
+//! implementation existed.
+
+#![allow(dead_code, unused_imports)]
+
+use crate::lifecycle::platform_matrix::{
+    Filesystem, GateKind, Os, PlatformError, PlatformJob, Toolchain, capability_supported,
+    claim_platform, supported_platform_matrix, unsupported_cases,
+};
+
+#[test]
+fn every_supported_platform_runs_the_required_locked_gates_on_rust_1_86() {
+    let matrix = supported_platform_matrix();
+    assert!(!matrix.is_empty());
+    for job in &matrix {
+        assert_eq!(job.toolchain, Toolchain::Rust186);
+        assert!(job.required.contains(&GateKind::Tests), "{job:?}");
+        assert!(job.required.contains(&GateKind::Docs), "{job:?}");
+        assert!(job.required.contains(&GateKind::Locked), "{job:?}");
+        assert!(
+            job.required.contains(&GateKind::Quality),
+            "the repository-owned quality command is used: {job:?}"
+        );
+        assert!(capability_supported(job.os, job.filesystem), "{job:?}");
+    }
+}
+
+#[test]
+fn the_owner_selected_os_filesystem_pairs_are_declared_exactly() {
+    let matrix = supported_platform_matrix();
+    let pairs = matrix
+        .iter()
+        .map(|job| (job.os, job.filesystem))
+        .collect::<std::collections::BTreeSet<_>>();
+    assert!(
+        pairs.contains(&(Os::Linux, Filesystem::ExtFamily)),
+        "{pairs:?}"
+    );
+    assert!(pairs.contains(&(Os::Mac, Filesystem::Apfs)), "{pairs:?}");
+    assert_eq!(pairs.len(), 2, "no invented platform is claimed: {pairs:?}");
+}
+
+#[test]
+fn unsupported_cases_fail_closed_and_are_explicitly_omitted_from_jobs() {
+    let matrix = supported_platform_matrix();
+    for case in unsupported_cases() {
+        assert!(
+            !capability_supported(case.os, case.filesystem),
+            "{case:?} must fail closed"
+        );
+        assert!(
+            !matrix
+                .iter()
+                .any(|job| job.os == case.os && job.filesystem == case.filesystem),
+            "the unsupported case must be omitted from jobs: {case:?}"
+        );
+    }
+    // Windows and network filesystems are the documented unsupported set.
+    let unsupported = unsupported_cases();
+    assert!(
+        unsupported.iter().any(|case| case.os == Os::Windows),
+        "{unsupported:?}"
+    );
+    assert!(
+        unsupported
+            .iter()
+            .any(|case| case.filesystem == Filesystem::Network),
+        "{unsupported:?}"
+    );
+}
+
+#[test]
+fn claiming_an_unsupported_or_invented_platform_fails_typed() {
+    assert!(capability_supported(Os::Linux, Filesystem::ExtFamily));
+    assert!(!capability_supported(Os::Windows, Filesystem::Network));
+    assert!(!capability_supported(Os::Linux, Filesystem::Network));
+    assert!(matches!(
+        claim_platform(Os::Windows, Filesystem::Network),
+        Err(PlatformError::Unsupported { .. })
+    ));
+    assert!(claim_platform(Os::Linux, Filesystem::ExtFamily).is_ok());
+    assert!(claim_platform(Os::Mac, Filesystem::Apfs).is_ok());
+}
+
+#[test]
+fn cache_isolation_and_job_identity_are_explicit() {
+    let matrix = supported_platform_matrix();
+    let identities = matrix
+        .iter()
+        .map(|job| job.cache_key())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(
+        identities.len(),
+        matrix.len(),
+        "each job has its own cache key"
+    );
+    for job in &matrix {
+        assert!(!job.cache_key().is_empty());
+    }
+}

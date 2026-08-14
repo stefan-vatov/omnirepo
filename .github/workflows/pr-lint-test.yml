@@ -78,3 +78,38 @@ jobs:
           --manifest-path tools/omnirepo-dev/Cargo.toml -- quality
           --manifest scripts/quality-manifest.json --repo-root .
           --profile msrv --json
+
+  macos-quality:
+    name: repository quality manifest on macOS (APFS)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Rust 1.86
+        uses: dtolnay/rust-toolchain@1.86.0
+
+      - name: Cache Rust build artifacts (isolated per OS)
+        uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Install pre-commit
+        run: python -m pip install --disable-pip-version-check 'pre-commit==4.3.0'
+
+      - name: Run aggregate quality manifest on macOS
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- quality
+          --manifest scripts/quality-manifest.json --repo-root .
+          --profile msrv --json
+
+      - name: Run the repository test suite on macOS
+        run: >-
+          cargo run --quiet --locked
+          --manifest-path tools/omnirepo-dev/Cargo.toml -- test
+          --manifest scripts/test-suite-manifest.json --repo-root .
+          --full --jobs 2 --artifacts target/omnirepo-test-artifacts --json
+        env:
+          RUSTFLAGS: "-D warnings"

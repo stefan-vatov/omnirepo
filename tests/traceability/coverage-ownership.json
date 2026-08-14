@@ -471,6 +471,10 @@
     {
       "path": "src/lifecycle/hostile_process_fixtures.rs",
       "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/lifecycle/platform_matrix.rs",
+      "row_id": "behavior-setup"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

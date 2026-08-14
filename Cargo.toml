@@ -83,6 +83,7 @@ exclude = [
     "src/lifecycle/lifecycle_model/lifecycle_model_tests.rs",
     "src/lifecycle/model_generation/model_generation_tests.rs",
     "src/lifecycle/model_property_suite/model_property_suite_tests.rs",
+    "src/lifecycle/platform_matrix/platform_matrix_tests.rs",
     "src/lifecycle/hostile_fixtures/hostile_fixtures_tests.rs",
     "src/lifecycle/hostile_process_fixtures/hostile_process_fixtures_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",

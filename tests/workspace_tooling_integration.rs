@@ -118,6 +118,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/plan_selection.rs",
         "src/lifecycle/terminal_projection.rs",
         "src/lifecycle/plan_builder.rs",
+        "src/lifecycle/platform_matrix.rs",
         "src/managed_content/delimiters.rs",
         "src/lifecycle/replacement_requests.rs",
         "src/lifecycle/diagnostics.rs",
