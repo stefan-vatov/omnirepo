@@ -379,6 +379,10 @@
     {
       "path": "src/lifecycle/verify_and_gate.rs",
       "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/lifecycle/git_delivery.rs",
+      "row_id": "behavior-git-delivery"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

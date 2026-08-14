@@ -24,6 +24,7 @@ mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
 mod fleet_permits;
+mod git_delivery;
 mod initial_pass;
 mod initial_sync;
 mod invocation;
