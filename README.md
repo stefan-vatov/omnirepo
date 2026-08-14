@@ -54,9 +54,7 @@ surface in the first constitutional release.
    failure, `3` partial fleet failure, `4` every selected repository
    failed, `5` durable-record failure, `130` user cancellation.
 
-See [the quickstart](docs/quickstart.md) for a complete walkthrough and
-[docs/breaking-guidance.md](docs/breaking-guidance.md) for what changed
-from earlier releases.
+See [the quickstart](docs/quickstart.md) for a complete walkthrough, [docs/breaks-inventory.md](docs/breaks-inventory.md) for what changed from earlier releases, and [docs/breaking-guidance.md](docs/breaking-guidance.md) for the actionable migration guidance.
 
 ## Installation
 

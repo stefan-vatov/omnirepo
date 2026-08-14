@@ -5,10 +5,10 @@ edition = "2024"
 rust-version = "1.86"
 authors = ["Stefan Vatov"]
 license = "MIT"
-description = "A command-line tool for managing multiple Git repositories."
+description = "Constitutional synchronization: converge managed files and sections from ordered sources into declared destinations, unattended and byte-exact."
 repository = "https://github.com/stefan-vatov/omnirepo"
 readme = "README.md"
-keywords =["repository", "cli", "terminal"]
+keywords = ["synchronization", "cli", "convergence", "constitution"]
 exclude = [
     "target",
     ".cargo",
