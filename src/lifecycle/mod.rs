@@ -51,5 +51,6 @@ mod terminal_projection;
 mod transaction_evidence;
 mod verification_gate;
 mod verifier_confinement;
+mod verify_and_gate;
 
 pub(crate) use invocation::run_invocation;

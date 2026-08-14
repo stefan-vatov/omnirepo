@@ -375,6 +375,10 @@
     {
       "path": "src/lifecycle/initial_sync.rs",
       "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/verify_and_gate.rs",
+      "row_id": "behavior-verification"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

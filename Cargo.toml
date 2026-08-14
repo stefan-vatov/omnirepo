@@ -54,6 +54,7 @@ exclude = [
     "src/lifecycle/event/event_tests.rs",
     "src/lifecycle/initial_pass/initial_pass_tests.rs",
     "src/lifecycle/initial_sync/initial_sync_tests.rs",
+    "src/lifecycle/verify_and_gate/verify_and_gate_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/admission/admission_tests.rs",
