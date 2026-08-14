@@ -169,7 +169,8 @@ pub fn ci_job_names() -> Vec<&'static str> {
 
 /// Render the concise support/evidence report from the declared matrix
 /// (the single source of truth).  The committed report must match this
-/// rendering exactly.
+/// rendering exactly.  The format is the canonical pretty JSON
+/// (2-space indent) that the repository formatter enforces.
 pub fn platform_evidence() -> String {
     let mut lines = vec![
         "{".to_owned(),
@@ -181,14 +182,20 @@ pub fn platform_evidence() -> String {
     for (index, job) in matrix.iter().enumerate() {
         let comma = if index + 1 < matrix.len() { "," } else { "" };
         let jobs = match job.os {
-            Os::Linux => "[\"quality\", \"msrv\"]",
-            Os::Mac => "[\"macos-quality\"]",
-            Os::Windows => "[]",
+            Os::Linux => vec!["quality", "msrv"],
+            Os::Mac => vec!["macos-quality"],
+            Os::Windows => Vec::new(),
         };
         lines.push(format!(
-            "    {{\"os\": \"{:?}\", \"filesystem\": \"{:?}\", \"jobs\": {jobs}, \"cache\": \"{}\"}}{comma}",
-            job.os,
-            job.filesystem,
+            "    {{\n      \"os\": \"{:?}\",\n      \"filesystem\": \"{:?}\",\n      \"jobs\": [",
+            job.os, job.filesystem
+        ));
+        for (job_index, name) in jobs.iter().enumerate() {
+            let job_comma = if job_index + 1 < jobs.len() { "," } else { "" };
+            lines.push(format!("        \"{name}\"{job_comma}"));
+        }
+        lines.push(format!(
+            "      ],\n      \"cache\": \"{}\"\n    }}{comma}",
             job.cache_key()
         ));
     }
@@ -201,7 +208,7 @@ pub fn platform_evidence() -> String {
             ""
         };
         lines.push(format!(
-            "    {{\"os\": \"{:?}\", \"filesystem\": \"{:?}\", \"policy\": \"fail-closed\"}}{comma}",
+            "    {{\n      \"os\": \"{:?}\",\n      \"filesystem\": \"{:?}\",\n      \"policy\": \"fail-closed\"\n    }}{comma}",
             case.os, case.filesystem
         ));
     }

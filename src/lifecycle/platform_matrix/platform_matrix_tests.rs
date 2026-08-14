@@ -107,16 +107,19 @@ fn cache_isolation_and_job_identity_are_explicit() {
 fn rendered_evidence_matches_the_committed_support_report() {
     use crate::lifecycle::platform_matrix::platform_evidence;
     // The evidence is rendered from the declared matrix (the single
-    // source of truth); the committed report must match it exactly —
-    // missing or extra matrix entries fail here.
+    // source of truth); the committed report must be semantically
+    // identical — missing or extra matrix entries fail here.
     let rendered = platform_evidence();
     let committed = std::fs::read_to_string(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/traceability/platform-evidence.json"),
     )
     .expect("committed evidence");
+    let rendered_value: yaml_serde::Value =
+        yaml_serde::from_str(&rendered).expect("rendered evidence parses");
+    let committed_value: yaml_serde::Value =
+        yaml_serde::from_str(&committed).expect("committed evidence parses");
     assert_eq!(
-        committed.trim(),
-        rendered.trim(),
+        rendered_value, committed_value,
         "the committed support report drifted from the declared matrix"
     );
 }
