@@ -11,17 +11,13 @@ mod revalidate;
 mod state;
 
 pub(crate) use capture::capture_state;
-pub(crate) use git_index::IsolatedIndex;
+pub(crate) use git_index::{IsolatedIndex, prepare_index};
+pub(crate) use manifest::{PlannedOperation, build_authorized_delta};
 pub(crate) use operation_commit::{CommitError, RecordedCommit, create_commit};
 pub(crate) use state::{
-    GitRepositoryState, HeadState, RefName, RepositoryId, RevisionId, UpstreamState,
+    GitRepositoryState, HeadState, RefName, RepositoryId, RepositorySnapshot, RevisionId,
+    UpstreamState,
 };
-
-#[cfg(test)]
-pub(crate) use git_index::prepare_index;
-
-#[cfg(test)]
-pub(crate) use manifest::{PlannedOperation, build_authorized_delta};
 
 #[cfg(test)]
 pub(crate) use state::AuthorizedDelta;
@@ -30,7 +26,7 @@ pub(crate) use state::AuthorizedDelta;
 pub(crate) use state::{
     AuthorityIdentity, CheckWitness, EntryKind, FileIdentity, FilesystemClass, FilesystemIdentity,
     FrozenWitnesses, GitFacts, IndexState, ManagedTargetIdentity, ObjectIdentity, RelativePath,
-    RepositoryFacts, RepositoryRoot, RepositorySnapshot, WorktreeState,
+    RepositoryFacts, RepositoryRoot, WorktreeState,
 };
 
 #[cfg(test)]

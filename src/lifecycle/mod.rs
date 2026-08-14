@@ -44,6 +44,7 @@ mod repository_preflight;
 mod run_record;
 mod run_summary;
 mod scheduler;
+mod single_repo_pass;
 mod source_catalog;
 mod source_extraction;
 mod stages;

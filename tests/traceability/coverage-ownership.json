@@ -383,6 +383,10 @@
     {
       "path": "src/lifecycle/git_delivery.rs",
       "row_id": "behavior-git-delivery"
+    },
+    {
+      "path": "src/lifecycle/single_repo_pass.rs",
+      "row_id": "behavior-fleet-progress"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
