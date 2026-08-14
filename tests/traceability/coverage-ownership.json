@@ -137,6 +137,38 @@
       "row_id": "behavior-git-delivery"
     },
     {
+      "path": "src/managed_content/transaction/artifact.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/candidates.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/errors.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/mod.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/plan.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/recovery.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/state.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/managed_content/transaction/transaction.rs",
+      "row_id": "behavior-containment"
+    },
+    {
       "path": "src/lifecycle/repository_preflight.rs",
       "row_id": "behavior-configuration-authority"
     },
@@ -202,10 +234,6 @@
     },
     {
       "path": "src/managed_content/mod.rs",
-      "row_id": "behavior-partial-section-sync"
-    },
-    {
-      "path": "src/managed_content/transaction.rs",
       "row_id": "behavior-partial-section-sync"
     },
     {
