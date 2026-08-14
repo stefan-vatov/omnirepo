@@ -60,6 +60,7 @@ fn valid_peers_finish_through_their_own_roots() {
         fs::create_dir_all(&working).expect("working");
         let git = |dir: &Path, args: &[&str]| {
             let output = Command::new("git")
+                .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
                 .args(args)
                 .current_dir(dir)
                 .output()
@@ -93,6 +94,7 @@ fn valid_peers_finish_through_their_own_roots() {
         git(&working, &["add", "."]);
         git(&working, &["commit", "--quiet", "--message", "base"]);
         let base_oid = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(["rev-parse", "HEAD"])
             .current_dir(&working)
             .output()

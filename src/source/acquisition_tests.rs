@@ -21,6 +21,7 @@ fn fixture_base() -> PathBuf {
 
 fn git(root: &Path, args: &[&str]) {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -170,6 +171,7 @@ fn remote_fixture(name: &str) -> (tempfile::TempDir, PathBuf, String) {
     git(&work, &["add", "."]);
     git(&work, &["commit", "--quiet", "--message", "base"]);
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["init", "--quiet", "--bare", "-b", "main"])
         .arg(&bare)
         .output()
@@ -177,6 +179,7 @@ fn remote_fixture(name: &str) -> (tempfile::TempDir, PathBuf, String) {
     assert!(output.status.success(), "bare init failed");
     let url = format!("file://{}", bare.display());
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["push", "--quiet", &url, "main"])
         .current_dir(&work)
         .output()
@@ -226,6 +229,7 @@ fn wrong_remote_cache_is_discarded_and_recloned() {
     // Advance the remote with a second commit (cloned so history is shared).
     let work = fixture.path().join("work2");
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["clone", "--quiet", &url])
         .arg(&work)
         .output()
@@ -237,6 +241,7 @@ fn wrong_remote_cache_is_discarded_and_recloned() {
     git(&work, &["add", "."]);
     git(&work, &["commit", "--quiet", "--message", "second"]);
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["push", "--quiet", &url, "main"])
         .current_dir(&work)
         .output()
@@ -302,6 +307,7 @@ fn credentials_are_never_logged_in_failures() {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -337,6 +343,7 @@ fn offline_first_fetch_is_typed_and_leaves_no_snapshot() {
     // The fetch never succeeded: FETCH_HEAD may hold an error stub, but no
     // revision may resolve from it — the staging is not authoritative.
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "--verify", "FETCH_HEAD^{commit}"])
         .current_dir(cache.join("upstream"))
         .output()
@@ -412,6 +419,7 @@ fn unavailable_priority_source_is_retained_as_explicit_failure() {
     .expect_err("unavailable higher source must fail");
     assert!(matches!(error, AcquireError::Network { .. }), "{error:?}");
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "--verify", "FETCH_HEAD^{commit}"])
         .current_dir(cache.join("higher"))
         .output()
@@ -429,6 +437,7 @@ fn hostile_source_mechanisms_never_execute_during_acquisition() {
     // with the explicit URL and sanitized environment, so none may execute.
     let work = fixture.path().join("hostile-work");
     let clone = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["clone", "--quiet", &url])
         .arg(&work)
         .output()
@@ -484,6 +493,7 @@ fn hostile_source_mechanisms_never_execute_during_acquisition() {
         let _ = fs::remove_file(marker);
     }
     let push = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["push", "--quiet", &url, "main"])
         .current_dir(&work)
         .output()

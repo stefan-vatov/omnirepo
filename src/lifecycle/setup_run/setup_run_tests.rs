@@ -29,6 +29,7 @@ fn git_repo(root: &Path) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()

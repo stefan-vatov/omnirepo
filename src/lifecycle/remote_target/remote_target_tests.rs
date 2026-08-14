@@ -21,6 +21,7 @@ fn fixture_repo() -> (
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -45,6 +46,7 @@ fn fixture_repo() -> (
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
     let local_oid = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&root)
         .output()
@@ -83,6 +85,7 @@ fn ahead_behind_and_diverged_postures_are_exact() {
     let working = authority.display_path().as_path();
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(working)
             .output()
@@ -91,6 +94,7 @@ fn ahead_behind_and_diverged_postures_are_exact() {
     };
     let rev_parse = |rev: &str| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(["rev-parse", rev])
             .current_dir(working)
             .output()
@@ -114,6 +118,7 @@ fn ahead_behind_and_diverged_postures_are_exact() {
     // local branch stays: behind=1.
     let head_tree = rev_parse("HEAD^{tree}");
     let remote_commit = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args([
             "commit-tree",
             &head_tree,
@@ -155,6 +160,7 @@ fn detached_and_no_upstream_fail_typed() {
     let (_fixture, authority) = fixture_repo();
     let working = authority.display_path().as_path();
     let _ = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["checkout", "--quiet", "--detach"])
         .current_dir(working)
         .status()
@@ -168,6 +174,7 @@ fn detached_and_no_upstream_fail_typed() {
     // Reattach and drop the upstream.
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(working)
             .output()
@@ -176,6 +183,7 @@ fn detached_and_no_upstream_fail_typed() {
     };
     git(&["checkout", "--quiet", "main"]);
     let _ = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["branch", "--unset-upstream"])
         .current_dir(working)
         .status()
@@ -193,6 +201,7 @@ fn unsanitized_transports_fail_before_contact() {
     let working = authority.display_path().as_path();
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(working)
             .output()

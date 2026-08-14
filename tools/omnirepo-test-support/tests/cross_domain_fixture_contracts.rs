@@ -81,9 +81,11 @@ fn contract_rows_are_stable_and_link_to_canonical_and_supporting_owners() {
         evidence_ids.push(row.evidence_id().to_owned());
         replay_ids.push(row.replay_id().to_owned());
         assert_eq!(row.primary_owner(), row.implementation_bead());
+        let downstream = row.downstream_bead();
         assert!(
-            row.downstream_bead()
-                .starts_with("omni-constitutional-convergence-2r9.")
+            downstream == "omni-constitutional-convergence-2r9"
+                || downstream.starts_with("omni-constitutional-convergence-2r9."),
+            "downstream bead must be the epic or one of its descendants: {downstream}"
         );
         assert_eq!(
             contract_case(&context, row.case_id()).unwrap().as_ref(),

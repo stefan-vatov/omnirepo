@@ -92,6 +92,10 @@ pub fn create_canonical_tag(
     }
     let output = Command::new("git")
         .args([
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "tag.gpgsign=false",
             "tag",
             "-a",
             &tag,

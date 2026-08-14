@@ -236,6 +236,8 @@ fn git_path_commits_exact_bytes_with_hostile_attributes_present() {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -266,6 +268,8 @@ fn git_path_commits_exact_bytes_with_hostile_attributes_present() {
     )
     .expect("changed");
     let blob = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["hash-object", "--", "managed.txt"])
         .current_dir(&root)
         .output()
@@ -273,12 +277,16 @@ fn git_path_commits_exact_bytes_with_hostile_attributes_present() {
         .stdout;
     let blob = String::from_utf8(blob).expect("utf8").trim().to_owned();
     let staged = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["add", "managed.txt"])
         .current_dir(&root)
         .output()
         .expect("add");
     assert!(staged.status.success());
     let index_blob = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["ls-files", "--stage", "--", "managed.txt"])
         .current_dir(&root)
         .output()

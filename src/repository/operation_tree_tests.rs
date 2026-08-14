@@ -98,6 +98,7 @@ fn fixture_repo_root() -> (tempfile::TempDir, std::path::PathBuf) {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -116,6 +117,7 @@ fn write(root: &Path, relative: &str, content: &str) {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -134,6 +136,7 @@ fn tree_contains_every_and_only_authorized_entries() {
     write(&root, "other.txt", "other\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -174,6 +177,7 @@ fn deletions_and_renames_are_exact_and_drift_fails() {
     write(&root, "managed.txt", "v1\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -218,6 +222,7 @@ fn unrelated_staged_content_never_enters_the_tree() {
     write(&root, "managed.txt", "v1\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()

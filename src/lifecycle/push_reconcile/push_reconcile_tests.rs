@@ -10,6 +10,7 @@ use std::{fs, path::Path, process::Command};
 
 fn head_oid(working: &std::path::Path) -> RevisionId {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(working)
         .output()
@@ -43,6 +44,7 @@ fn fixture_repos() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf
     fs::create_dir_all(&working).expect("working");
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()
@@ -75,6 +77,7 @@ fn fixture_repos() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf
     // ref equals the recorded OID.
     git(&working, &["push", "--quiet", "origin", "main"]);
     let oid = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&working)
         .output()
@@ -123,12 +126,14 @@ fn remote_old_allows_retry_within_policy() {
     // never accepted (e.g. a disconnect after accept).  Rewind the remote
     // ref to the parent so it is neither the recorded nor a third OID.
     let parent = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD~1"])
         .current_dir(&working)
         .output()
         .expect("git");
     let parent = revision(String::from_utf8(parent.stdout).expect("stdout").trim());
     let rewind = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["update-ref", "refs/heads/main", parent.as_str()])
         .current_dir(&upstream)
         .output()
@@ -155,6 +160,7 @@ fn third_oid_is_a_conflict_without_force() {
     let recorded = head_oid(&working);
     // A third OID: a remote-only commit on top of the recorded one.
     let third = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "third"])
         .current_dir(&working)
         .output()
@@ -165,6 +171,7 @@ fn third_oid_is_a_conflict_without_force() {
         .to_owned();
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()

@@ -59,6 +59,7 @@ fn fixture_repos() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf
     fs::create_dir_all(&working).expect("working");
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()
@@ -87,6 +88,7 @@ fn fixture_repos() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf
     // The tracking ref mirrors the upstream (never contacted) so the
     // freeze can resolve the publication target locally.
     let base = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&working)
         .output()
@@ -105,6 +107,7 @@ fn fixture_repos() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf
 
 fn head_oid(working: &Path) -> RevisionId {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(working)
         .output()
@@ -134,6 +137,7 @@ fn exactly_one_intended_ref_reaches_one_intended_oid() {
     .expect("push");
     // The upstream advertises exactly one ref, and it is the intended OID.
     let advertised = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["for-each-ref", "--format=%(refname) %(objectname)"])
         .current_dir(&upstream)
         .output()
@@ -155,6 +159,7 @@ fn divergent_remote_rejects_without_force() {
     // Push the base, then advance the upstream with a third commit.
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()
@@ -163,6 +168,7 @@ fn divergent_remote_rejects_without_force() {
     };
     git(&working, &["push", "--quiet", "origin", "main"]);
     let third = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "third"])
         .current_dir(&working)
         .output()
@@ -205,6 +211,7 @@ fn credential_bearing_transport_never_reaches_the_push() {
     let (_fixture, working, _upstream) = fixture_repos();
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()

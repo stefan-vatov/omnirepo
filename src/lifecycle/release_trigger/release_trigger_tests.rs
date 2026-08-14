@@ -23,6 +23,7 @@ fn git_repo(root: &Path) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()
@@ -39,6 +40,7 @@ fn git_repo(root: &Path) {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -59,6 +61,7 @@ fn the_exact_sha_trigger_verifies_when_tag_commit_and_head_match() {
     let tag = git_text(&root, &["rev-parse", "HEAD"]);
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -79,6 +82,7 @@ fn a_head_mismatch_refuses_the_trigger() {
     let head = git_text(&root, &["rev-parse", "HEAD"]);
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -89,6 +93,7 @@ fn a_head_mismatch_refuses_the_trigger() {
     // A later commit moves the head away from the tag's commit.
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -117,6 +122,7 @@ fn a_missing_tag_is_refused() {
     let head = git_text(&root, &["rev-parse", "HEAD"]);
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()

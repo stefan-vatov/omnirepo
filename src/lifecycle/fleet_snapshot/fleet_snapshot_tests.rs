@@ -28,6 +28,7 @@ fn git_repo(root: &Path) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()
@@ -150,6 +151,7 @@ fn a_non_regular_file_fails_typed() {
 
 fn git(root: &Path, args: &[&str]) {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -159,6 +161,7 @@ fn git(root: &Path, args: &[&str]) {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()

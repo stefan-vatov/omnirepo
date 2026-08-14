@@ -51,6 +51,7 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -139,6 +140,7 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
     .expect("delta");
     let index = crate::repository::prepare_index(&root, &delta).expect("index");
     let base = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&root)
         .output()

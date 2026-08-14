@@ -24,6 +24,7 @@ fn git_repo(root: &Path) -> (String, String) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()
@@ -42,6 +43,7 @@ fn git_repo(root: &Path) -> (String, String) {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -83,6 +85,7 @@ fn an_existing_tag_at_a_different_commit_is_refused() {
     let root_path = Path::new(&root);
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root_path)
             .output()

@@ -51,6 +51,7 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -177,6 +178,7 @@ fn no_duplicate_git_effect_on_redelivery() {
     // the branch ref is moved by a later step, so the object database is
     // the duplicate-free witness.
     let objects = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args([
             "cat-file",
             "--batch-all-objects",

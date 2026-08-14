@@ -58,6 +58,7 @@ mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
 mod exit_status;
+mod final_gate;
 mod fleet_app;
 mod fleet_binding;
 mod fleet_cancel;

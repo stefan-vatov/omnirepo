@@ -28,6 +28,7 @@ fn fixture_base() -> tempfile::TempDir {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -43,6 +44,7 @@ fn git_repo(root: &Path) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()
@@ -92,6 +94,7 @@ fn a_configured_fleet_runs_end_to_end_and_finalizes_success() {
     fs::write(source.join("managed.txt"), "v1\n").expect("source file");
     let git = |root: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()

@@ -162,6 +162,8 @@ fn compare_never_touches_git() {
     let (_fixture, root) = fixture_root();
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -194,6 +196,8 @@ fn compare_never_touches_git() {
 
 fn git_status(root: &Path) -> String {
     let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["status", "--porcelain"])
         .current_dir(root)
         .output()

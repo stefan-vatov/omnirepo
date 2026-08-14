@@ -109,6 +109,7 @@ fn fixture_repo_root() -> (tempfile::TempDir, std::path::PathBuf) {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -127,6 +128,7 @@ fn write(root: &Path, relative: &str, content: &str) {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -145,6 +147,7 @@ fn isolated_index_stages_exactly_the_authorized_delta() {
     write(&root, "other.txt", "other\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -206,6 +209,7 @@ fn isolated_index_stages_exactly_the_authorized_delta() {
 
 fn git_text_with_env(root: &Path, args: &[&str], index: &Path) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .env("GIT_INDEX_FILE", index)
         .args(args)
         .current_dir(root)
@@ -225,6 +229,7 @@ fn existing_index_bytes_are_preserved_as_the_base() {
     write(&root, "kept.txt", "kept\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -263,6 +268,7 @@ fn hostile_config_cannot_widen_staging_and_failure_leaves_no_lock() {
     write(&root, "managed.txt", "v1\n");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()

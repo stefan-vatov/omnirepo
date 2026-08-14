@@ -32,6 +32,7 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -54,6 +55,7 @@ fn second_run_performs_no_content_or_git_mutation() {
     fs::write(&target, "v1\n").expect("write");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -63,6 +65,7 @@ fn second_run_performs_no_content_or_git_mutation() {
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "first sync"]);
     let commits_before = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-list", "--count", "HEAD"])
         .current_dir(&root)
         .output()
@@ -74,6 +77,7 @@ fn second_run_performs_no_content_or_git_mutation() {
     let content_after = fs::read_to_string(&target).expect("read");
     assert_eq!(content_after, "v1\n");
     let commits_after = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-list", "--count", "HEAD"])
         .current_dir(&root)
         .output()

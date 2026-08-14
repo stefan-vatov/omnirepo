@@ -25,6 +25,8 @@ fn fixture_repo() -> (tempfile::TempDir, std::path::PathBuf) {
 
 fn git(root: &Path, args: &[&str]) {
     let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -222,6 +224,8 @@ fn configured_upstream_is_captured() {
     // A real bare remote so the upstream commit resolves.
     let bare = fixture.path().join("origin.git");
     let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["init", "--quiet", "--bare", "-b", "master"])
         .arg(&bare)
         .output()
@@ -232,6 +236,8 @@ fn configured_upstream_is_captured() {
         &["remote", "add", "origin", bare.to_str().expect("bare path")],
     );
     let output = std::process::Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["push", "--quiet", "-u", "origin", "master"])
         .current_dir(&root)
         .output()

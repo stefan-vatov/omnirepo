@@ -60,6 +60,7 @@ fn fixture_repos() -> (tempfile::TempDir, PathBufFixture) {
     fs::create_dir_all(&working).expect("working");
     let git = |dir: &Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()
@@ -88,6 +89,7 @@ fn fixture_repos() -> (tempfile::TempDir, PathBufFixture) {
     // The remote tracking ref is set to an OLD commit so the push advances
     // exactly the selected ref.
     let base_oid = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&working)
         .output()
@@ -120,6 +122,7 @@ fn push_sends_only_the_recorded_oid_to_the_selected_ref() {
     let (_fixture, repos) = fixture_repos();
     let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
     let oid = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&repos.working)
         .output()
@@ -144,6 +147,7 @@ fn push_sends_only_the_recorded_oid_to_the_selected_ref() {
     journal.shutdown().expect("shutdown");
     // The upstream ref is exactly the recorded OID.
     let upstream_ref = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "refs/heads/main"])
         .current_dir(&repos.upstream)
         .output()
@@ -157,6 +161,7 @@ fn push_sends_only_the_recorded_oid_to_the_selected_ref() {
     // No tags and no incidental refs were sent: the bare upstream carries
     // exactly one ref.
     let refs = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["for-each-ref", "--format=%(refname)"])
         .current_dir(&repos.upstream)
         .output()
@@ -170,6 +175,7 @@ fn remote_rejection_is_typed_and_intent_is_journaled() {
     let (_fixture, repos) = fixture_repos();
     let (_jfixture, mut journal, run_id, record_path) = journal_fixture();
     let oid = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["rev-parse", "HEAD"])
         .current_dir(&repos.working)
         .output()
@@ -180,6 +186,7 @@ fn remote_rejection_is_typed_and_intent_is_journaled() {
     // upstream ref forward (all objects exist in both stores).
     let git = |dir: &std::path::Path, args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(dir)
             .output()
@@ -196,6 +203,7 @@ fn remote_rejection_is_typed_and_intent_is_journaled() {
         ],
     );
     let remote_commit = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args([
             "commit-tree",
             "HEAD^{tree}",

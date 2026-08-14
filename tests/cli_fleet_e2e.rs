@@ -31,6 +31,7 @@ fn git_repo(root: &Path) {
     fs::create_dir_all(root).expect("repo");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(root)
             .output()
@@ -48,6 +49,7 @@ fn setup_source(fixture: &tempfile::TempDir) -> std::path::PathBuf {
     fs::write(source.join("managed.txt"), "v1\n").expect("source file");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&source)
             .output()
@@ -74,6 +76,7 @@ fn setup_destination(fixture: &tempfile::TempDir, id: &str, content: &str) -> st
     fs::write(destination.join("managed.txt"), content).expect("managed");
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&destination)
             .output()
@@ -112,6 +115,7 @@ fn records_in(home: &Path) -> Vec<std::path::PathBuf> {
 
 fn git_text(root: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(args)
         .current_dir(root)
         .output()
@@ -257,6 +261,7 @@ fn repair_with_a_fake_adapter_recovers_the_failed_repository() {
     }
     let git = |args: &[&str]| {
         let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&destination)
             .output()

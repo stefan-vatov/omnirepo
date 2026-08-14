@@ -108,6 +108,8 @@ fn fixture_repo_root() -> (tempfile::TempDir, std::path::PathBuf) {
     std::fs::create_dir_all(&root).expect("repo");
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -221,6 +223,8 @@ fn revalidation_classifies_expected_pre_existing_concurrent_and_missing() {
     write(&root, "notes.txt", "notes\n");
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -312,6 +316,8 @@ fn hostile_worktree_combinations_classify_completely() {
     write(&root, "other.txt", "o1\n");
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()
@@ -361,6 +367,8 @@ fn hostile_config_never_executes_during_revalidation() {
     write(&root, "managed.txt", "v1\n");
     let git = |args: &[&str]| {
         let output = std::process::Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
             .args(args)
             .current_dir(&root)
             .output()

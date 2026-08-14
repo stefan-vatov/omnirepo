@@ -65,11 +65,11 @@ fn implemented_first_row(source: &str, verified: bool, accepted_downstream: bool
     let downstream = if accepted_downstream {
         "omni-test-acceptance-1"
     } else {
-        "omni-constitutional-convergence-2r9.32.5"
+        "omni-test-open-1"
     };
     let planned_test = "{\"role\":\"planned\",\"contract\":\"omni-constitutional-convergence-2r9.6#trace.principle.managed-authoritative\"}";
     let executable_test = "{\"role\":\"executable\",\"path\":\"tests/traceability_contract.rs\",\"selector\":\"canonical_traceability_matrix_is_valid\"}";
-    let planned_evidence = "{\"role\":\"planned\",\"contract\":\"omni-constitutional-convergence-2r9.32.5#evidence.trace.principle.managed-authoritative.v1\"}";
+    let planned_evidence = "{\"role\":\"planned\",\"contract\":\"omni-constitutional-convergence-2r9#evidence.trace.principle.managed-authoritative.v1\"}";
     let artifact_evidence = "{\"role\":\"artifact\",\"path\":\"tests/traceability_contract.rs\",\"selector\":\"evidence.trace.principle.managed-authoritative.v1\"}";
     let planned_fixture = "\"fixture\":\"fixture:managed-whole-and-partial\"";
     let executable_fixture = "\"fixture\":\"fixture:managed-whole-and-partial\",\"fixture_locator\":{\"role\":\"fixture\",\"path\":\"tests/traceability_contract.rs\",\"selector\":\"fixture:managed-whole-and-partial\"}";
@@ -85,7 +85,7 @@ fn implemented_first_row(source: &str, verified: bool, accepted_downstream: bool
             1,
         )
         .replacen(
-            "\"downstream_bead\":\"omni-constitutional-convergence-2r9.32.5\"",
+            "\"downstream_bead\":\"omni-constitutional-convergence-2r9\"",
             &format!("\"downstream_bead\":\"{downstream}\""),
             1,
         )
@@ -96,6 +96,15 @@ fn implemented_first_row(source: &str, verified: bool, accepted_downstream: bool
         )
         .replacen(planned_test, executable_test, 1)
         .replacen(planned_fixture, executable_fixture, 1);
+    if !accepted_downstream {
+        // The not-accepted variant binds its planned evidence locator to the
+        // synthetic open bead so locator-contract validation stays coherent.
+        output = output.replacen(
+            "{\"role\":\"planned\",\"contract\":\"omni-constitutional-convergence-2r9#evidence.trace.principle.managed-authoritative.v1\"}",
+            "{\"role\":\"planned\",\"contract\":\"omni-test-open-1#evidence.trace.principle.managed-authoritative.v1\"}",
+            1,
+        );
+    }
     if verified {
         output = output
             .replacen(
@@ -116,6 +125,12 @@ fn append_synthetic_acceptance_bead(source: &str, evidence: bool) -> String {
     };
     format!(
         "{source}\n{{\"id\":\"omni-test-acceptance-1\",\"status\":\"closed\",\"issue_type\":\"task\",\"labels\":[],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"test\",\"closed_at\":\"2026-08-13T00:01:00Z\",\"close_reason\":\"structured acceptance evidence\",\"notes\":\"generic acceptance note\"{evidence_field}}}"
+    )
+}
+
+fn append_synthetic_open_bead(source: &str) -> String {
+    format!(
+        "{source}\n{{\"id\":\"omni-test-open-1\",\"status\":\"open\",\"issue_type\":\"task\",\"labels\":[],\"created_at\":\"2026-08-13T00:00:00Z\",\"created_by\":\"test\",\"notes\":\"generic acceptance note\"}}"
     )
 }
 
@@ -424,15 +439,17 @@ fn owner_decision_refs_require_closed_owner_provenance() {
 
 #[test]
 fn implementation_status_cannot_claim_future_work() {
-    // Flip the fleet-progress row (its implementation bead .74 is still
-    // open) to "implemented": the validator must flag the overclaim.
+    // Flip the packaging row's implementation bead to a synthetic OPEN bead and
+    // claim "implemented": the validator must flag the overclaim. The live
+    // tracker has no open beads in the terminal state, so the export is
+    // extended with a synthetic open record (string-level only).
     let source = matrix().replacen(
-        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.33\",\"implementation_status\":\"specified\"",
-        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.33\",\"implementation_status\":\"implemented\"",
+        "\"implementation_bead\":\"omni-constitutional-convergence-2r9\",\"implementation_status\":\"specified\"",
+        "\"implementation_bead\":\"omni-test-open-1\",\"implementation_status\":\"implemented\"",
         1,
     );
     assert_ne!(source, matrix(), "the fixture must change the matrix");
-    let report = traceability::validate_source(&source, &beads());
+    let report = traceability::validate_source(&source, &append_synthetic_open_bead(&beads()));
     assert!(
         report
             .findings
@@ -557,7 +574,7 @@ fn specified_rows_use_unique_non_executable_contract_locators() {
 #[test]
 fn implemented_rows_require_executable_test_locators() {
     let source = implemented_first_row(&matrix(), false, false);
-    let report = traceability::validate_source(&source, &beads());
+    let report = traceability::validate_source(&source, &append_synthetic_open_bead(&beads()));
     assert!(report.valid, "findings: {:?}", report.findings);
 
     let unresolved_selector = ["missing", "runtime", "selector"].join("_");
@@ -566,7 +583,7 @@ fn implemented_rows_require_executable_test_locators() {
         &unresolved_selector,
         1,
     );
-    let report = traceability::validate_source(&unresolved, &beads());
+    let report = traceability::validate_source(&unresolved, &append_synthetic_open_bead(&beads()));
     assert!(
         report.valid,
         "pure validation must not claim filesystem evidence"
@@ -575,8 +592,11 @@ fn implemented_rows_require_executable_test_locators() {
 
 #[test]
 fn verified_rows_require_closed_acceptance_and_evidence_proof() {
+    // The not-accepted downstream is a synthetic open bead: in the terminal
+    // state the live tracker has no open beads, so the export is extended
+    // (string-level only) with an open record.
     let source = implemented_first_row(&matrix(), true, false);
-    let report = traceability::validate_source(&source, &beads());
+    let report = traceability::validate_source(&source, &append_synthetic_open_bead(&beads()));
     assert!(!report.valid);
     assert!(
         report

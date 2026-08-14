@@ -87,6 +87,7 @@ fn runtime_dependency_allowlist_is_exact_and_lockfile_is_tracked() {
     );
 
     let tracked = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(["ls-files", "--error-unmatch", "Cargo.lock"])
         .current_dir(&root)
         .output()
