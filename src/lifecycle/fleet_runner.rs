@@ -22,7 +22,6 @@ use crate::lifecycle::fleet_snapshot::build_frozen_snapshot;
 use crate::lifecycle::journal::JournalHandle;
 use crate::lifecycle::single_repo_pass::run_single_repository_pass;
 use crate::lifecycle::work_mapping::WorkItem;
-use crate::repository::RepositorySnapshot;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -50,7 +49,10 @@ pub fn run_fleet_initial_passes(
             frozen_repair_inputs: Vec::new(),
         });
     }
-    // Owned per-repository destinations (the runner closure is 'static).
+    // Owned per-repository destinations and plans (the runner closure is
+    // 'static).  The frozen snapshot is built lazily per admitted
+    // repository inside the runner: a snapshot failure fails that
+    // repository only and never aborts the fleet pass.
     let destinations = config
         .repositories()
         .iter()
@@ -61,33 +63,25 @@ pub fn run_fleet_initial_passes(
             )
         })
         .collect::<HashMap<String, String>>();
-    // Build the frozen snapshot per admitted repository first.
-    let mut snapshots: HashMap<String, RepositorySnapshot> = HashMap::new();
-    for item in &composition.work {
-        let WorkItem::Run { repository, .. } = item else {
-            continue;
-        };
-        let Some(working) = destinations.get(repository) else {
-            continue;
-        };
-        let plan = plans
-            .iter()
-            .find(|plan| plan.repository == *repository)
-            .and_then(|plan| plan.plan.as_ref().ok())
-            .cloned()
-            .unwrap_or_else(|| crate::lifecycle::sync_plan::SyncPlan::new(repository, Vec::new()));
-        let snapshot = build_frozen_snapshot(std::path::Path::new(working), &plan)
-            .map_err(|error| format!("{repository}: {error}"))?;
-        snapshots.insert(repository.clone(), snapshot);
-    }
-    let shared = Arc::new(snapshots);
+    let plans = plans
+        .iter()
+        .map(|plan| {
+            (
+                plan.repository.clone(),
+                plan.plan.as_ref().ok().cloned().unwrap_or_else(|| {
+                    crate::lifecycle::sync_plan::SyncPlan::new(&plan.repository, Vec::new())
+                }),
+            )
+        })
+        .collect::<HashMap<String, crate::lifecycle::sync_plan::SyncPlan>>();
     let destinations = Arc::new(destinations);
+    let plans = Arc::new(plans);
     let journal_handle = journal.clone();
     let run_id_owned = run_id.to_owned();
     let mut lease_check = |_repository: &str| true;
     let runner = {
-        let shared = Arc::clone(&shared);
         let destinations = Arc::clone(&destinations);
+        let plans = Arc::clone(&plans);
         move |item: &WorkItem| match item {
             WorkItem::Skip { repository, reason } => RepoResult::Skipped {
                 repository: repository.clone(),
@@ -100,19 +94,25 @@ pub fn run_fleet_initial_passes(
                         reason: "the repository is not declared".to_owned(),
                     };
                 };
-                let Some(snapshot) = shared.get(repository) else {
-                    return RepoResult::Failed {
-                        repository: repository.clone(),
-                        reason: "the frozen snapshot is unavailable".to_owned(),
-                    };
-                };
                 let working = std::path::Path::new(working);
+                let plan = plans.get(repository).cloned().unwrap_or_else(|| {
+                    crate::lifecycle::sync_plan::SyncPlan::new(repository, Vec::new())
+                });
+                let snapshot = match build_frozen_snapshot(working, &plan) {
+                    Ok(snapshot) => snapshot,
+                    Err(reason) => {
+                        return RepoResult::Failed {
+                            repository: repository.clone(),
+                            reason,
+                        };
+                    }
+                };
                 match run_single_repository_pass(
                     working,
                     &journal_handle,
                     &run_id_owned,
                     repository,
-                    snapshot,
+                    &snapshot,
                     SYNC_COMMIT_MESSAGE,
                 ) {
                     Ok(crate::lifecycle::single_repo_pass::PassOutcome::Delivered { oid }) => {

@@ -119,6 +119,7 @@ pub fn run_fleet_repair(
             repository: &repository,
             frozen_inputs: &frozen,
             budget: Duration::from_secs(60),
+            trusted_agent: true,
         };
         match execute_confined_repair(request) {
             Ok(RepairOutcome::Succeeded { .. }) => {

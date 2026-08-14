@@ -72,6 +72,7 @@ fn a_successful_confined_agent_yields_typed_evidence() {
         repository: "dest-a",
         frozen_inputs: &["baseline-1".to_owned()],
         budget: Duration::from_secs(10),
+        trusted_agent: false,
     })
     .expect("repair");
     assert!(matches!(outcome, RepairOutcome::Succeeded { .. }));
@@ -101,6 +102,7 @@ fn a_crashing_agent_fails_typed_without_claiming_success() {
         repository: "dest-a",
         frozen_inputs: &["baseline-1".to_owned()],
         budget: Duration::from_secs(10),
+        trusted_agent: false,
     })
     .expect_err("crash");
     assert!(matches!(error, RepairError::AgentCrashed { .. }), "{error}");
@@ -131,6 +133,7 @@ fn a_hanging_agent_is_terminated_at_the_budget() {
         repository: "dest-a",
         frozen_inputs: &["baseline-1".to_owned()],
         budget: Duration::from_millis(300),
+        trusted_agent: false,
     })
     .expect_err("timeout");
     assert!(
@@ -164,6 +167,7 @@ fn an_escaping_agent_path_fails_before_execution() {
         repository: "dest-a",
         frozen_inputs: &["baseline-1".to_owned()],
         budget: Duration::from_secs(10),
+        trusted_agent: false,
     })
     .expect_err("escape");
     assert!(

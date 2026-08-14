@@ -83,6 +83,10 @@ pub struct RepairRequest<'a> {
     pub frozen_inputs: &'a [String],
     /// The execution budget.
     pub budget: Duration,
+    /// True when the agent is the machine-declared adapter (frozen
+    /// identity, trusted); false when the argv is repository-supplied
+    /// (the escape check applies).
+    pub trusted_agent: bool,
 }
 
 /// Execute one confined repair: causation proven, class eligible, agent
@@ -97,6 +101,7 @@ pub fn execute_confined_repair(request: RepairRequest<'_>) -> Result<RepairOutco
         repository,
         frozen_inputs,
         budget,
+        trusted_agent,
     } = request;
     // Causation bound: the frozen inputs must be present (the caller
     // already proved current-run causation upstream; the execution gate
@@ -114,9 +119,11 @@ pub fn execute_confined_repair(request: RepairRequest<'_>) -> Result<RepairOutco
     ) {
         return Err(RepairError::ClassTerminal { class });
     }
-    // The agent path must be inside the destination.
+    // A repository-supplied agent path must be inside the destination;
+    // the machine-declared adapter is trusted by the machine priority and
+    // its frozen identity.
     let agent_path = Path::new(&argv[0]);
-    if !agent_path.starts_with(destination) {
+    if !trusted_agent && !agent_path.starts_with(destination) {
         return Err(RepairError::AgentPathEscapes {
             path: agent_path.display().to_string(),
         });
