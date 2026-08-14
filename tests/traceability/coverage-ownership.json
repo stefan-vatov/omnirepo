@@ -221,6 +221,22 @@
       "row_id": "behavior-containment"
     },
     {
+      "path": "src/platform/authority/backend.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/platform/authority/identity.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/platform/authority/paths.rs",
+      "row_id": "behavior-containment"
+    },
+    {
+      "path": "src/platform/authority/roots.rs",
+      "row_id": "behavior-containment"
+    },
+    {
       "path": "src/repository/mod.rs",
       "row_id": "behavior-repository-policy"
     },
