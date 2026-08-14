@@ -48,6 +48,6 @@ pub(crate) use targets::{
 };
 
 #[cfg(test)]
-mod state_tests_a;
+mod state_a_tests;
 #[cfg(test)]
-mod state_tests_b;
+mod state_b_tests;

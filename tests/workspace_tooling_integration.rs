@@ -92,6 +92,7 @@ fn product_package_contains_runtime_only_files() {
         "src/managed_content/representation.rs",
         "src/lifecycle/repository_preflight.rs",
         "src/managed_content/section_append.rs",
+        "src/managed_content/section_fixture_tests.rs",
         "src/lifecycle/diagnostic_aggregation.rs",
         "src/lifecycle/sync_plan.rs",
         "src/lifecycle/push_reconcile.rs",

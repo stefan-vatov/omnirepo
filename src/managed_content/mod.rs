@@ -5,7 +5,10 @@ mod delimiters;
 mod partial_scan;
 mod representation;
 mod section_append;
+
 mod section_builder;
+#[cfg(test)]
+mod section_fixture_tests;
 mod transaction;
 mod whole_file;
 

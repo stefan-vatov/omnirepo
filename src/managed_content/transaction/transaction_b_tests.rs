@@ -1,4 +1,4 @@
-use super::transaction_tests_a::{
+use super::transaction_a_tests::{
     artifact, artifact_for, candidate, candidate_for, content_synchronized_state,
     content_written_state, existing_plan, fully_durable_new_recovery_with_candidate,
     metadata_applied_state, plan, renamed_state, temp_created_state,

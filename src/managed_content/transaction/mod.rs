@@ -37,9 +37,9 @@ pub(crate) use recovery::{
 pub(crate) use state::ContentVisibility;
 
 #[cfg(test)]
-mod transaction_tests_a;
+mod transaction_a_tests;
 #[cfg(test)]
-mod transaction_tests_b;
+mod transaction_b_tests;
 pub(crate) use state::{Comparison, JournalCheckpoint, TransactionState};
 #[cfg(test)]
 pub(crate) use transaction::Transaction;

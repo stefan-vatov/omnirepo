@@ -1,4 +1,4 @@
-use super::state_tests_a::{
+use super::state_a_tests::{
     facts, identity, path, ref_name, repository_id, revision, root, root_with_authority,
     snapshot_with_target, witness, witnesses,
 };

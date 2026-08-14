@@ -60,20 +60,25 @@ pub fn build_section_replacement(
     bounds: Bounds,
     payload: &str,
 ) -> Result<SectionReplacement, SectionError> {
-    let lines: Vec<&str> = original.lines().collect();
+    // Split inclusively on '\n' so every line keeps its exact terminator
+    // (LF or CRLF); outside content is never normalized.
+    let chunks: Vec<&str> = original.split_inclusive('\n').collect();
+    let line_count = chunks.len();
     let (start, end) = (bounds.start_line as usize, bounds.end_line as usize);
-    if start < 1 || end > lines.len() || start >= end {
+    if start < 1 || end > line_count || start >= end {
         return Err(SectionError::BoundsOutside {
             reason: format!("bounds {start}..={end} do not fit the content"),
         });
     }
     let escaped = escape_payload(payload, syntax);
     let mut content = String::new();
-    for (index, line) in lines.iter().enumerate() {
+    for (index, chunk) in chunks.iter().enumerate() {
         let line_number = index + 1;
         if line_number == start {
-            content.push_str(line);
-            content.push('\n');
+            content.push_str(chunk);
+            if !chunk.ends_with('\n') {
+                content.push('\n');
+            }
             // The section body: marker lines only when the payload is
             // non-empty.
             if !escaped.is_empty() {
@@ -83,14 +88,15 @@ pub fn build_section_replacement(
                 }
             }
         } else if line_number == end {
-            content.push_str(line);
-            content.push('\n');
+            content.push_str(chunk);
+            if !chunk.ends_with('\n') {
+                content.push('\n');
+            }
         } else if line_number > start && line_number < end {
             // The old body is replaced by the payload.
             continue;
         } else {
-            content.push_str(line);
-            content.push('\n');
+            content.push_str(chunk);
         }
     }
     // An original without a trailing newline stays without one.
@@ -103,13 +109,13 @@ pub fn build_section_replacement(
 
 /// The current section body (marker lines excluded).
 fn section_body(original: &str, syntax: &DelimiterSyntax, bounds: Bounds) -> String {
-    let lines: Vec<&str> = original.lines().collect();
-    lines
+    let chunks: Vec<&str> = original.split_inclusive('\n').collect();
+    chunks
         .iter()
         .skip(bounds.start_line as usize)
         .take(bounds.end_line as usize - bounds.start_line as usize - 1)
-        .filter(|line| !line.contains(syntax.open) && !line.contains(syntax.close))
-        .copied()
+        .filter(|chunk| !chunk.contains(syntax.open) && !chunk.contains(syntax.close))
+        .map(|chunk| chunk.trim_end_matches(['\n', '\r']))
         .collect::<Vec<_>>()
         .join("\n")
 }
