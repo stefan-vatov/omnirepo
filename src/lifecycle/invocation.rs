@@ -11,15 +11,10 @@
 
 #![allow(dead_code)]
 
-use super::event::{JournalEvent, Outcome};
-use super::journal::{Journal, JournalConfig, JournalHandle};
+use super::journal::{Journal, JournalConfig};
 use super::run_record::{RunRecord, RunRecordError};
-use crate::configuration::{Command, Discovery, discover};
-use std::{
-    error::Error,
-    fmt,
-    path::{Path, PathBuf},
-};
+use crate::configuration::Command;
+use std::{error::Error, fmt, path::PathBuf};
 
 /// Canonical application dispatch failure.
 #[derive(Debug)]
@@ -84,60 +79,41 @@ fn run_sync() -> u8 {
     let mut journal = Journal::start(record, JournalConfig::default());
     // Dispatch exactly one canonical initial application service: an
     // absent machine authority is an empty fleet, which is a success
-    // (the .27 contract); a configured fleet fails closed typed.
-    let outcome = dispatch_application(&journal.handle, &run_id, &home);
-    let terminal = match outcome {
-        Ok(()) => Outcome::Success,
-        Err(_) => Outcome::Failed,
+    // (the .27 contract); a configured fleet composes and runs the
+    // canonical pipeline.  The dispatch already wrote its terminal
+    // event; this boundary only maps the exit class.
+    let outcome =
+        super::fleet_dispatch::dispatch_fleet(&journal.handle, &run_id, &home, &record_path);
+    let exit_code = match &outcome {
+        Ok(dispatch) => super::exit_status::exit_code_for(dispatch.exit_class) as u8,
+        Err(_) => 2,
     };
-    if let Err(error) = journal.handle.submit(JournalEvent::Terminal {
-        checkpoint: 0,
-        run_id: run_id.clone(),
-        outcome: terminal,
-    }) {
-        eprintln!("omnirepo: sync failed: cannot finalize the run record: {error}");
-        return 5;
-    }
     if let Err(error) = journal.shutdown() {
         eprintln!("omnirepo: sync failed: cannot finalize the run journal: {error}");
         return 5;
     }
     match outcome {
-        Ok(()) => {
-            eprintln!(
-                "omnirepo: sync completed (run {run_id} recorded at {})",
-                record_path.display()
-            );
-            0
+        Ok(dispatch) => {
+            if dispatch.exit_class == super::exit_status::ExitClass::Success {
+                eprintln!(
+                    "omnirepo: sync completed (run {run_id} recorded at {})",
+                    record_path.display()
+                );
+            } else {
+                eprintln!(
+                    "omnirepo: sync failed (run {run_id} recorded at {})",
+                    record_path.display()
+                );
+            }
+            exit_code
         }
         Err(error) => {
             eprintln!(
                 "omnirepo: sync failed: {error} (run {run_id} recorded at {})",
                 record_path.display()
             );
-            2
+            exit_code
         }
-    }
-}
-
-/// The canonical initial application dispatch seam: exactly one service per
-/// fleet invocation, reached only after the run record exists and the
-/// journal is accepting events.  An absent machine authority is an
-/// empty fleet (success per .27); a configured fleet fails closed typed
-/// without ambient scanning until the fleet composition lands.
-fn dispatch_application(
-    journal: &JournalHandle,
-    run_id: &str,
-    home: &Path,
-) -> Result<(), ApplicationError> {
-    let _ = (journal, run_id);
-    let discovery = discover(home).map_err(|_error| ApplicationError::Unavailable)?;
-    match discovery {
-        // Absent machine authority: the empty-fleet success contract.
-        Discovery::Absent => Ok(()),
-        // A configured fleet composes and runs the fleet pass in the
-        // application service; until then it fails closed typed.
-        Discovery::Present(_config) => Err(ApplicationError::Unavailable),
     }
 }
 
