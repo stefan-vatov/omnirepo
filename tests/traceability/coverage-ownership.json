@@ -403,6 +403,10 @@
     {
       "path": "src/lifecycle/fleet_app.rs",
       "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/repair_classify.rs",
+      "row_id": "behavior-repair-causation"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

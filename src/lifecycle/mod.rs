@@ -43,6 +43,7 @@ mod push_reconcile;
 mod record_finalize;
 mod remote_push;
 mod remote_target;
+mod repair_classify;
 mod replace;
 mod replacement_requests;
 mod replay;
