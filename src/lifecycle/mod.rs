@@ -54,5 +54,6 @@ mod transaction_evidence;
 mod verification_gate;
 mod verifier_confinement;
 mod verify_and_gate;
+mod work_mapping;
 
 pub(crate) use invocation::run_invocation;
