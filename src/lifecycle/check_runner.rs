@@ -81,7 +81,7 @@ pub fn run_check(
     for (key, value) in &spec.env {
         command.env(key, value);
     }
-    let mut child = command.spawn().map_err(|error| CheckError::Spawn {
+    let mut child = spawn_retry(&mut command).map_err(|error| CheckError::Spawn {
         reason: error.to_string(),
     })?;
     // The program runs in its own process group so a timeout can kill the
@@ -169,6 +169,23 @@ fn spawn_reader<R: Read + Send + 'static>(
 fn terminate(child: &mut std::process::Child) {
     let _ = child.kill();
     let _ = child.wait();
+}
+
+/// Spawn with a bounded retry on ETXTBSY: a script that was just
+/// materialized by the harness can briefly be seen as "text file busy"
+/// by a racing exec; the retry makes the spawn robust without waiting
+/// for a fsync.
+fn spawn_retry(command: &mut std::process::Command) -> std::io::Result<std::process::Child> {
+    let mut attempt = 0;
+    loop {
+        match command.spawn() {
+            Err(error) if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempt < 3 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(10 * attempt));
+            }
+            result => return result,
+        }
+    }
 }
 
 fn join_readers(readers: Vec<std::thread::JoinHandle<()>>) {

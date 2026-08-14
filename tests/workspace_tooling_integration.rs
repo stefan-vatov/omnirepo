@@ -91,6 +91,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/hostile_acceptance_tests.rs",
         "src/lifecycle/evidence_hostile_tests.rs",
         "src/lifecycle/platform_acceptance_tests.rs",
+        "src/lifecycle/process_acceptance_tests.rs",
         "src/lifecycle/verify_and_gate.rs",
         "src/lifecycle/initial_pass/transition.rs",
         "src/lifecycle/invocation.rs",
