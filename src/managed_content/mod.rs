@@ -12,6 +12,7 @@ mod section_fixture_tests;
 mod transaction;
 mod whole_file;
 
+pub(crate) use compare::CompareOutcome;
 pub(crate) use transaction::{TempCandidate, TransactionPlan};
 
 #[cfg(test)]

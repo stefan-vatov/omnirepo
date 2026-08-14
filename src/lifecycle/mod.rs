@@ -44,6 +44,7 @@ mod stages;
 mod sync_plan;
 mod terminal_projection;
 mod transaction_evidence;
+mod verification_gate;
 mod verifier_confinement;
 
 pub(crate) use invocation::run_invocation;
