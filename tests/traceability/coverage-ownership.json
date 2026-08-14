@@ -355,6 +355,10 @@
     {
       "path": "src/lifecycle/check_runner.rs",
       "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/lifecycle/verifier_confinement.rs",
+      "row_id": "behavior-verification"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

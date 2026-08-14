@@ -71,6 +71,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/agent_runtime.rs",
         "src/lifecycle/cancellation.rs",
         "src/lifecycle/check_runner.rs",
+        "src/lifecycle/verifier_confinement.rs",
         "src/lifecycle/command_spec.rs",
         "src/lifecycle/agent_framing.rs",
         "src/lifecycle/commit_journal.rs",
