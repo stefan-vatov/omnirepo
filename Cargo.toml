@@ -129,6 +129,7 @@ exclude = [
     "src/lifecycle/remote_target/remote_target_tests.rs",
     "src/lifecycle/fleet_permits/fleet_permits_tests.rs",
     "src/lifecycle/fleet_scenarios/fleet_scenarios_tests.rs",
+    "src/lifecycle/fleet_generators/fleet_generators_tests.rs",
     "src/lifecycle/adapters/adapters_hostile_tests.rs",
     "src/lifecycle/admission/admission_concurrency_tests.rs",
     "src/lifecycle/agent_confinement/agent_confinement_tests.rs",
