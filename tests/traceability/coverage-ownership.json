@@ -503,6 +503,10 @@
     {
       "path": "src/lifecycle/fleet_catalog.rs",
       "row_id": "behavior-source-materialization"
+    },
+    {
+      "path": "src/lifecycle/fleet_policy.rs",
+      "row_id": "behavior-repository-policy"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
