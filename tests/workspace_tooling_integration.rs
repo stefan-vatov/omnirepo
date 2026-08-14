@@ -67,6 +67,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/single_repo_pass.rs",
         "src/lifecycle/work_mapping.rs",
         "src/lifecycle/fleet_fanout.rs",
+        "src/lifecycle/fleet_collector.rs",
         "src/lifecycle/verify_and_gate.rs",
         "src/lifecycle/initial_pass/transition.rs",
         "src/lifecycle/invocation.rs",

@@ -59,6 +59,7 @@ exclude = [
     "src/lifecycle/single_repo_pass/single_repo_pass_tests.rs",
     "src/lifecycle/work_mapping/work_mapping_tests.rs",
     "src/lifecycle/fleet_fanout/fleet_fanout_tests.rs",
+    "src/lifecycle/fleet_collector/fleet_collector_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/admission/admission_tests.rs",

@@ -23,6 +23,7 @@ mod commit_journal;
 mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
+mod fleet_collector;
 mod fleet_fanout;
 mod fleet_permits;
 mod git_delivery;
