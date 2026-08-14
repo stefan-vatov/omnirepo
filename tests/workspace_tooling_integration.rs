@@ -72,6 +72,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/repair_causation.rs",
         "src/lifecycle/repair_reserve.rs",
         "src/lifecycle/repair_snapshot.rs",
+        "src/lifecycle/repair_delta.rs",
         "src/lifecycle/repair_execute.rs",
         "src/lifecycle/repair_fixture_tests.rs",
         "src/lifecycle/repair_classify.rs",
