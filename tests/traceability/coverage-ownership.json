@@ -265,8 +265,40 @@
       "row_id": "behavior-repository-policy"
     },
     {
-      "path": "src/repository/state.rs",
-      "row_id": "failure-synchronization"
+      "path": "src/repository/state/canonical.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/causation.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/delta.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/domain_error.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/facts.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/git_facts.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/identities.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/mod.rs",
+      "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/repository/state/targets.rs",
+      "row_id": "behavior-verification"
     },
     {
       "path": "src/source/mod.rs",
