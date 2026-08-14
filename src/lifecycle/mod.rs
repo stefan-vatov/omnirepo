@@ -57,6 +57,7 @@ mod fleet_collector;
 mod fleet_composition;
 mod fleet_declarations;
 mod fleet_fanout;
+mod fleet_finalize;
 mod fleet_generators;
 mod fleet_permits;
 mod fleet_planning;

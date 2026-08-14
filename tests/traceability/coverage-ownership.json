@@ -539,6 +539,10 @@
     {
       "path": "src/lifecycle/fleet_cancel.rs",
       "row_id": "behavior-run-record"
+    },
+    {
+      "path": "src/lifecycle/fleet_finalize.rs",
+      "row_id": "command-sync"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
