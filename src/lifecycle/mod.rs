@@ -61,6 +61,7 @@ mod fleet_planning;
 mod fleet_policy;
 mod fleet_profile;
 mod fleet_scenarios;
+mod fleet_snapshot;
 mod git_delivery;
 mod hostile_fixtures;
 mod hostile_process_fixtures;

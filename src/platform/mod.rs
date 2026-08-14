@@ -5,9 +5,10 @@
 mod authority;
 
 pub(crate) use authority::{
-    AgentWorkingDirectoryRoot, AuthorityRoot, DestinationRepositoryRoot, GitWorkingDirectoryRoot,
-    MutationIntent, ObjectClass, PathError, ReadOnly, RelativePath, RunRecordRoot,
-    SourceSnapshotRoot, open_mutation_root, sync_directory, sync_file,
+    AgentWorkingDirectoryRoot, AuthorityIdentity, AuthorityRoot, DestinationRepositoryRoot,
+    FilesystemIdentity, GitWorkingDirectoryRoot, MutationIntent, ObjectClass, ObjectIdentity,
+    PathError, ReadOnly, RelativePath, RunRecordRoot, SourceSnapshotRoot, open_mutation_root,
+    sync_directory, sync_file,
 };
 
 #[cfg(test)]

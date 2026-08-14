@@ -20,6 +20,11 @@ pub(crate) use policy_loader::{PolicyPresence, load_policy};
 #[cfg(test)]
 pub(crate) use policy_loader::PolicyLoadError;
 pub(crate) use state::{
+    AuthorityIdentity, EntryKind, FileIdentity, FilesystemClass, FilesystemIdentity,
+    FrozenWitnesses, ManagedTargetIdentity, ObjectIdentity, RelativePath, RepositoryFacts,
+    RepositoryRoot,
+};
+pub(crate) use state::{
     GitRepositoryState, HeadState, RefName, RepositoryId, RepositorySnapshot, RevisionId,
     UpstreamState,
 };
@@ -28,11 +33,7 @@ pub(crate) use state::{
 pub(crate) use state::AuthorizedDelta;
 
 #[cfg(test)]
-pub(crate) use state::{
-    AuthorityIdentity, CheckWitness, EntryKind, FileIdentity, FilesystemClass, FilesystemIdentity,
-    FrozenWitnesses, GitFacts, IndexState, ManagedTargetIdentity, ObjectIdentity, RelativePath,
-    RepositoryFacts, RepositoryRoot, WorktreeState,
-};
+pub(crate) use state::{CheckWitness, GitFacts, IndexState, WorktreeState};
 
 #[cfg(test)]
 mod capture_tests;

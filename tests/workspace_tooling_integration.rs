@@ -78,6 +78,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/fleet_binding.rs",
         "src/lifecycle/fleet_policy.rs",
         "src/lifecycle/fleet_planning.rs",
+        "src/lifecycle/fleet_snapshot.rs",
         "src/lifecycle/repair_causation.rs",
         "src/lifecycle/repair_reserve.rs",
         "src/lifecycle/repair_snapshot.rs",
