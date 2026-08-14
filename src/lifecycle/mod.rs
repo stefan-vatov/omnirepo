@@ -107,6 +107,7 @@ mod repository_preflight;
 mod run_record;
 mod run_summary;
 mod scheduler;
+mod setup_author;
 mod setup_plan;
 mod single_repo_pass;
 mod source_catalog;

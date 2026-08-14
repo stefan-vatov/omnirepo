@@ -51,6 +51,7 @@ pub enum SetupAction {
 #[derive(Debug)]
 pub enum SetupPlanError {
     ConflictingAuthority { path: String },
+    Io { path: String, reason: String },
 }
 
 impl fmt::Display for SetupPlanError {
@@ -61,6 +62,9 @@ impl fmt::Display for SetupPlanError {
                     formatter,
                     "the existing authority file {path:?} is invalid or conflicting and is never replaced"
                 )
+            }
+            Self::Io { path, reason } => {
+                write!(formatter, "setup authority io failure {path:?}: {reason}")
             }
         }
     }
