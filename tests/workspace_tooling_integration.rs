@@ -103,6 +103,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/replay.rs",
         "src/lifecycle/replace.rs",
         "src/lifecycle/admission.rs",
+        "src/lifecycle/acceptance_journeys.rs",
         "src/lifecycle/adapters.rs",
         "src/lifecycle/agent_confinement.rs",
         "src/lifecycle/agent_runtime.rs",

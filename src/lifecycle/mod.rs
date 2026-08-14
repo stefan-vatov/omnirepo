@@ -2,6 +2,7 @@
 
 #![allow(dead_code)]
 
+mod acceptance_journeys;
 mod adapters;
 mod admission;
 #[cfg(test)]
