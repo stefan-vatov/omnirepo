@@ -18,6 +18,9 @@ pub(crate) use representation::{Representation, check_exact_representation};
 pub(crate) use transaction::{TempCandidate, TransactionPlan};
 
 #[cfg(test)]
+pub(crate) use representation::destination_equals_source;
+
+#[cfg(test)]
 pub(crate) use whole_file::{WholeFileOutcome, classify_whole_file};
 
 #[cfg(test)]

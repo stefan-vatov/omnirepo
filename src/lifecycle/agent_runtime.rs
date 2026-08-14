@@ -10,6 +10,23 @@
 
 use super::agent_confinement::AgentConfinement;
 use super::agent_framing::{MAX_FRAME_PAYLOAD_BYTES, sanitize_output};
+/// Spawn with a bounded retry on ETXTBSY: a script that was just
+/// materialized by the harness can briefly be seen as "text file busy"
+/// by a racing exec; the retry makes the spawn robust without waiting
+/// for a fsync.
+fn spawn_retry(command: &mut Command) -> std::io::Result<std::process::Child> {
+    let mut attempt = 0;
+    loop {
+        match command.spawn() {
+            Err(error) if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempt < 3 => {
+                attempt += 1;
+                std::thread::sleep(Duration::from_millis(10 * attempt));
+            }
+            result => return result,
+        }
+    }
+}
+
 #[cfg(test)]
 mod agent_runtime_tests;
 
@@ -102,7 +119,7 @@ pub fn run_agent(
         // Own process group so descendants die with the agent.
         command.process_group(0);
     }
-    let mut child = command.spawn().map_err(|error| AgentRuntimeError::Spawn {
+    let mut child = spawn_retry(&mut command).map_err(|error| AgentRuntimeError::Spawn {
         reason: error.to_string(),
     })?;
     // Reader threads drain both pipes to EOF; they stop accepting bytes at

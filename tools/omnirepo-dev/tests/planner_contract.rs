@@ -129,8 +129,12 @@ fn fake_br(root: &Path, mode: &str) -> PathBuf {
         "#!/bin/sh\nset -eu\nif [ \"$1\" != \"--no-auto-import\" ] || [ \"$2\" != \"--no-auto-flush\" ] || [ \"$4\" != \"--json\" ]; then exit 41; fi\nif read _line; then exit 42; fi\nprintf '%s\\n' \"${{BEADS_JSONL-<unset>}}\" > \"$PWD/seen-beads-jsonl\"\nprintf '%s\\n' \"$PWD\" > \"$PWD/seen-cwd-$3\"\ncase \"{mode}:$3\" in\n  nonzero:*) printf '%s\\n' 'fake br failure' >&2; exit 7 ;;\n  stderr-oversized:*) /usr/bin/yes x >&2 ;;\n  invalid-utf8:ready) /bin/printf '\\377\\n' ;;\n  invalid-utf8-stderr:ready) /bin/printf '[]\\n'; /bin/printf '\\377\\n' >&2 ;;\n  signal:*) kill -TERM $$ ;;\n  malformed:ready) printf '%s\\n' '{{}}' ;;\n  malformed:scheduler) printf '%s\\n' '[]' ;;\n  timeout:*) while :; do :; done ;;\n  oversized:*) /usr/bin/yes x ;;\n  late:ready) (/bin/sleep 4) & exit 0 ;;\n  *:ready) /bin/cat \"$PWD/ready.json\" ;;\n  *:scheduler) /bin/cat \"$PWD/scheduler.json\" ;;\n  *) exit 43 ;;\nesac\n",
         mode = mode
     );
-    fs::write(&executable, script).expect("write fake br");
-    set_executable(&executable);
+    // Publish atomically: a concurrent exec must never see a
+    // half-written script (ETXTBSY).
+    let temporary = root.join(format!(".fake-br.tmp-{}", std::process::id()));
+    fs::write(&temporary, &script).expect("write fake br temp");
+    set_executable(&temporary);
+    fs::rename(&temporary, &executable).expect("publish fake br");
     executable
 }
 

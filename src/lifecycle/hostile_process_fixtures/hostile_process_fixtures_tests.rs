@@ -95,11 +95,21 @@ fn the_agent_crash_script_exits_with_its_typed_code() {
         .find(|entry| entry.kind == ProcessFixtureKind::AgentCrash)
         .expect("agent crash fixture");
     let path = materialize_process(crash, fixture.path()).expect("materialize");
-    let status = Command::new(&path)
-        .current_dir(fixture.path())
-        .status()
-        .expect("run");
+    let status = run_with_retry(&path, fixture.path()).expect("run");
     assert_eq!(status.code(), Some(7), "the agent crash exits 7");
+}
+
+fn run_with_retry(path: &Path, cwd: &Path) -> std::io::Result<std::process::ExitStatus> {
+    let mut attempt = 0;
+    loop {
+        match Command::new(path).current_dir(cwd).status() {
+            Err(error) if error.kind() == std::io::ErrorKind::ExecutableFileBusy && attempt < 3 => {
+                attempt += 1;
+                std::thread::sleep(std::time::Duration::from_millis(10 * attempt));
+            }
+            result => return result,
+        }
+    }
 }
 
 #[test]

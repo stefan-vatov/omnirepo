@@ -8,6 +8,9 @@ mod admission;
 mod authority_integration_tests;
 
 #[cfg(test)]
+mod platform_acceptance_tests;
+
+#[cfg(test)]
 mod evidence_hostile_tests;
 
 #[cfg(test)]
