@@ -81,6 +81,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/migration_decision.rs",
         "src/lifecycle/lifecycle_model.rs",
         "src/lifecycle/hostile_fixtures.rs",
+        "src/lifecycle/hostile_process_fixtures.rs",
         "src/lifecycle/model_generation.rs",
         "src/lifecycle/model_property_suite.rs",
         "src/lifecycle/repair_execute.rs",
