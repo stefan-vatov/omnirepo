@@ -74,6 +74,15 @@ pub(crate) fn parse() -> Command {
     Cli::parse().command
 }
 
+/// The canonical public command surface of the binary, in declared order.
+pub(crate) fn command_surface() -> Vec<String> {
+    use clap::CommandFactory;
+    Cli::command()
+        .get_subcommands()
+        .map(|subcommand| subcommand.get_name().to_owned())
+        .collect()
+}
+
 pub const SUPPORTED_SCHEMA_VERSION: u16 = 1;
 pub const DEFAULT_MAX_REPOSITORIES: u16 = 4;
 pub const DEFAULT_MAX_CHILD_WORK: u16 = 8;

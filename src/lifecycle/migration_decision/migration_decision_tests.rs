@@ -47,3 +47,12 @@ fn a_migrate_command_is_never_admitted() {
     let hidden = vec!["sync".to_owned(), "migrate-config".to_owned()];
     assert!(!assert_migration_free_surface(&hidden));
 }
+
+#[test]
+fn the_runtime_command_surface_carries_no_migration_path() {
+    // The actual clap surface of the binary: exactly sync, setup, validate.
+    let mut names = crate::configuration::command_surface();
+    names.sort();
+    assert_eq!(names, vec!["setup", "sync", "validate"], "{names:?}");
+    assert!(assert_migration_free_surface(&names));
+}
