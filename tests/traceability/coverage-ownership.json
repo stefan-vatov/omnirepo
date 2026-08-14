@@ -547,6 +547,10 @@
     {
       "path": "src/lifecycle/fleet_dispatch.rs",
       "row_id": "command-sync"
+    },
+    {
+      "path": "src/lifecycle/setup_plan.rs",
+      "row_id": "behavior-setup"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

@@ -133,6 +133,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/remote_push.rs",
         "src/lifecycle/source_extraction.rs",
         "src/lifecycle/scheduler.rs",
+        "src/lifecycle/setup_plan.rs",
         "src/lifecycle/run_summary.rs",
         "src/lifecycle/record_finalize.rs",
         "src/lifecycle/plan_selection.rs",

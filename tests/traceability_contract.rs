@@ -427,8 +427,8 @@ fn implementation_status_cannot_claim_future_work() {
     // Flip the fleet-progress row (its implementation bead .74 is still
     // open) to "implemented": the validator must flag the overclaim.
     let source = matrix().replacen(
-        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.31\",\"implementation_status\":\"specified\"",
-        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.31\",\"implementation_status\":\"implemented\"",
+        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.59\",\"implementation_status\":\"specified\"",
+        "\"implementation_bead\":\"omni-constitutional-convergence-2r9.59\",\"implementation_status\":\"implemented\"",
         1,
     );
     assert_ne!(source, matrix(), "the fixture must change the matrix");
