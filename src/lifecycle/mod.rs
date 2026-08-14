@@ -68,6 +68,7 @@ mod migration_decision;
 mod model_generation;
 mod model_property_suite;
 mod nested_permits;
+mod output_guard;
 mod plan_builder;
 mod plan_selection;
 mod platform_matrix;

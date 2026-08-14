@@ -108,6 +108,7 @@ exclude = [
     "src/lifecycle/plan_builder/plan_builder_tests.rs",
     "src/lifecycle/terminal_projection/summary_fixture_tests.rs",
     "src/lifecycle/plan_builder/plan_fixture_tests.rs",
+    "src/lifecycle/output_guard/output_guard_tests.rs",
     "src/managed_content/delimiters/delimiters_tests.rs",
     "src/managed_content/partial_scan/partial_scan_tests.rs",
     "src/managed_content/section_builder/section_builder_tests.rs",
