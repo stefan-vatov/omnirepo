@@ -53,6 +53,7 @@ mod repair_delta;
 mod repair_execute;
 mod repair_reapply;
 mod repair_reserve;
+mod repair_selection;
 mod repair_snapshot;
 mod replace;
 mod replacement_requests;
