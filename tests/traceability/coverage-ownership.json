@@ -451,6 +451,10 @@
     {
       "path": "src/lifecycle/migration_decision.rs",
       "row_id": "principle-convention-intent"
+    },
+    {
+      "path": "src/lifecycle/lifecycle_model.rs",
+      "row_id": "behavior-fleet-progress"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

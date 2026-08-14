@@ -78,6 +78,7 @@ exclude = [
     "src/lifecycle/repair_fallback/repair_fallback_tests.rs",
     "src/lifecycle/repair_fold/repair_fold_tests.rs",
     "src/lifecycle/migration_decision/migration_decision_tests.rs",
+    "src/lifecycle/lifecycle_model/lifecycle_model_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/admission/admission_tests.rs",
