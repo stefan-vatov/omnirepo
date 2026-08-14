@@ -90,6 +90,7 @@ mod platform_matrix;
 mod preflight;
 mod push_reconcile;
 mod record_finalize;
+mod release_manifest;
 mod remote_push;
 mod remote_target;
 mod repair_causation;

@@ -563,6 +563,10 @@
     {
       "path": "src/lifecycle/setup_run.rs",
       "row_id": "behavior-setup"
+    },
+    {
+      "path": "src/lifecycle/release_manifest.rs",
+      "row_id": "behavior-packaging"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
