@@ -194,6 +194,17 @@ pub fn transition(model: &mut LifecycleModel, action: Action<'_>) -> Result<(), 
         }
         Action::RunCheck { repository } => {
             let index = index_of(model, repository)?;
+            // The check stage follows the sync stage: evidence requires
+            // the prior sync intent.
+            let synced = model
+                .effect_log
+                .iter()
+                .any(|entry| entry == &format!("intent:sync:{repository}"));
+            if !synced {
+                return Err(ModelError::EffectWithoutIntent {
+                    repository: repository.to_owned(),
+                });
+            }
             model.states[index] = RepoState::Verified;
             model.run = RunState::Check;
             model
@@ -208,6 +219,17 @@ pub fn transition(model: &mut LifecycleModel, action: Action<'_>) -> Result<(), 
         }
         Action::Push { repository } => {
             let index = index_of(model, repository)?;
+            // The push follows the commit: evidence requires the prior
+            // commit intent.
+            let committed = model
+                .effect_log
+                .iter()
+                .any(|entry| entry == &format!("intent:commit:{repository}"));
+            if !committed {
+                return Err(ModelError::EffectWithoutIntent {
+                    repository: repository.to_owned(),
+                });
+            }
             model.states[index] = RepoState::Pushed;
             model.run = RunState::Push;
             model.effect_log.push(format!("evidence:push:{repository}"));
