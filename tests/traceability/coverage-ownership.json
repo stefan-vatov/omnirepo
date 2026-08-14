@@ -535,6 +535,10 @@
     {
       "path": "src/lifecycle/fleet_repair.rs",
       "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/fleet_cancel.rs",
+      "row_id": "behavior-run-record"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

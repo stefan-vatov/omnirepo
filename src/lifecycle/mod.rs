@@ -51,6 +51,7 @@ mod event;
 mod exit_status;
 mod fleet_app;
 mod fleet_binding;
+mod fleet_cancel;
 mod fleet_catalog;
 mod fleet_collector;
 mod fleet_composition;
