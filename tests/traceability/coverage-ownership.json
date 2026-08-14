@@ -363,6 +363,14 @@
     {
       "path": "src/lifecycle/verification_gate.rs",
       "row_id": "behavior-verification"
+    },
+    {
+      "path": "src/lifecycle/initial_pass.rs",
+      "row_id": "behavior-fleet-progress"
+    },
+    {
+      "path": "src/lifecycle/initial_pass/transition.rs",
+      "row_id": "behavior-fleet-progress"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",

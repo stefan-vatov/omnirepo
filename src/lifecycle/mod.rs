@@ -24,6 +24,7 @@ mod diagnostic_aggregation;
 mod diagnostics;
 mod event;
 mod fleet_permits;
+mod initial_pass;
 mod invocation;
 mod journal;
 mod nested_permits;
