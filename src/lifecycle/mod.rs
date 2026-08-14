@@ -61,6 +61,7 @@ mod fleet_permits;
 mod fleet_planning;
 mod fleet_policy;
 mod fleet_profile;
+mod fleet_runner;
 mod fleet_scenarios;
 mod fleet_snapshot;
 mod git_delivery;

@@ -65,18 +65,25 @@ pub fn run_single_repository_pass(
     message: &str,
 ) -> Result<PassOutcome, PassError> {
     // Plan the authorized delta from the frozen snapshot: every whole-file
-    // managed target becomes a replacement operation.
-    let operations = snapshot
-        .targets()
-        .iter()
-        .map(|target| {
-            PlannedOperation::replaced(
-                target.path().clone(),
-                target.observed_file().cloned().expect("frozen identity"),
-                target.observed_file().cloned().expect("frozen identity"),
-            )
-        })
-        .collect::<Vec<_>>();
+    // managed target becomes a replacement operation.  An absent target
+    // (creation) is not part of the replace-only pass contract and fails
+    // typed instead of panicking.
+    let mut operations = Vec::new();
+    for target in snapshot.targets() {
+        let Some(identity) = target.observed_file().cloned() else {
+            return Err(PassError::Plan {
+                reason: format!(
+                    "managed target {} is absent; creation is not part of the replace-only pass",
+                    String::from_utf8_lossy(target.path().as_bytes())
+                ),
+            });
+        };
+        operations.push(PlannedOperation::replaced(
+            target.path().clone(),
+            identity.clone(),
+            identity,
+        ));
+    }
     let delta = build_authorized_delta(snapshot, operations).map_err(|error| PassError::Plan {
         reason: error.to_string(),
     })?;
