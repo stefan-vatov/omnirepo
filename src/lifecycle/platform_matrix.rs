@@ -161,6 +161,55 @@ pub fn unsupported_cases() -> Vec<UnsupportedCase> {
     ]
 }
 
+/// The canonical CI job names for the declared matrix.  The drift
+/// contract ties these to the live workflow jobs.
+pub fn ci_job_names() -> Vec<&'static str> {
+    vec!["quality", "msrv", "macos-quality"]
+}
+
+/// Render the concise support/evidence report from the declared matrix
+/// (the single source of truth).  The committed report must match this
+/// rendering exactly.
+pub fn platform_evidence() -> String {
+    let mut lines = vec![
+        "{".to_owned(),
+        "  \"schema\": \"omnirepo.platform-evidence.v1\",".to_owned(),
+        "  \"toolchain\": \"1.86\",".to_owned(),
+        "  \"supported\": [".to_owned(),
+    ];
+    let matrix = supported_platform_matrix();
+    for (index, job) in matrix.iter().enumerate() {
+        let comma = if index + 1 < matrix.len() { "," } else { "" };
+        let jobs = match job.os {
+            Os::Linux => "[\"quality\", \"msrv\"]",
+            Os::Mac => "[\"macos-quality\"]",
+            Os::Windows => "[]",
+        };
+        lines.push(format!(
+            "    {{\"os\": \"{:?}\", \"filesystem\": \"{:?}\", \"jobs\": {jobs}, \"cache\": \"{}\"}}{comma}",
+            job.os,
+            job.filesystem,
+            job.cache_key()
+        ));
+    }
+    lines.push("  ],".to_owned());
+    lines.push("  \"capability_skips\": [".to_owned());
+    for (index, case) in unsupported_cases().iter().enumerate() {
+        let comma = if index + 1 < unsupported_cases().len() {
+            ","
+        } else {
+            ""
+        };
+        lines.push(format!(
+            "    {{\"os\": \"{:?}\", \"filesystem\": \"{:?}\", \"policy\": \"fail-closed\"}}{comma}",
+            case.os, case.filesystem
+        ));
+    }
+    lines.push("  ]".to_owned());
+    lines.push("}".to_owned());
+    lines.join("\n")
+}
+
 /// Claim a platform for an operation.  An unsupported or invented pair
 /// fails typed before any effect.
 pub fn claim_platform(os: Os, filesystem: Filesystem) -> Result<(), PlatformError> {

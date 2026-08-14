@@ -1,0 +1,14 @@
+{
+  "schema": "omnirepo.platform-evidence.v1",
+  "toolchain": "1.86",
+  "supported": [
+    {"os": "Linux", "filesystem": "ExtFamily", "jobs": ["quality", "msrv"], "cache": "Linux-ExtFamily-Rust186"},
+    {"os": "Mac", "filesystem": "Apfs", "jobs": ["macos-quality"], "cache": "Mac-Apfs-Rust186"}
+  ],
+  "capability_skips": [
+    {"os": "Windows", "filesystem": "Network", "policy": "fail-closed"},
+    {"os": "Windows", "filesystem": "ExtFamily", "policy": "fail-closed"},
+    {"os": "Linux", "filesystem": "Network", "policy": "fail-closed"},
+    {"os": "Mac", "filesystem": "Network", "policy": "fail-closed"}
+  ]
+}

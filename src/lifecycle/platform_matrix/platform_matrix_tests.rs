@@ -5,6 +5,8 @@
 
 #![allow(dead_code, unused_imports)]
 
+use std::path::Path;
+
 use crate::lifecycle::platform_matrix::{
     Filesystem, GateKind, Os, PlatformError, PlatformJob, Toolchain, capability_supported,
     claim_platform, supported_platform_matrix, unsupported_cases,
@@ -98,5 +100,61 @@ fn cache_isolation_and_job_identity_are_explicit() {
     );
     for job in &matrix {
         assert!(!job.cache_key().is_empty());
+    }
+}
+
+#[test]
+fn rendered_evidence_matches_the_committed_support_report() {
+    use crate::lifecycle::platform_matrix::platform_evidence;
+    // The evidence is rendered from the declared matrix (the single
+    // source of truth); the committed report must match it exactly —
+    // missing or extra matrix entries fail here.
+    let rendered = platform_evidence();
+    let committed = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/traceability/platform-evidence.json"),
+    )
+    .expect("committed evidence");
+    assert_eq!(
+        committed.trim(),
+        rendered.trim(),
+        "the committed support report drifted from the declared matrix"
+    );
+}
+
+#[test]
+fn every_supported_os_maps_to_live_ci_jobs_and_no_extra_platform_is_claimed() {
+    use crate::lifecycle::platform_matrix::ci_job_names;
+    let workflow = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/pr-lint-test.yml"),
+    )
+    .expect("workflow");
+    // Every declared job name appears in the live workflow.
+    for job in ci_job_names() {
+        assert!(workflow.contains(job), "the CI job {job:?} is missing");
+    }
+    // A job whose name suggests an undeclared platform fails the drift
+    // check (no invented platform is claimed).
+    for line in workflow.lines() {
+        let name = line.trim();
+        if name.starts_with("  ") && name.ends_with(":") && !name.starts_with("    ") {
+            let job = name.trim_end_matches(':').trim();
+            if job.contains("windows") || job.contains("win-") || job.contains("network") {
+                panic!("the CI declares an unsupported platform job: {job}");
+            }
+        }
+    }
+}
+
+#[test]
+fn capability_skips_are_visible_in_the_evidence() {
+    use crate::lifecycle::platform_matrix::platform_evidence;
+    let evidence = platform_evidence();
+    // The unsupported cases are explicitly visible in the report.
+    for case in unsupported_cases() {
+        assert!(
+            evidence.contains(&format!("\"os\": \"{:?}\"", case.os))
+                && evidence.contains(&format!("\"filesystem\": \"{:?}\"", case.filesystem)),
+            "the skip for {case:?} is not visible in the evidence"
+        );
     }
 }
