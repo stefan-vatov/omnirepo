@@ -92,6 +92,7 @@ mod push_reconcile;
 mod record_finalize;
 mod release_build;
 mod release_manifest;
+mod release_platform;
 mod remote_push;
 mod remote_target;
 mod repair_causation;

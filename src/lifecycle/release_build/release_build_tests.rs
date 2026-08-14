@@ -27,6 +27,11 @@ fn crate_fixture(root: &Path) {
     .expect("manifest");
     fs::write(root.join(".gitignore"), "target\n").expect("gitignore");
     fs::write(root.join("src/lib.rs"), "pub fn answer() -> u32 { 42 }\n").expect("lib");
+    fs::write(
+        root.join("src/main.rs"),
+        "fn main() { println!(\"release-fixture-{}\", env!(\"CARGO_PKG_VERSION\")); }\n",
+    )
+    .expect("main");
 }
 
 fn git(root: &Path, args: &[&str]) {

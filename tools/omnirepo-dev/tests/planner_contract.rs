@@ -146,8 +146,12 @@ if [ "$1" != "--no-auto-import" ] || [ "$2" != "--no-auto-flush" ] || [ "$4" != 
 printf '%s\n' "${LLVM_PROFILE_FILE-<unset>}" > "$PWD/seen-profile"
 printf '[]\n'
 "#;
-    fs::write(&executable, script).expect("write profile fake br");
-    set_executable(&executable);
+    // Publish atomically: a concurrent exec must never see a
+    // half-written script (ETXTBSY).
+    let temporary = root.join(format!(".profile-fake-br.tmp-{}", std::process::id()));
+    fs::write(&temporary, script).expect("write profile fake br temp");
+    set_executable(&temporary);
+    fs::rename(&temporary, &executable).expect("publish profile fake br");
     executable
 }
 

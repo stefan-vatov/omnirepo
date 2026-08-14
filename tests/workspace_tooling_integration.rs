@@ -94,6 +94,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/repair_selection.rs",
         "src/lifecycle/release_manifest.rs",
         "src/lifecycle/release_build.rs",
+        "src/lifecycle/release_platform.rs",
         "src/lifecycle/repair_fallback.rs",
         "src/lifecycle/repair_fold.rs",
         "src/lifecycle/migration_decision.rs",
