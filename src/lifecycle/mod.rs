@@ -45,6 +45,7 @@ mod remote_push;
 mod remote_target;
 mod repair_causation;
 mod repair_classify;
+mod repair_reserve;
 mod replace;
 mod replacement_requests;
 mod replay;

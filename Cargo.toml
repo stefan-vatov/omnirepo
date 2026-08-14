@@ -67,6 +67,7 @@ exclude = [
     "src/lifecycle/fleet_app/application_contract_tests.rs",
     "src/lifecycle/repair_classify/repair_classify_tests.rs",
     "src/lifecycle/repair_causation/repair_causation_tests.rs",
+    "src/lifecycle/repair_reserve/repair_reserve_tests.rs",
     "src/lifecycle/journal/journal_tests.rs",
     "src/lifecycle/replay/replay_tests.rs",
     "src/lifecycle/admission/admission_tests.rs",
