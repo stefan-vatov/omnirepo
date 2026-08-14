@@ -38,6 +38,7 @@ mod initial_pass;
 mod initial_sync;
 mod invocation;
 mod journal;
+mod migration_decision;
 mod nested_permits;
 mod plan_builder;
 mod plan_selection;

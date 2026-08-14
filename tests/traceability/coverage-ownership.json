@@ -447,6 +447,10 @@
     {
       "path": "src/lifecycle/repair_fold.rs",
       "row_id": "behavior-repair-causation"
+    },
+    {
+      "path": "src/lifecycle/migration_decision.rs",
+      "row_id": "principle-convention-intent"
     }
   ],
   "schema": "omnirepo.coverage-ownership.v1",
