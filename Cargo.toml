@@ -116,6 +116,7 @@ exclude = [
     "src/lifecycle/setup_plan/setup_plan_tests.rs",
     "src/lifecycle/setup_author/setup_author_tests.rs",
     "src/lifecycle/setup_files/setup_files_tests.rs",
+    "src/lifecycle/setup_run/setup_run_tests.rs",
     "src/lifecycle/run_summary/run_summary_tests.rs",
     "src/lifecycle/record_finalize/record_finalize_tests.rs",
     "src/lifecycle/plan_selection/plan_selection_tests.rs",

@@ -44,7 +44,16 @@ pub fn apply_setup_plan(
     match &action {
         SetupAction::Create { path } | SetupAction::Update { path } => {
             let target = root.join(path);
-            let temporary = root.join(format!(".{}.tmp-{}", path, std::process::id()));
+            let parent = target.parent().unwrap_or(root);
+            std::fs::create_dir_all(parent).map_err(|error| SetupPlanError::Io {
+                path: parent.display().to_string(),
+                reason: error.to_string(),
+            })?;
+            let file_name = target
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.clone());
+            let temporary = parent.join(format!(".{file_name}.tmp-{}", std::process::id()));
             std::fs::write(&temporary, &intent.machine_content).map_err(|error| {
                 SetupPlanError::Io {
                     path: temporary.display().to_string(),

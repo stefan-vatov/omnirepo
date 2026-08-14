@@ -110,6 +110,7 @@ mod scheduler;
 mod setup_author;
 mod setup_files;
 mod setup_plan;
+mod setup_run;
 mod single_repo_pass;
 mod source_catalog;
 mod source_extraction;
