@@ -40,6 +40,7 @@ mod invocation;
 mod journal;
 mod lifecycle_model;
 mod migration_decision;
+mod model_generation;
 mod nested_permits;
 mod plan_builder;
 mod plan_selection;
