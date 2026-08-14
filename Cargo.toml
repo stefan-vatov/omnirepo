@@ -102,6 +102,7 @@ exclude = [
     "src/lifecycle/check_runner/check_runner_tests.rs",
     "src/lifecycle/verifier_confinement/verifier_confinement_tests.rs",
     "src/lifecycle/verification_gate/verification_gate_tests.rs",
+    "src/lifecycle/verification_fixture_tests.rs",
     "src/lifecycle/commit_journal/commit_journal_fixture_tests.rs",
     "src/lifecycle/agent_framing/agent_framing_tests.rs",
     "src/lifecycle/commit_journal/commit_journal_tests.rs",

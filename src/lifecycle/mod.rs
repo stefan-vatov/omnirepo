@@ -8,6 +8,9 @@ mod admission;
 mod authority_integration_tests;
 
 #[cfg(test)]
+mod verification_fixture_tests;
+
+#[cfg(test)]
 mod sync_idempotence_tests;
 
 mod agent_confinement;

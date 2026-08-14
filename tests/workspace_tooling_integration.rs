@@ -72,6 +72,7 @@ fn product_package_contains_runtime_only_files() {
         "src/lifecycle/cancellation.rs",
         "src/lifecycle/check_runner.rs",
         "src/lifecycle/verification_gate.rs",
+        "src/lifecycle/verification_fixture_tests.rs",
         "src/lifecycle/verifier_confinement.rs",
         "src/lifecycle/command_spec.rs",
         "src/lifecycle/agent_framing.rs",
