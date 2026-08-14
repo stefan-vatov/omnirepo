@@ -239,6 +239,7 @@ fn terminate(child: &mut std::process::Child) {
         let pid = child.id();
         let _ = std::process::Command::new("kill")
             .arg("-TERM")
+            .arg("--")
             .arg(format!("-{pid}"))
             .status();
         let _ = child.kill();

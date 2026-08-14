@@ -14,6 +14,7 @@ mod agent_confinement;
 mod agent_framing;
 mod agent_runtime;
 mod cancellation;
+mod check_runner;
 mod command_spec;
 mod commit_journal;
 mod diagnostic_aggregation;

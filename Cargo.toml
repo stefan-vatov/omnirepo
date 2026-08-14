@@ -99,6 +99,7 @@ exclude = [
     "src/lifecycle/agent_runtime/agent_runtime_tests.rs",
     "src/lifecycle/cancellation/cancellation_tests.rs",
     "src/lifecycle/command_spec/command_spec_tests.rs",
+    "src/lifecycle/check_runner/check_runner_tests.rs",
     "src/lifecycle/commit_journal/commit_journal_fixture_tests.rs",
     "src/lifecycle/agent_framing/agent_framing_tests.rs",
     "src/lifecycle/commit_journal/commit_journal_tests.rs",
