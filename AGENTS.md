@@ -54,7 +54,7 @@ Trivial mechanical tasks need no line.
 <!-- END PROJECT CONSTITUTION -->
 
 <!-- BEGIN PROJECT CANON -->
-<!-- GENERATED from canon-core.md by tools/build.py - edit canon-core.md instead -->
+<!-- Hand-maintained; edit in place (the build.py/canon-core.md generator no longer exists). -->
 
 FIRST PROJECT ACTION — probe only for `canon/`. If present, read
 `canon/manifest.md` and load only routed pages matching the task; route again

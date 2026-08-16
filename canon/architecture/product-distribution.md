@@ -31,10 +31,13 @@ selected binary surface on the supported toolchain.
 
 A release is identified by one protected SemVer tag `vX.Y.Z` whose version
 matches the Cargo package and whose immutable commit is the qualified release
-source. A push to `main` never publishes. The exact qualified commit produces
-both the crates.io package and the GitHub release with supported platform
-binaries; artifact digests, version output, changelog, and migration guidance
-must all identify that same commit and version.
+source. A push to `main` never publishes. Release tag creation honors the
+invoking user's configured Git signing policy; missing identity or signing
+capability is a release failure, never a reason to bypass the selected policy.
+The exact qualified commit produces both the crates.io package and the GitHub
+release with supported platform binaries; artifact digests, version output,
+changelog, and migration guidance must all identify that same commit and
+version.
 
 Publication is idempotent and never moves, deletes, or repoints an existing tag
 or public artifact. If one channel succeeds and another fails, the successful
