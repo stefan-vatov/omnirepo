@@ -166,3 +166,31 @@ fn declared_order_is_preserved_across_all_loads() {
         .collect::<Vec<_>>();
     assert_eq!(ids, vec!["repo-zeta", "repo-alpha", "repo-mid"]);
 }
+
+#[test]
+fn declared_commands_are_carried_into_the_fleet_pass() {
+    let fixture = fixture_base();
+    destination(fixture.path(), "repo-a");
+    write_policy(
+        fixture.path(),
+        "repo-a",
+        "version: 1\ncommands:\n  - [echo, ok]\n  - [/bin/true]\n",
+    );
+    let config = machine(vec![destination(fixture.path(), "repo-a")]);
+    let loads = load_repository_policies(&config);
+    let checks = &loads[0].checks;
+    assert_eq!(
+        checks.len(),
+        2,
+        "commands survive the policy load: {:?}",
+        loads[0]
+    );
+    assert_eq!(checks[0].argv(), &["echo".to_owned(), "ok".to_owned()]);
+    assert_eq!(checks[1].argv(), &["/bin/true".to_owned()]);
+    // An absent policy carries no commands.
+    let absent = fixture_base();
+    destination(absent.path(), "repo-b");
+    let config = machine(vec![destination(absent.path(), "repo-b")]);
+    let loads = load_repository_policies(&config);
+    assert!(loads[0].checks.is_empty(), "{:?}", loads[0]);
+}

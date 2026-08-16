@@ -23,8 +23,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Default push deadline.
-pub const DEFAULT_PUSH_TIMEOUT: Duration = Duration::from_secs(30);
+/// Default push deadline: two minutes
+/// (canon/architecture/fleet-lifecycle.md: git delivery).
+pub const DEFAULT_PUSH_TIMEOUT: Duration = Duration::from_secs(120);
 /// Maximum captured push output bytes.
 pub const MAX_PUSH_OUTPUT_BYTES: usize = 64 * 1024;
 

@@ -140,6 +140,7 @@ fn every_admitted_repository_reaches_exactly_one_result_in_declared_order() {
                 "repo-a",
                 vec![plan_item("item-1", "managed.txt")],
             )),
+            checks: Vec::new(),
         },
         RepositoryPlan {
             repository: "repo-b".to_owned(),
@@ -147,6 +148,7 @@ fn every_admitted_repository_reaches_exactly_one_result_in_declared_order() {
                 "repo-b",
                 vec![plan_item("item-2", "managed.txt")],
             )),
+            checks: Vec::new(),
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
@@ -204,6 +206,7 @@ fn a_failing_repository_never_stops_its_peers() {
                 "repo-good",
                 vec![plan_item("item-1", "managed.txt")],
             )),
+            checks: Vec::new(),
         },
         RepositoryPlan {
             repository: "repo-bad".to_owned(),
@@ -211,6 +214,7 @@ fn a_failing_repository_never_stops_its_peers() {
                 "repo-bad",
                 vec![plan_item("item-2", "managed.txt")],
             )),
+            checks: Vec::new(),
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
@@ -256,6 +260,7 @@ fn an_unchanged_repository_creates_no_commit() {
             "repo-a",
             vec![plan_item("item-1", "managed.txt")],
         )),
+        checks: Vec::new(),
     }];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
     let (_jfixture, mut journal, run_id) = journal_fixture();

@@ -79,6 +79,7 @@ fn ok_plan(repository: &str, items: Vec<PlanItem>) -> RepositoryPlan {
     RepositoryPlan {
         repository: repository.to_owned(),
         plan: Ok(SyncPlan::new(repository, items)),
+        checks: Vec::new(),
     }
 }
 
@@ -86,6 +87,7 @@ fn failed_plan(repository: &str, reason: &str) -> RepositoryPlan {
     RepositoryPlan {
         repository: repository.to_owned(),
         plan: Err(reason.to_owned()),
+        checks: Vec::new(),
     }
 }
 

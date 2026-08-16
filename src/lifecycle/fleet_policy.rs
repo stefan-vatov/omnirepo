@@ -14,7 +14,7 @@ mod fleet_policy_tests;
 
 use crate::configuration::MachineConfiguration;
 use crate::lifecycle::plan_selection::Policy;
-use crate::repository::{PolicyPresence, load_policy};
+use crate::repository::{PolicyPresence, VerificationCommand, load_policy};
 use std::path::Path;
 
 /// One destination's policy load outcome.
@@ -24,6 +24,10 @@ pub struct RepositoryPolicyLoad {
     /// The plan policy: None when the load failed, Absent when no policy
     /// file exists, Explicit otherwise.
     pub policy: Option<Policy>,
+    /// The declared verification commands (explicit argv arrays) for the
+    /// fleet pass; empty when the policy is absent, failed, or declares
+    /// no commands.
+    pub checks: Vec<VerificationCommand>,
     /// The typed failure for this destination only.
     pub failure: Option<String>,
 }
@@ -41,16 +45,23 @@ pub fn load_repository_policies(config: &MachineConfiguration) -> Vec<Repository
                 Ok(PolicyPresence::Absent) => RepositoryPolicyLoad {
                     repository,
                     policy: Some(Policy::Absent),
+                    checks: Vec::new(),
                     failure: None,
                 },
                 Ok(PolicyPresence::Present(policy)) => RepositoryPolicyLoad {
                     repository,
+                    checks: policy
+                        .commands()
+                        .as_slice()
+                        .map(|commands| commands.to_vec())
+                        .unwrap_or_default(),
                     policy: Some(convert(&policy)),
                     failure: None,
                 },
                 Err(error) => RepositoryPolicyLoad {
                     repository,
                     policy: None,
+                    checks: Vec::new(),
                     failure: Some(error.to_string()),
                 },
             }

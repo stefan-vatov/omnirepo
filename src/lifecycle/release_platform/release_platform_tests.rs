@@ -94,10 +94,11 @@ fn the_local_host_bundle_builds_and_verifies() {
 fn an_unavailable_cross_target_fails_typed() {
     let fixture = fixture_base();
     let (root, head) = fixture_repo(&fixture);
-    // A target without the installed toolchain fails typed, never a
-    // panic and never a fake bundle.
+    // A target that no standard toolchain ships (and no rustup shim can
+    // auto-install on a non-rustup rustc) fails typed, never a panic and
+    // never a fake bundle.
     let error =
-        build_platform_bundle_for(&root, &head, "wasm32-unknown-unknown").expect_err("cross");
+        build_platform_bundle_for(&root, &head, "x86_64-unknown-fuchsia").expect_err("cross");
     assert!(
         matches!(error, BundleError::TargetUnavailable { .. }),
         "{error}"

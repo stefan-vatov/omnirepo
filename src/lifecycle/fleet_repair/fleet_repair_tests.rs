@@ -222,7 +222,7 @@ fn a_duplicate_reservation_never_double_repairs() {
         &run_id,
         &config,
         &failed,
-        &[adapter.clone()],
+        std::slice::from_ref(&adapter),
         &record_text,
     )
     .expect("first");

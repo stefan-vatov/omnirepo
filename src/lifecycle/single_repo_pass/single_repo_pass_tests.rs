@@ -129,6 +129,7 @@ fn each_run_yields_one_replayable_initial_result_and_exact_residue() {
         &run_id,
         "dest-a",
         &snapshot_for(&root),
+        &[],
         "sync managed",
     )
     .expect("pass");
@@ -162,6 +163,7 @@ fn no_duplicate_git_effect_on_redelivery() {
         &run_id,
         "dest-a",
         &snapshot_for(&root),
+        &[],
         "sync managed",
     )
     .expect("pass");
@@ -204,6 +206,7 @@ fn protected_state_remains_intact() {
         &run_id,
         "dest-a",
         &snapshot_for(&root),
+        &[],
         "sync managed",
     )
     .expect("pass");
@@ -226,6 +229,7 @@ fn cancellation_records_an_unambiguous_result() {
         &run_id,
         "dest-a",
         &snapshot_for(&root),
+        &[],
         "sync managed",
     )
     .expect("pass");
@@ -238,4 +242,110 @@ fn cancellation_records_an_unambiguous_result() {
         !record.contains("\"type\":\"cancelled\""),
         "no phantom cancellation"
     );
+}
+
+#[test]
+fn a_failing_declared_check_prevents_git_delivery() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    fs::write(root.join("managed.txt"), "v2\n").expect("file");
+    let checks =
+        vec![crate::repository::VerificationCommand::new(["/bin/false"]).expect("command")];
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot_for(&root),
+        &checks,
+        "sync managed",
+    )
+    .expect("pass");
+    // The failed check fails the pass: no Git delivery happens and no
+    // scoped commit object is created beyond the base.
+    let failed = match outcome {
+        PassOutcome::Failed { reason } => reason,
+        other => panic!("expected the failing check to fail the pass: {other:?}"),
+    };
+    assert!(failed.contains("verification"), "{failed}");
+    let objects = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args([
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("git");
+    let objects = String::from_utf8(objects.stdout).expect("stdout");
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 1, "base only; the failing check prevents Git");
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn a_passing_declared_check_allows_git_delivery() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    fs::write(root.join("managed.txt"), "v2\n").expect("file");
+    let checks = vec![crate::repository::VerificationCommand::new(["/bin/true"]).expect("command")];
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot_for(&root),
+        &checks,
+        "sync managed",
+    )
+    .expect("pass");
+    assert!(
+        matches!(outcome, PassOutcome::Delivered { .. }),
+        "a passing check permits the scoped delivery: {outcome:?}"
+    );
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn a_concurrent_managed_change_prevents_git_delivery() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    fs::write(root.join("managed.txt"), "v2\n").expect("file");
+    // The snapshot froze managed.txt as a regular file.  A declared check
+    // then removes the managed target during verification: the fresh
+    // capture sees a deletion at a managed path, which is not the
+    // authorized replacement, and the pass fails without Git.
+    let checks = vec![
+        crate::repository::VerificationCommand::new(["/bin/rm", "managed.txt"]).expect("command"),
+    ];
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot_for(&root),
+        &checks,
+        "sync managed",
+    )
+    .expect("pass");
+    let failed = match outcome {
+        PassOutcome::Failed { reason } => reason,
+        other => panic!("expected the concurrent change to fail the pass: {other:?}"),
+    };
+    assert!(failed.contains("concurrently"), "{failed}");
+    let objects = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args([
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("git");
+    let objects = String::from_utf8(objects.stdout).expect("stdout");
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 1, "base only; the concurrent change prevents Git");
+    journal.shutdown().expect("shutdown");
 }

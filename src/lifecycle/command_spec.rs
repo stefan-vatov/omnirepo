@@ -12,6 +12,10 @@
 use crate::platform::RelativePath;
 use std::{error::Error, fmt, path::PathBuf, time::Duration};
 
+/// The canonical default per-check timeout: ten minutes
+/// (canon/architecture/fleet-lifecycle.md: verification commands).
+pub const DEFAULT_COMMAND_TIMEOUT: Duration = Duration::from_secs(600);
+
 /// One translated command spec.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommandSpec {

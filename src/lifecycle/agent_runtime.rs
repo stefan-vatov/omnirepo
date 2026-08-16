@@ -39,8 +39,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Default agent run budget.
-pub const DEFAULT_AGENT_TIMEOUT: Duration = Duration::from_secs(120);
+/// Default agent run budget: fifteen minutes
+/// (canon/architecture/fleet-lifecycle.md: agent-assisted repair).
+pub const DEFAULT_AGENT_TIMEOUT: Duration = Duration::from_secs(900);
 /// Maximum captured evidence bytes (post-sanitization).
 pub const MAX_EVIDENCE_BYTES: usize = MAX_FRAME_PAYLOAD_BYTES;
 

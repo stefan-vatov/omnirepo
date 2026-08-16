@@ -85,7 +85,7 @@ fn fake_and_replaced_adapter_executables_fail_resolution() {
     fs::create_dir_all(bin.join("empty")).expect("empty dir");
     let outcome = resolve_adapters_with_path(
         &[AgentKind::Codex],
-        &[bin.clone()],
+        std::slice::from_ref(&bin),
         Some(bin.join("empty").as_os_str()),
     )
     .expect("resolve");
@@ -99,7 +99,7 @@ fn fake_and_replaced_adapter_executables_fail_resolution() {
     write_executable(&codex, "#!/bin/sh\nexit 0\n");
     let resolved = resolve_adapters_with_path(
         &[AgentKind::Codex],
-        &[bin.clone()],
+        std::slice::from_ref(&bin),
         Some(bin.join("empty").as_os_str()),
     )
     .expect("resolve");
@@ -112,7 +112,7 @@ fn fake_and_replaced_adapter_executables_fail_resolution() {
     write_executable(&codex, "#!/bin/sh\ntouch /tmp/omnirepo-adapter-ran\n");
     let resolved = resolve_adapters_with_path(
         &[AgentKind::Codex],
-        &[bin.clone()],
+        std::slice::from_ref(&bin),
         Some(bin.join("empty").as_os_str()),
     )
     .expect("resolve");

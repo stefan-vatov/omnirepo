@@ -122,10 +122,11 @@ fn strip_comment(raw: &str) -> &str {
         match byte {
             b'\'' if !in_double => in_single = !in_single,
             b'"' if !in_single => in_double = !in_double,
-            b'#' if !in_single && !in_double => {
-                if index == 0 || raw.as_bytes()[index - 1].is_ascii_whitespace() {
-                    return &raw[..index];
-                }
+            b'#' if !in_single
+                && !in_double
+                && (index == 0 || raw.as_bytes()[index - 1].is_ascii_whitespace()) =>
+            {
+                return &raw[..index];
             }
             _ => {}
         }

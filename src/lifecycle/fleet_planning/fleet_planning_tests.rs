@@ -73,6 +73,7 @@ fn absent_policy() -> RepositoryPolicyLoad {
     RepositoryPolicyLoad {
         repository: String::new(),
         policy: Some(Policy::Absent),
+        checks: Vec::new(),
         failure: None,
     }
 }
@@ -141,6 +142,7 @@ fn a_policy_failure_fails_only_its_plan_and_peers_continue() {
         RepositoryPolicyLoad {
             repository: "repo-a".to_owned(),
             policy: None,
+            checks: Vec::new(),
             failure: Some("aliased policy file".to_owned()),
         },
         absent_policy(),
@@ -168,6 +170,7 @@ fn explicit_policy_selection_governs_the_plan() {
             include: vec!["item-1".to_owned()],
             exclude: Vec::new(),
         }),
+        checks: Vec::new(),
         failure: None,
     }];
     let plans = build_repository_plans(&config, &catalog, &declarations, &policies);

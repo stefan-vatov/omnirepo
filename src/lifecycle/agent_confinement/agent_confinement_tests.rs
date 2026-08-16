@@ -27,7 +27,12 @@ fn agent_confinement_is_destination_only() {
     let (_fixture, destination, inside, _outside) = fixture();
     let root =
         AuthorityRoot::<AgentWorkingDirectoryRoot, ReadOnly>::open(&destination).expect("root");
-    let confinement = confine(&root, &[inside.clone()], &[inside.clone()]).expect("confine");
+    let confinement = confine(
+        &root,
+        std::slice::from_ref(&inside),
+        std::slice::from_ref(&inside),
+    )
+    .expect("confine");
     assert_eq!(
         confinement.workdir,
         destination.canonicalize().expect("canonical")
@@ -53,7 +58,7 @@ fn outside_extra_paths_escape_and_fail() {
     let (_fixture, destination, _inside, outside) = fixture();
     let root =
         AuthorityRoot::<AgentWorkingDirectoryRoot, ReadOnly>::open(&destination).expect("root");
-    let error = confine(&root, &[], &[outside.clone()]).expect_err("escape must fail");
+    let error = confine(&root, &[], std::slice::from_ref(&outside)).expect_err("escape must fail");
     assert!(
         matches!(error, ConfinementError::EscapesDestination { .. }),
         "{error:?}"

@@ -15,6 +15,7 @@ mod fleet_repair_tests;
 
 use crate::configuration::MachineConfiguration;
 use crate::lifecycle::adapters::AdapterResolution;
+use crate::lifecycle::agent_runtime::DEFAULT_AGENT_TIMEOUT;
 use crate::lifecycle::journal::JournalHandle;
 use crate::lifecycle::repair_causation::CausationVerdict;
 use crate::lifecycle::repair_classify::FailureClass;
@@ -23,7 +24,6 @@ use crate::lifecycle::repair_fallback::allocate_within_budget;
 use crate::lifecycle::repair_reserve::reserve_repair_attempt;
 use crate::lifecycle::repair_selection::{FailedRepository, select_eligible_failed};
 use std::path::Path;
-use std::time::Duration;
 
 /// One failed fleet member entering the repair pass.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -118,7 +118,7 @@ pub fn run_fleet_repair(
             run_id,
             repository: &repository,
             frozen_inputs: &frozen,
-            budget: Duration::from_secs(60),
+            budget: DEFAULT_AGENT_TIMEOUT,
             trusted_agent: true,
         };
         match execute_confined_repair(request) {

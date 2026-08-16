@@ -68,12 +68,21 @@ pub fn run_fleet_initial_passes(
         .map(|plan| {
             (
                 plan.repository.clone(),
-                plan.plan.as_ref().ok().cloned().unwrap_or_else(|| {
-                    crate::lifecycle::sync_plan::SyncPlan::new(&plan.repository, Vec::new())
-                }),
+                (
+                    plan.plan.as_ref().ok().cloned().unwrap_or_else(|| {
+                        crate::lifecycle::sync_plan::SyncPlan::new(&plan.repository, Vec::new())
+                    }),
+                    plan.checks.clone(),
+                ),
             )
         })
-        .collect::<HashMap<String, crate::lifecycle::sync_plan::SyncPlan>>();
+        .collect::<HashMap<
+            String,
+            (
+                crate::lifecycle::sync_plan::SyncPlan,
+                Vec<crate::repository::VerificationCommand>,
+            ),
+        >>();
     let destinations = Arc::new(destinations);
     let plans = Arc::new(plans);
     let journal_handle = journal.clone();
@@ -95,8 +104,11 @@ pub fn run_fleet_initial_passes(
                     };
                 };
                 let working = std::path::Path::new(working);
-                let plan = plans.get(repository).cloned().unwrap_or_else(|| {
-                    crate::lifecycle::sync_plan::SyncPlan::new(repository, Vec::new())
+                let (plan, checks) = plans.get(repository).cloned().unwrap_or_else(|| {
+                    (
+                        crate::lifecycle::sync_plan::SyncPlan::new(repository, Vec::new()),
+                        Vec::new(),
+                    )
                 });
                 let snapshot = match build_frozen_snapshot(working, &plan) {
                     Ok(snapshot) => snapshot,
@@ -113,6 +125,7 @@ pub fn run_fleet_initial_passes(
                     &run_id_owned,
                     repository,
                     &snapshot,
+                    &checks,
                     SYNC_COMMIT_MESSAGE,
                 ) {
                     Ok(crate::lifecycle::single_repo_pass::PassOutcome::Delivered { oid }) => {

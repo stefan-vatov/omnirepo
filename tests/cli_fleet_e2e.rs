@@ -307,3 +307,81 @@ fn repair_with_a_fake_adapter_recovers_the_failed_repository() {
         .assert()
         .code(0);
 }
+
+#[test]
+fn a_failing_declared_command_gates_the_commit() {
+    let fixture = fixture("e2e-check-fail-");
+    let source = setup_source(&fixture);
+    let destination = setup_destination(&fixture, "destination-a", "v1\n");
+    fs::write(
+        destination.join(".omnirepo.yaml"),
+        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/bin/false]\n",
+    )
+    .expect("policy");
+    let home = fixture.path().join("home");
+    fs::create_dir_all(&home).expect("home");
+    write_machine_config(
+        &home,
+        &[("destination-a", &destination)],
+        &[("source-a", &source)],
+    );
+    command(&home, fixture.path())
+        .arg("sync")
+        .assert()
+        .code(4)
+        .stdout(predicate::str::is_empty());
+    // No Git delivery: the object database holds exactly the base commit.
+    let objects = git_text(
+        &destination,
+        &[
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ],
+    );
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(
+        commits, 1,
+        "the failing declared command prevents the scoped commit"
+    );
+    // The managed target stays exactly as the base held it.
+    assert_eq!(
+        fs::read_to_string(destination.join("managed.txt")).expect("managed"),
+        "v1\n",
+        "no write reaches the destination without a passing check"
+    );
+}
+
+#[test]
+fn a_passing_declared_command_allows_the_commit() {
+    let fixture = fixture("e2e-check-pass-");
+    let source = setup_source(&fixture);
+    let destination = setup_destination(&fixture, "destination-a", "v1\n");
+    fs::write(
+        destination.join(".omnirepo.yaml"),
+        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/bin/true]\n",
+    )
+    .expect("policy");
+    let home = fixture.path().join("home");
+    fs::create_dir_all(&home).expect("home");
+    write_machine_config(
+        &home,
+        &[("destination-a", &destination)],
+        &[("source-a", &source)],
+    );
+    command(&home, fixture.path()).arg("sync").assert().code(0);
+    // The passing check permits the scoped commit object (base plus one).
+    let objects = git_text(
+        &destination,
+        &[
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ],
+    );
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(
+        commits, 2,
+        "base plus the scoped commit object after a passing check"
+    );
+}
