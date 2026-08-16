@@ -38,6 +38,9 @@ fn git_repo(root: &Path) -> std::path::PathBuf {
     git(&["init", "--quiet", "-b", "main"]);
     git(&["config", "user.name", "Release"]);
     git(&["config", "user.email", "release@example.test"]);
+    // The product honors the invoking user's signing policy, so the fixture
+    // pins signing off locally instead of relying on the ambient config.
+    git(&["config", "tag.gpgsign", "false"]);
     fs::write(root.join("file.txt"), "v1\n").expect("file");
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);

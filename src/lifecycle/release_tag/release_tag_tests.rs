@@ -34,6 +34,9 @@ fn git_repo(root: &Path) -> (String, String) {
     git(&["init", "--quiet", "-b", "main"]);
     git(&["config", "user.name", "Tag"]);
     git(&["config", "user.email", "tag@example.test"]);
+    // The product honors the invoking user's signing policy, so the fixture
+    // pins signing off locally instead of relying on the ambient config.
+    git(&["config", "tag.gpgsign", "false"]);
     fs::write(root.join("file.txt"), "v1\n").expect("file");
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
