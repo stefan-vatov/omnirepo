@@ -56,6 +56,72 @@ surface in the first constitutional release.
 
 See [the quickstart](docs/quickstart.md) for a complete walkthrough, [docs/breaks-inventory.md](docs/breaks-inventory.md) for what changed from earlier releases, and [docs/breaking-guidance.md](docs/breaking-guidance.md) for the actionable migration guidance.
 
+## Managed partial sections
+
+Whole files sync byte-exactly. For a **partial**, mark the managed region
+in both the source and the destination with the file format's comment
+delimiters: `sync` replaces only the bytes between the markers and keeps
+everything outside them verbatim. The markers are the format's canonical
+comment syntax (`#`, `//`, or `<!-- -->`), so the file stays ordinary
+source.
+
+### Markdown destination
+
+Insert the marker pair where the partial should live, for example in
+`docs/site/README.md`:
+
+```markdown
+<!-- omnirepo-start -->
+# Monthly release highlights
+- Roadmap for the next milestone
+<!-- omnirepo-end -->
+```
+
+The source file carries the exact replacement content between the same
+pair, and the declaration selects it with `mode=section`:
+
+```text
+omnirepo-declarations-v1
+source=docs revision=<pinned-sha> path=highlights.md id=release-highlights mode=section destination=docs/site/README.md
+```
+
+Every `sync` rewrites only the block between the two Markdown comments;
+the rest of `README.md` is preserved untouched.
+
+### JavaScript / TypeScript destination
+
+Same idea in `src/version.ts`:
+
+```ts
+// omnirepo-start
+export const API_VERSION = process.env.API_VERSION ?? "unstable";
+// omnirepo-end
+```
+
+### The top ten format families
+
+The registry resolves the destination path's extension (last component,
+lowercase) to exactly one marker pair. Unknown or extensionless targets
+fail closed with a typed error — a partial is never silently inferred:
+
+| Destination format | Extensions | Open marker | Close marker |
+|---|---|---|---|
+| YAML | `.yml`, `.yaml` | `# omnirepo-start` | `# omnirepo-end` |
+| TOML | `.toml` | `# omnirepo-start` | `# omnirepo-end` |
+| Shell | `.sh`, `.bash` | `# omnirepo-start` | `# omnirepo-end` |
+| JSON | `.json` | `// omnirepo-start` | `// omnirepo-end` |
+| JavaScript | `.js`, `.mjs`, `.cjs` | `// omnirepo-start` | `// omnirepo-end` |
+| TypeScript | `.ts`, `.mts`, `.cts` | `// omnirepo-start` | `// omnirepo-end` |
+| Markdown | `.md`, `.markdown` | `<!-- omnirepo-start -->` | `<!-- omnirepo-end -->` |
+| HTML | `.html`, `.htm` | `<!-- omnirepo-start -->` | `<!-- omnirepo-end -->` |
+| Python | `.py` | `# omnirepo-start` | `# omnirepo-end` |
+| Rust | `.rs` | `// omnirepo-start` | `// omnirepo-end` |
+
+Exactly one ordered, non-nested marker pair is required. Unpaired,
+nested, multiple, or reversed markers are typed failures, never guesses.
+The full delimiter reference lives in
+[docs/reference.md](docs/reference.md).
+
 ## Installation
 
 Build from source with the pinned toolchain:
