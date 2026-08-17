@@ -60,21 +60,25 @@ fn executable_publication_fault_and_closed_readiness_are_deterministic() {
         .expect("fixture executable should be tracked");
 
     // RED: a publication writer that remains open makes Linux reject execve
-    // with ETXTBSY. The GREEN publication path must close this handle before
-    // crossing its readiness boundary.
-    let writer = fs::OpenOptions::new()
-        .write(true)
-        .open(&published)
-        .expect("fixture publication writer should open");
-    let spawn = Command::new(&published)
-        .arg("--list")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
-    let error = spawn.expect_err("open publication writer must fault with ETXTBSY");
-    assert_eq!(error.raw_os_error(), Some(26));
-    drop(writer);
+    // with ETXTBSY (macOS does not enforce that conflict). The GREEN
+    // publication path must close this handle before crossing its readiness
+    // boundary.
+    #[cfg(target_os = "linux")]
+    {
+        let writer = fs::OpenOptions::new()
+            .write(true)
+            .open(&published)
+            .expect("fixture publication writer should open");
+        let spawn = Command::new(&published)
+            .arg("--list")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+        let error = spawn.expect_err("open publication writer must fault with ETXTBSY");
+        assert_eq!(error.raw_os_error(), Some(26));
+        drop(writer);
+    }
 
     let executable =
         fs::read(std::env::current_exe().expect("test executable should be discoverable"))
