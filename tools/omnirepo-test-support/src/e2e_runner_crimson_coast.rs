@@ -1726,8 +1726,14 @@ fn process_paths(fixture: &LifecycleFixture, replay: &str, effects: &Path) -> Ve
 
 fn create_outside_canary() -> Result<TempDir, RunnerError> {
     // This is a deliberate, controlled observation boundary. It is not a
-    // claim that the host OS can globally report arbitrary writes.
-    let canary = TempDir::new()?;
+    // claim that the host OS can globally report arbitrary writes.  The
+    // canary shares the fixture's filesystem (the crate's target dir) so
+    // hard-link probes can actually create the link across the boundary.
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base)?;
+    let canary = tempfile::Builder::new()
+        .prefix("omnirepo-outside-canary-")
+        .tempdir_in(&base)?;
     fs::write(canary.path().join("sentinel"), b"outside-canary-v1\n")?;
     Ok(canary)
 }
