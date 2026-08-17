@@ -154,16 +154,20 @@ fn text_output_keeps_the_legacy_success_and_failure_projection() {
     let output = Command::new(binary_path())
         .args(["validate-decisions"])
         .env("BEADS_JSONL", &path)
+        .env("PATH", root.join("empty-bin"))
         .current_dir(&root)
         .output()
         .expect("run text validator");
-    assert_eq!(
-        output.status.code(),
-        Some(1),
-        "unexpected exit; stdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    if output.status.code() != Some(1) {
+        panic!(
+            "unexpected exit {:?}; stdout: {:?}; stderr: {:?}; fixture_bytes: {:?}; cwd_exists: {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+            fs::read(&path).map_err(|error| error.to_string()),
+            root.exists()
+        );
+    }
     assert!(output.stdout.is_empty());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
