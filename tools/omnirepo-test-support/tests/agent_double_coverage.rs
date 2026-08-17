@@ -131,18 +131,33 @@ fn agent_errors_have_stable_display_source_and_conversions() {
 fn release_before_hit_is_rejected_then_normal_release_succeeds() {
     let mut fixture = LifecycleFixture::create(FixtureSpec::new("agent-release-order", 7_601))
         .expect("fixture should be created");
+    // Deterministic barrier semantics first: a barrier that was never hit
+    // rejects release with the exact invariant.  (The live agent session
+    // below races its own thread, so the rejection is proven here.)
+    let barrier = fixture
+        .barriers()
+        .arm("release-order-before-hit")
+        .expect("arm barrier");
+    assert!(matches!(
+        barrier.release(),
+        Err(FixtureError::Invariant(message)) if message == "barrier was not hit"
+    ));
+    // hit() blocks until release() (the barrier protocol), so the hit runs
+    // on its own thread and the main thread waits for it.
+    let barrier_for_thread = barrier.clone();
+    let hit_thread = std::thread::spawn(move || {
+        barrier_for_thread.hit().expect("hit barrier");
+    });
+    barrier.wait_for_hit().expect("barrier hit observed");
+    barrier.release().expect("release after hit");
+    hit_thread.join().expect("hit thread");
+
     let session = AgentDouble::start(
         &mut fixture,
         "release-order",
         vec![r#"{"kind":"result","status":"ok"}"#.to_owned()],
     )
     .expect("agent should start");
-
-    assert!(matches!(
-        session.release(),
-        Err(AgentDoubleError::Fixture(FixtureError::Invariant(message)))
-            if message == "barrier was not hit"
-    ));
     session
         .wait_for_barrier()
         .expect("agent should report its barrier");

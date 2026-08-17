@@ -735,7 +735,7 @@ fn raw_non_utf8_expected_file_preserves_lossless_identity() {
         "raw-path-identity",
         FixtureBinarySpec::shell(
             "raw-path-identity",
-            "#!/bin/sh\nset -eu\nname=$(printf 'raw-\\377.txt')\nprintf 'raw-bytes\\n' > \"$OMNIREPO_E2E_EFFECTS_ROOT/$name\"\n",
+            "#!/bin/sh\nset -eu\nexport LC_ALL=C\nname=$(printf 'raw-\\377.txt')\nprintf 'raw-bytes\\n' > \"$OMNIREPO_E2E_EFFECTS_ROOT/$name\"\n",
         ),
     )
     .expect("valid raw path case")
