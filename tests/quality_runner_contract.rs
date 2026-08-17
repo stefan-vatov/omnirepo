@@ -7,7 +7,7 @@
 
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Output},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -60,7 +60,13 @@ impl Fixture {
             .duration_since(UNIX_EPOCH)
             .expect("system clock is after the Unix epoch")
             .as_nanos();
-        let root = std::env::temp_dir().join(format!(
+        // The system temp dir on macOS lives under /var/folders, and /var is
+        // a symlink there; the quality runner canonicalizes the repository
+        // root, which would diverge from raw /var paths, so fixtures live
+        // under the repository's target dir.
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+        fs::create_dir_all(&base).expect("fixture base");
+        let root = base.join(format!(
             "omnirepo-quality-runner-{}-{nonce}",
             std::process::id()
         ));
