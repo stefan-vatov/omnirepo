@@ -16,6 +16,18 @@ use omnirepo_test_support::test_evidence::{
     sanitize_channels,
 };
 
+fn fixture_dir(prefix: &str) -> tempfile::TempDir {
+    // The system temp dir on macOS lives under /var/folders, and /var is a
+    // symlink there; the evidence store validates its root as symlink-free,
+    // so fixtures live under the crate's target dir.
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    std::fs::create_dir_all(&base).expect("fixture base");
+    tempfile::Builder::new()
+        .prefix(prefix)
+        .tempdir_in(&base)
+        .expect("fixture dir")
+}
+
 fn identity(case_id: &str, suite: &str, attempt: u32) -> TestIdentity {
     TestIdentity::new(
         case_id,
@@ -350,7 +362,7 @@ fn malformed_or_tampered_jsonl_fails_closed() {
 
 #[test]
 fn safe_artifact_store_rejects_absolute_parent_and_symlink_paths() {
-    let root = tempfile::tempdir().expect("artifact root");
+    let root = fixture_dir("evidence-artifact-root-");
     let store = ArtifactStore::new(root.path()).expect("store");
     assert!(store.resolve("/tmp/outside").is_err());
     assert!(store.resolve("../outside").is_err());
@@ -737,8 +749,8 @@ fn public_debug_redacts_secrets_and_body_or_cleanup_diagnostics() {
 
 #[test]
 fn artifact_store_rejects_symlink_ancestors_and_non_directory_components() {
-    let parent = tempfile::tempdir().expect("parent");
-    let real_parent = tempfile::tempdir().expect("real parent");
+    let parent = fixture_dir("evidence-parent-");
+    let real_parent = fixture_dir("evidence-real-parent-");
 
     #[cfg(unix)]
     {
@@ -746,7 +758,7 @@ fn artifact_store_rejects_symlink_ancestors_and_non_directory_components() {
             .expect("ancestor symlink fixture");
         assert!(ArtifactStore::new(parent.path().join("alias/artifacts")).is_err());
 
-        let root_target = tempfile::tempdir().expect("root target");
+        let root_target = fixture_dir("evidence-root-target-");
         let root_alias = parent.path().join("root-alias");
         std::os::unix::fs::symlink(root_target.path(), &root_alias).expect("root symlink fixture");
         assert!(ArtifactStore::new(root_alias).is_err());
@@ -769,8 +781,8 @@ fn artifact_store_rejects_symlink_ancestors_and_non_directory_components() {
 #[cfg(unix)]
 #[test]
 fn artifact_store_does_not_follow_an_ancestor_swapped_to_a_symlink() {
-    let root = tempfile::tempdir().expect("artifact root");
-    let outside = tempfile::tempdir().expect("outside root");
+    let root = fixture_dir("evidence-artifact-root-");
+    let outside = fixture_dir("evidence-outside-");
     let store = ArtifactStore::new(root.path()).expect("store");
     std::fs::create_dir(root.path().join("swappable")).expect("child directory");
     std::fs::rename(root.path().join("swappable"), root.path().join("moved")).expect("move child");
@@ -788,8 +800,8 @@ fn artifact_store_does_not_follow_an_ancestor_swapped_to_a_symlink() {
 #[cfg(unix)]
 #[test]
 fn artifact_store_does_not_follow_a_root_ancestor_swapped_to_a_symlink() {
-    let parent = tempfile::tempdir().expect("parent");
-    let outside = tempfile::tempdir().expect("outside root");
+    let parent = fixture_dir("evidence-parent-");
+    let outside = fixture_dir("evidence-outside-");
     let root_parent = parent.path().join("authority");
     let root = root_parent.join("artifacts");
     std::fs::create_dir_all(&root).expect("authority root");
