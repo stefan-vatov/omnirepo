@@ -174,7 +174,7 @@ fn declared_commands_are_carried_into_the_fleet_pass() {
     write_policy(
         fixture.path(),
         "repo-a",
-        "version: 1\ncommands:\n  - [echo, ok]\n  - [/bin/true]\n",
+        "version: 1\ncommands:\n  - [echo, ok]\n  - [/usr/bin/true]\n",
     );
     let config = machine(vec![destination(fixture.path(), "repo-a")]);
     let loads = load_repository_policies(&config);
@@ -186,7 +186,7 @@ fn declared_commands_are_carried_into_the_fleet_pass() {
         loads[0]
     );
     assert_eq!(checks[0].argv(), &["echo".to_owned(), "ok".to_owned()]);
-    assert_eq!(checks[1].argv(), &["/bin/true".to_owned()]);
+    assert_eq!(checks[1].argv(), &["/usr/bin/true".to_owned()]);
     // An absent policy carries no commands.
     let absent = fixture_base();
     destination(absent.path(), "repo-b");

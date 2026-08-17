@@ -196,7 +196,7 @@ fn sanitized_command(working: &Path) -> Command {
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_OPTIONAL_LOCKS", "0")
         .env("GIT_LFS_SKIP_SMUDGE", "1")
-        .env("GIT_ASKPASS", "/bin/true")
+        .env("GIT_ASKPASS", "/usr/bin/true")
         .env("SSH_ASKPASS", "")
         .arg("--no-optional-locks")
         .arg("-c")

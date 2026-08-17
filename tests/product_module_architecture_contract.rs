@@ -2038,7 +2038,15 @@ mod tests {
     use tempfile::TempDir;
 
     fn fixture() -> TempDir {
-        let directory = tempfile::tempdir().expect("create fixture directory");
+        // The system temp dir on macOS lives under /var/folders, and /var
+        // is a symlink there; the validated topology must not traverse
+        // symlinks, so fixtures live under the repository's target dir.
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+        fs::create_dir_all(&base).expect("fixture base");
+        let directory = tempfile::Builder::new()
+            .prefix("product-module-")
+            .tempdir_in(&base)
+            .expect("create fixture directory");
         let root = directory.path();
         fs::create_dir_all(root.join("src/configuration")).unwrap();
         fs::create_dir_all(root.join("tools/omnirepo-dev")).unwrap();
