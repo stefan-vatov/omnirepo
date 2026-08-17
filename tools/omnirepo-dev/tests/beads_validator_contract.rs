@@ -1,21 +1,27 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
+static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
+
 fn temporary_jsonl(contents: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+    let sequence = NEXT_ROOT.fetch_add(1, Ordering::Relaxed);
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock is after the Unix epoch")
         .as_nanos();
     // The system temp dir on macOS lives under /var/folders, and /var is a
     // symlink there; the validator reads live Beads through the
-    // symlink-free authority, so fixtures live under the repository.
+    // symlink-free authority, so fixtures live under the repository.  The
+    // sequence counter keeps parallel tests on disjoint roots even within
+    // the same nanosecond.
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
     fs::create_dir_all(&base).expect("fixture base");
-    let root = base.join(format!("omnirepo-dev-validator-{unique}"));
+    let root = base.join(format!("omnirepo-dev-validator-{sequence}-{unique}"));
     fs::create_dir_all(root.join(".beads")).expect("create temporary Beads directory");
     let path = root.join(".beads/issues.jsonl");
     fs::write(&path, contents).expect("write temporary tracked export");

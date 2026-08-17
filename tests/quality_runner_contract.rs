@@ -9,8 +9,11 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{Command, Output},
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
 
 use serde::Deserialize;
 
@@ -56,6 +59,7 @@ struct Fixture {
 
 impl Fixture {
     fn new() -> Self {
+        let sequence = NEXT_ROOT.fetch_add(1, Ordering::Relaxed);
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("system clock is after the Unix epoch")
@@ -63,11 +67,12 @@ impl Fixture {
         // The system temp dir on macOS lives under /var/folders, and /var is
         // a symlink there; the quality runner canonicalizes the repository
         // root, which would diverge from raw /var paths, so fixtures live
-        // under the repository's target dir.
+        // under the repository's target dir.  The sequence counter keeps
+        // parallel tests on disjoint roots even within the same nanosecond.
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
         fs::create_dir_all(&base).expect("fixture base");
         let root = base.join(format!(
-            "omnirepo-quality-runner-{}-{nonce}",
+            "omnirepo-quality-runner-{}-{sequence}-{nonce}",
             std::process::id()
         ));
         fs::create_dir_all(root.join("nested")).expect("create fixture directories");
