@@ -323,7 +323,10 @@ fn write_response(
         response.body.len()
     )?;
     stream.write_all(&response.body)?;
-    stream.shutdown(Shutdown::Both)?;
+    // The shutdown signals EOF for "Connection: close".  The client may
+    // already have closed after reading the response, in which case macOS
+    // reports ENOTCONN; the exchange evidence stands either way.
+    let _ = stream.shutdown(Shutdown::Both);
     Ok(())
 }
 
