@@ -9,7 +9,12 @@ fn temporary_jsonl(contents: &str) -> (std::path::PathBuf, std::path::PathBuf) {
         .duration_since(UNIX_EPOCH)
         .expect("system clock is after the Unix epoch")
         .as_nanos();
-    let root = std::env::temp_dir().join(format!("omnirepo-dev-validator-{unique}"));
+    // The system temp dir on macOS lives under /var/folders, and /var is a
+    // symlink there; the validator reads live Beads through the
+    // symlink-free authority, so fixtures live under the repository.
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base).expect("fixture base");
+    let root = base.join(format!("omnirepo-dev-validator-{unique}"));
     fs::create_dir_all(root.join(".beads")).expect("create temporary Beads directory");
     let path = root.join(".beads/issues.jsonl");
     fs::write(&path, contents).expect("write temporary tracked export");
@@ -154,8 +159,17 @@ fn text_output_keeps_the_legacy_success_and_failure_projection() {
     assert_eq!(output.status.code(), Some(1));
     assert!(output.stdout.is_empty());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("decision workflow invalid:"));
-    assert!(stderr.contains("decision-drift"));
-    assert!(stderr.contains("decision labels require status=decision"));
+    assert!(
+        stderr.contains("decision workflow invalid:"),
+        "header missing; stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("decision-drift"),
+        "drift issue missing; stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("decision labels require status=decision"),
+        "finding message missing; stderr: {stderr}"
+    );
     fs::remove_dir_all(root).expect("remove text fixture");
 }
