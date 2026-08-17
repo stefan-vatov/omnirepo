@@ -21,6 +21,17 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
+/// The live transition-matrix runs need the owner-machine `br` CLI on
+/// PATH.  CI cannot install it, so the live tests skip with a visible
+/// note there and run for real on the owner machine.
+fn skip_without_br() -> bool {
+    if omnirepo_dev::br_adapter::BrAdapterConfig::is_br_on_path() {
+        return false;
+    }
+    eprintln!("authority-capability: skipped-live-br (the owner-machine br CLI is not installed)");
+    true
+}
+
 fn assert_complete_report(report: &MatrixReport) {
     assert_eq!(report.schema, TRANSITION_MATRIX_SCHEMA);
     assert_eq!(report.cases.len(), CASE_IDS.len());
@@ -53,6 +64,9 @@ fn assert_complete_report(report: &MatrixReport) {
 
 #[test]
 fn frozen_transition_matrix_preserves_all_thirteen_cases() {
+    if skip_without_br() {
+        return;
+    }
     let report = run(&repository_root()).expect("real br transition matrix should pass");
     assert_complete_report(&report);
 
@@ -87,6 +101,9 @@ fn frozen_transition_matrix_preserves_all_thirteen_cases() {
 
 #[test]
 fn concurrent_matrix_runs_use_disjoint_workspaces_and_cleanup() {
+    if skip_without_br() {
+        return;
+    }
     let root = repository_root();
     thread::scope(|scope| {
         let first = scope.spawn(|| run(&root));
@@ -118,12 +135,18 @@ fn nonzero_br_probe_is_an_actionable_error() {
 
 #[test]
 fn report_does_not_leave_transition_matrix_temp_artifacts() {
+    if skip_without_br() {
+        return;
+    }
     let report = run(&repository_root()).expect("matrix should pass");
     assert!(report.workspace_removed);
 }
 
 #[test]
 fn report_json_contains_only_stable_case_data() {
+    if skip_without_br() {
+        return;
+    }
     let report = run(&repository_root()).expect("matrix should pass");
     let value: Value = serde_json::to_value(report).expect("matrix report JSON");
     let serialized = serde_json::to_string(&value).expect("serialize matrix report");
