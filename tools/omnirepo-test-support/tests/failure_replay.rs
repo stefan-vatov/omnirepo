@@ -918,7 +918,14 @@ fn bundle_write_failure_is_typed_and_cannot_be_treated_as_green() {
     let bundle = spec()
         .build(&DiagnosticRedactor::new(["known-secret"]))
         .expect("bundle");
-    let root = tempfile::tempdir().expect("temp root");
+    // The system temp dir on macOS lives under /var/folders, and /var is a
+    // symlink there; the evidence store validates its root as symlink-free.
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    std::fs::create_dir_all(&base).expect("fixture base");
+    let root = tempfile::Builder::new()
+        .prefix("failure-replay-root-")
+        .tempdir_in(&base)
+        .expect("temp root");
     let store =
         omnirepo_test_support::test_evidence::ArtifactStore::new(root.path()).expect("store");
     bundle.write(&store, "replay.json").expect("first write");
