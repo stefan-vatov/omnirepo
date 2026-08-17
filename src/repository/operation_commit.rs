@@ -55,19 +55,46 @@ pub fn create_commit(
             reason: "write-tree produced no tree object".to_owned(),
         });
     }
-    let mut arguments = vec!["commit-tree".to_owned(), tree.clone()];
+    // The sanitized environment drops every config file, so the invoking
+    // user's identity and signing policy are resolved explicitly through
+    // the normal config chain (local, then global/XDG) and passed to the
+    // commit.  Missing identity is a repository failure, never a bypass.
+    let identity = resolve_user_identity(root)?;
+    let mut arguments = vec!["commit-tree".to_owned()];
+    // commit-tree ignores the commit.gpgsign config, so the user's signing
+    // policy is applied explicitly with -S (and the configured key).
+    if identity.gpgsign {
+        if let Some(key) = &identity.signing_key {
+            arguments.push(format!("-S{key}"));
+        } else {
+            arguments.push("-S".to_owned());
+        }
+    }
+    arguments.push(tree.clone());
     if let Some(parent) = parent {
         arguments.push("-p".to_owned());
         arguments.push(parent.to_owned());
     }
     arguments.push("-m".to_owned());
     arguments.push(message.to_owned());
-    let sha = git_text_with_index(
-        root,
-        &arguments.iter().map(String::as_str).collect::<Vec<_>>(),
-        &index.index_path,
-    )?;
-    let sha = sha.trim().to_owned();
+    let mut command = sanitized_command(root, &index.index_path);
+    command
+        .env("GIT_AUTHOR_NAME", &identity.name)
+        .env("GIT_AUTHOR_EMAIL", &identity.email)
+        .env("GIT_COMMITTER_NAME", &identity.name)
+        .env("GIT_COMMITTER_EMAIL", &identity.email)
+        .args(&arguments);
+    let output = command.output().map_err(|error| CommitError::Git {
+        command: "commit-tree".to_owned(),
+        reason: error.to_string(),
+    })?;
+    if !output.status.success() {
+        return Err(CommitError::Git {
+            command: arguments.join(" "),
+            reason: String::from_utf8_lossy(&output.stderr).trim().to_owned(),
+        });
+    }
+    let sha = String::from_utf8_lossy(&output.stdout).trim().to_owned();
     if sha.is_empty() {
         return Err(CommitError::MissingTree {
             reason: "commit-tree produced no commit".to_owned(),
@@ -77,6 +104,117 @@ pub fn create_commit(
         sha,
         tree,
         parent: parent.map(str::to_owned),
+    })
+}
+
+/// The invoking user's resolved Git identity and signing policy.
+struct UserIdentity {
+    name: String,
+    email: String,
+    signing_key: Option<String>,
+    gpgsign: bool,
+}
+
+/// Resolve a config value through the normal chain (local, then global and
+/// XDG) from the destination root.  The read never runs hooks or filters.
+fn user_config(root: &Path, key: &str) -> Result<Option<String>, CommitError> {
+    let output = Command::new("git")
+        .args(["config", key])
+        .current_dir(root)
+        .output()
+        .map_err(|error| CommitError::Git {
+            command: format!("git config {key}"),
+            reason: error.to_string(),
+        })?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    Ok(if value.is_empty() { None } else { Some(value) })
+}
+
+/// Resolve a config value in one explicit scope.  Used for the signing
+/// policy so it always comes from the same source as the identity that
+/// actually won the chain.
+fn scoped_config(root: &Path, scope: &str, key: &str) -> Result<Option<String>, CommitError> {
+    let output = Command::new("git")
+        .args(["config", scope, key])
+        .current_dir(root)
+        .output()
+        .map_err(|error| CommitError::Git {
+            command: format!("git config {scope} {key}"),
+            reason: error.to_string(),
+        })?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    Ok(if value.is_empty() { None } else { Some(value) })
+}
+
+/// Resolve the identity through the normal chain and report whether the
+/// winning source was the repository-local config.
+fn identity_with_origin(root: &Path, key: &str) -> Result<(Option<String>, bool), CommitError> {
+    let output = Command::new("git")
+        .args(["config", "--show-origin", key])
+        .current_dir(root)
+        .output()
+        .map_err(|error| CommitError::Git {
+            command: format!("git config --show-origin {key}"),
+            reason: error.to_string(),
+        })?;
+    if !output.status.success() {
+        return Ok((None, false));
+    }
+    let line = String::from_utf8_lossy(&output.stdout);
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return Ok((None, false));
+    }
+    let (origin, value) = match trimmed.split_once('\t') {
+        Some((origin, value)) => (origin, value.to_owned()),
+        None => ("", trimmed.to_owned()),
+    };
+    let local = origin.contains(".git/config") || origin.contains("\\.git\\config");
+    Ok((Some(value), local))
+}
+
+fn resolve_user_identity(root: &Path) -> Result<UserIdentity, CommitError> {
+    let (name, local_identity) = identity_with_origin(root, "user.name")?;
+    let name = name.ok_or_else(|| CommitError::Git {
+        command: "git config user.name".to_owned(),
+        reason: "author identity unknown: the invoking user has no configured Git identity"
+            .to_owned(),
+    })?;
+    let (email, _) = identity_with_origin(root, "user.email")?;
+    let email = email.ok_or_else(|| CommitError::Git {
+        command: "git config user.email".to_owned(),
+        reason: "author email unknown: the invoking user has no configured Git email".to_owned(),
+    })?;
+    // The signing policy comes from the same source that supplied the
+    // identity: a repository-declared identity (fixture or repo-local)
+    // carries its own signing scope; otherwise the invoking user's global
+    // and XDG policy applies.
+    let (signing_key, gpgsign) = if local_identity {
+        (
+            scoped_config(root, "--local", "user.signingkey")?,
+            scoped_config(root, "--local", "commit.gpgsign")?
+                .map(|value| value == "true")
+                .unwrap_or(false),
+        )
+    } else {
+        (
+            scoped_config(root, "--global", "user.signingkey")?,
+            scoped_config(root, "--global", "commit.gpgsign")?
+                .map(|value| value == "true")
+                .unwrap_or(false),
+        )
+    };
+    Ok(UserIdentity {
+        name,
+        email,
+        signing_key,
+        gpgsign,
     })
 }
 
