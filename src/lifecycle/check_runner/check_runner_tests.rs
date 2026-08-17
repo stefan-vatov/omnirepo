@@ -32,14 +32,14 @@ fn passing_and_failing_checks_reach_typed_terminal_results() {
         .expect("fixture");
     let ok = run_check(
         fixture.path(),
-        &spec(&["/bin/true"], Duration::from_secs(10)),
+        &spec(&["/usr/bin/true"], Duration::from_secs(10)),
         Duration::from_secs(10),
     )
     .expect("run");
     assert_eq!(ok.outcome, CheckOutcome::Passed);
     let fail = run_check(
         fixture.path(),
-        &spec(&["/bin/false"], Duration::from_secs(10)),
+        &spec(&["/usr/bin/false"], Duration::from_secs(10)),
         Duration::from_secs(10),
     )
     .expect("run");

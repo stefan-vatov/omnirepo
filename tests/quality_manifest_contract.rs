@@ -62,12 +62,16 @@ struct PackageLock {
 }
 
 const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
-    ("fmt", "stable", &["cargo", "fmt", "--all", "--", "--check"]),
+    (
+        "fmt",
+        "rust-1.86.0",
+        &["scripts/cargo-1.86", "fmt", "--all", "--", "--check"],
+    ),
     (
         "clippy",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "clippy",
             "--workspace",
             "--all-targets",
@@ -80,9 +84,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "tests",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--workspace",
             "--all-targets",
@@ -92,9 +96,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "doctests",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--workspace",
             "--doc",
@@ -104,9 +108,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "build",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "build",
             "--workspace",
             "--all-targets",
@@ -121,9 +125,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "beads-validate",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "run",
             "--quiet",
             "--locked",
@@ -135,9 +139,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "beads-validator-tests",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--quiet",
             "--locked",
@@ -149,9 +153,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "beads-plan",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "run",
             "--quiet",
             "--locked",
@@ -166,9 +170,9 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "beads-plan-tests",
-        "stable",
+        "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--quiet",
             "--locked",
@@ -187,7 +191,7 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
         "msrv-tests",
         "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--workspace",
             "--all-targets",
@@ -199,7 +203,7 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
         "msrv-doctests",
         "rust-1.86.0",
         &[
-            "cargo",
+            "scripts/cargo-1.86",
             "test",
             "--workspace",
             "--doc",

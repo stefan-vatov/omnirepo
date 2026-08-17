@@ -34,7 +34,7 @@
   "gates": [
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "fmt",
         "--all",
         "--",
@@ -45,12 +45,12 @@
       "id": "fmt",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "clippy",
         "--workspace",
         "--all-targets",
@@ -65,12 +65,12 @@
       "id": "clippy",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--workspace",
         "--all-targets",
@@ -82,12 +82,12 @@
       "id": "tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--workspace",
         "--doc",
@@ -99,12 +99,12 @@
       "id": "doctests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "build",
         "--workspace",
         "--all-targets",
@@ -116,7 +116,7 @@
       "id": "build",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
@@ -135,7 +135,7 @@
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "run",
         "--quiet",
         "--locked",
@@ -149,12 +149,12 @@
       "id": "beads-validate",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--quiet",
         "--locked",
@@ -168,12 +168,12 @@
       "id": "beads-validator-tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "run",
         "--quiet",
         "--locked",
@@ -190,12 +190,12 @@
       "id": "beads-plan",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--quiet",
         "--locked",
@@ -209,7 +209,7 @@
       "id": "beads-plan-tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "stable",
+      "toolchain": "rust-1.86.0",
       "working_directory": "."
     },
     {
@@ -227,7 +227,7 @@
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--workspace",
         "--all-targets",
@@ -244,7 +244,7 @@
     },
     {
       "argv": [
-        "cargo",
+        "scripts/cargo-1.86",
         "test",
         "--workspace",
         "--doc",

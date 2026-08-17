@@ -35,13 +35,13 @@ fn command_order_is_preserved_with_typed_evidence() {
         .expect("fixture");
     let first = run_check(
         fixture.path(),
-        &spec_at(&["/bin/true"], 0),
+        &spec_at(&["/usr/bin/true"], 0),
         Duration::from_secs(10),
     )
     .expect("run");
     let second = run_check(
         fixture.path(),
-        &spec_at(&["/bin/false"], 1),
+        &spec_at(&["/usr/bin/false"], 1),
         Duration::from_secs(10),
     )
     .expect("run");
@@ -121,14 +121,14 @@ fn failures_prevent_git_but_valid_peers_proceed() {
     // peer's gate passes independently.
     let failing = run_check(
         fixture.path(),
-        &spec_at(&["/bin/false"], 0),
+        &spec_at(&["/usr/bin/false"], 0),
         Duration::from_secs(10),
     )
     .expect("run");
     assert!(matches!(failing.outcome, CheckOutcome::Failed { .. }));
     let valid = run_check(
         fixture.path(),
-        &spec_at(&["/bin/true"], 0),
+        &spec_at(&["/usr/bin/true"], 0),
         Duration::from_secs(10),
     )
     .expect("run");

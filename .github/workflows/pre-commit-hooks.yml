@@ -22,8 +22,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7.0.1
 
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust 1.86
+        uses: dtolnay/rust-toolchain@1.86.0
         with:
           components: rustfmt, clippy
 

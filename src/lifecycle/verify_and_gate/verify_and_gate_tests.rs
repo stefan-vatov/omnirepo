@@ -57,7 +57,7 @@ fn passing_checks_and_a_pass_gate_allow_git_delivery() {
     let fixture = fixture();
     let run = verify_and_gate(
         fixture.path(),
-        &[spec(&["/bin/true"])],
+        &[spec(&["/usr/bin/true"])],
         &gate(),
         CompareOutcome::Unchanged,
         true,
@@ -75,7 +75,7 @@ fn a_failed_check_prevents_git_delivery() {
     let fixture = fixture();
     let run = verify_and_gate(
         fixture.path(),
-        &[spec(&["/bin/false"])],
+        &[spec(&["/usr/bin/false"])],
         &gate(),
         CompareOutcome::Unchanged,
         true,
@@ -91,7 +91,7 @@ fn gate_drift_or_identity_change_prevents_git_delivery() {
     let fixture = fixture();
     let run = verify_and_gate(
         fixture.path(),
-        &[spec(&["/bin/true"])],
+        &[spec(&["/usr/bin/true"])],
         &gate(),
         CompareOutcome::Unchanged,
         false,
@@ -104,7 +104,7 @@ fn gate_drift_or_identity_change_prevents_git_delivery() {
     // Concurrent modification also rejects.
     let run = verify_and_gate(
         fixture.path(),
-        &[spec(&["/bin/true"])],
+        &[spec(&["/usr/bin/true"])],
         &gate(),
         CompareOutcome::Unchanged,
         true,
@@ -120,7 +120,10 @@ fn checks_run_in_declared_order_with_bounded_results() {
     let fixture = fixture();
     let run = verify_and_gate(
         fixture.path(),
-        &[spec_at(&["/bin/true"], 0), spec_at(&["/bin/true"], 1)],
+        &[
+            spec_at(&["/usr/bin/true"], 0),
+            spec_at(&["/usr/bin/true"], 1),
+        ],
         &gate(),
         CompareOutcome::Unchanged,
         true,

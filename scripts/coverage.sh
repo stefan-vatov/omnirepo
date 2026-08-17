@@ -14,12 +14,12 @@ if [[ ! -f Cargo.toml ]]; then
 fi
 
 readonly coverage_dir="$PWD/coverage"
-readonly cargo_llvm_cov=(cargo "+${RUST_TOOLCHAIN}" llvm-cov)
+readonly cargo_llvm_cov=(scripts/cargo-1.86 llvm-cov)
 readonly coverage_ownership_matrix="$PWD/tests/traceability/matrix.json"
 readonly coverage_ownership_map="$PWD/tests/traceability/coverage-ownership.json"
 readonly coverage_ownership_manifest="tools/omnirepo-dev/Cargo.toml"
-readonly coverage_ownership_command=(cargo "+${RUST_TOOLCHAIN}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- coverage-ownership --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --matrix "$coverage_ownership_matrix" --ownership "$coverage_ownership_map" --json)
-readonly coverage_changed_command=(cargo "+${RUST_TOOLCHAIN}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- changed-coverage --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --base "${OMNIREPO_COVERAGE_BASE:-}" --json)
+readonly coverage_ownership_command=(scripts/cargo-1.86 run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- coverage-ownership --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --matrix "$coverage_ownership_matrix" --ownership "$coverage_ownership_map" --json)
+readonly coverage_changed_command=(scripts/cargo-1.86 run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- changed-coverage --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --base "${OMNIREPO_COVERAGE_BASE:-}" --json)
 
 printf 'coverage: rust-toolchain=%s cargo-llvm-cov=%s lines>=%s functions>=%s regions>=%s\n' \
     "$RUST_TOOLCHAIN" \

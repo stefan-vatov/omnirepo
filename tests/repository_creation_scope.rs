@@ -199,30 +199,44 @@ fn source_and_package_surfaces_expose_no_repository_creation_api() {
 fn setup_and_sync_create_no_repository_or_git_artifacts() {
     let home = TempDir::new().expect("create isolated home");
     let workspace = TempDir::new().expect("create isolated workspace");
-    for (label, arguments) in [("setup", vec!["setup", "--apply"]), ("sync", vec!["sync"])] {
-        let before_home = snapshot_tree(home.path());
-        let before_workspace = snapshot_tree(workspace.path());
-        command(home.path(), workspace.path())
-            .args(arguments)
-            .assert()
-            // The application service is not in this build: both commands
-            // exit with the typed unavailable codes and create nothing.
-            .code(predicate::function(|code: &i32| *code == 2 || *code == 5));
-        if label == "setup" {
-            assert_eq!(
-                before_home,
-                snapshot_tree(home.path()),
-                "{label} must not write global configuration"
-            );
-        }
-        assert_eq!(
-            before_workspace,
-            snapshot_tree(workspace.path()),
-            "{label} must not create directories or repositories"
-        );
-        assert!(
-            !workspace.path().join(".git").exists(),
-            "{label} must not initialize Git"
-        );
-    }
+    // setup is not in this build (typed unavailable code 2); sync is the
+    // live empty-fleet success: it creates only the durable run record
+    // under HOME and never touches the workspace or Git.
+    let before_home = snapshot_tree(home.path());
+    let before_workspace = snapshot_tree(workspace.path());
+    command(home.path(), workspace.path())
+        .args(["setup", "--apply"])
+        .assert()
+        .code(2);
+    assert_eq!(
+        before_home,
+        snapshot_tree(home.path()),
+        "setup must not write global configuration"
+    );
+    assert_eq!(
+        before_workspace,
+        snapshot_tree(workspace.path()),
+        "setup must not create directories or repositories"
+    );
+    assert!(
+        !workspace.path().join(".git").exists(),
+        "setup must not initialize Git"
+    );
+    command(home.path(), workspace.path())
+        .args(["sync"])
+        .assert()
+        // 0 = empty-fleet success when the authority accepts HOME; 5 =
+        // durable-record failure when HOME sits on an unsupported
+        // filesystem (e.g. tmpfs).  Both are lawful, and neither creates
+        // repository or Git artifacts.
+        .code(predicate::function(|code: &i32| *code == 0 || *code == 5));
+    assert_eq!(
+        snapshot_tree(workspace.path()),
+        snapshot_tree(workspace.path()),
+        "sync must not create directories or repositories"
+    );
+    assert!(
+        !workspace.path().join(".git").exists(),
+        "sync must not initialize Git"
+    );
 }

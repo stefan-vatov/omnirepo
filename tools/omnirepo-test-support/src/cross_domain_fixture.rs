@@ -1374,7 +1374,7 @@ fn derive_marker_topology(bytes: &[u8], expected_id: &str) -> MarkerTopologyFixt
 
     let mut markers = Vec::new();
     for (line_index, raw_line) in bytes.split(|byte| *byte == b'\n').enumerate() {
-        let line = raw_line.strip_suffix(&[b'\r'][..]).unwrap_or(raw_line);
+        let line = raw_line.strip_suffix(&b"\r"[..]).unwrap_or(raw_line);
         let Ok(text) = std::str::from_utf8(line) else {
             if line
                 .windows(b"omnirepo:".len())

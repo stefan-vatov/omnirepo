@@ -17,7 +17,7 @@ use serde_json::{Map, Value, de::Deserializer};
 pub const REPORT_SCHEMA: &str = "omnirepo.coverage-ownership-report.v1";
 pub const OWNERSHIP_SCHEMA: &str = "omnirepo.coverage-ownership.v1";
 const MAX_INPUT_BYTES: usize = 8 * 1024 * 1024;
-const MAX_REPORT_BYTES: usize = 1024 * 1024;
+const MAX_REPORT_BYTES: usize = 8 * 1024 * 1024;
 const MAX_FIELD_BYTES: usize = 16 * 1024;
 const MAX_SOURCE_FILES: usize = 512;
 const MAX_TREE_DEPTH: usize = 32;

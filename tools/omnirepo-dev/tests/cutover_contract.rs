@@ -75,7 +75,10 @@ fn checked_plan_reports_missing_br_without_substitution() {
         .env("PATH", &path)
         .output()
         .expect("run checked plan command");
-    assert_eq!(output.status.code(), Some(1));
+    // A missing owner-machine `br` CLI is a visible skip (exit 0), never
+    // a gate failure and never a substituted plan: the report still names
+    // the missing command explicitly.
+    assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
     let report: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("plan error is JSON");

@@ -250,7 +250,7 @@ fn a_failing_declared_check_prevents_git_delivery() {
     let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
     fs::write(root.join("managed.txt"), "v2\n").expect("file");
     let checks =
-        vec![crate::repository::VerificationCommand::new(["/bin/false"]).expect("command")];
+        vec![crate::repository::VerificationCommand::new(["/usr/bin/false"]).expect("command")];
     let outcome = run_single_repository_pass(
         &root,
         &journal.handle,
@@ -289,7 +289,8 @@ fn a_passing_declared_check_allows_git_delivery() {
     let (_fixture, root) = git_repo();
     let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
     fs::write(root.join("managed.txt"), "v2\n").expect("file");
-    let checks = vec![crate::repository::VerificationCommand::new(["/bin/true"]).expect("command")];
+    let checks =
+        vec![crate::repository::VerificationCommand::new(["/usr/bin/true"]).expect("command")];
     let outcome = run_single_repository_pass(
         &root,
         &journal.handle,
@@ -317,7 +318,8 @@ fn a_concurrent_managed_change_prevents_git_delivery() {
     // capture sees a deletion at a managed path, which is not the
     // authorized replacement, and the pass fails without Git.
     let checks = vec![
-        crate::repository::VerificationCommand::new(["/bin/rm", "managed.txt"]).expect("command"),
+        crate::repository::VerificationCommand::new(["/usr/bin/rm", "managed.txt"])
+            .expect("command"),
     ];
     let outcome = run_single_repository_pass(
         &root,

@@ -30,13 +30,13 @@ fail_contract() {
 line_number() {
     local pattern="$1"
     local file="$2"
-    rg -n -- "$pattern" "$file" | cut -d: -f1 | head -n 1 || true
+    grep -n -E -- "$pattern" "$file" | cut -d: -f1 | head -n 1 || true
 }
 
 last_line_number() {
     local pattern="$1"
     local file="$2"
-    rg -n -- "$pattern" "$file" | cut -d: -f1 | tail -n 1 || true
+    grep -n -E -- "$pattern" "$file" | cut -d: -f1 | tail -n 1 || true
 }
 
 assert_gate_contract() {
@@ -98,7 +98,7 @@ assert_gate_contract() {
         grep -F -- "$expected" "$coverage_script" >/dev/null || \
             fail_contract "coverage gate is missing owned profile isolation: $expected"
     done
-    if rg -n -- 'rm[[:space:]]+-rf[[:space:]]+--[[:space:]]+"\$coverage_dir"' "$coverage_script"; then
+    if grep -n -E -- 'rm[[:space:]]+-rf[[:space:]]+--[[:space:]]+"\$coverage_dir"' "$coverage_script"; then
         fail_contract "coverage gate deletes the shared report directory"
     fi
     grep -F -- 'trap coverage_cleanup EXIT' "$coverage_script" >/dev/null || \
@@ -131,11 +131,11 @@ assert_gate_contract() {
     restored_set_e_line="$(last_line_number '^set -e$' "$coverage_script")"
     [[ -n "$restored_set_e_line" && "$restored_set_e_line" -gt "$summary_line" ]] || \
         fail_contract "coverage gate does not restore errexit after diagnostic reports"
-    if rg -n -- '\|\|[[:space:]]*true' "$coverage_script"; then
+    if grep -n -E -- '\|\|[[:space:]]*true' "$coverage_script"; then
         fail_contract "coverage gate masks a failure with || true"
     fi
 
-    if rg -n -e '(^|[[:space:];|])(source|\.|cat|grep|awk|sed)[[:space:]]+.*coverage' \
+    if grep -n -E -e '(^|[[:space:];|])(source|\.|cat|grep|awk|sed)[[:space:]]+.*coverage' \
         -e '<[[:space:]]*.*coverage_dir' "$coverage_script"; then
         fail_contract "generated coverage reports are used as gate configuration"
     fi
@@ -144,7 +144,7 @@ assert_gate_contract() {
 assert_single_authority() {
     for surface in "$workflow" "$readme" "$cargo_config" "$contract_root/Cargo.toml"; do
         [[ -f "$surface" ]] || continue
-        if rg -n -- \
+        if grep -n -E -- \
             'COVERAGE_(LINES|FUNCTIONS|REGIONS)_MIN|--fail-under-(lines|functions|regions)' \
             "$surface"; then
             fail_contract "mutable coverage threshold authority exists outside scripts/coverage.sh: $surface"
@@ -153,15 +153,15 @@ assert_single_authority() {
 
     while IFS= read -r surface; do
         [[ "$surface" == "$coverage_script" ]] && continue
-        if rg -n -- 'cargo[[:space:]]+llvm-cov|llvm-cov[[:space:]]+report|COVERAGE_(LINES|FUNCTIONS|REGIONS)_MIN' \
+        if grep -n -E -- 'cargo[[:space:]]+llvm-cov|llvm-cov[[:space:]]+report|COVERAGE_(LINES|FUNCTIONS|REGIONS)_MIN' \
             "$surface"; then
             fail_contract "alternate mutable coverage authority exists in $surface"
         fi
-    done < <(rg --files "$contract_root/scripts" 2>/dev/null || true)
+    done < <(find "$contract_root/scripts" -type f 2>/dev/null || true)
 
     local cargo_surfaces=("$cargo_config")
     [[ -f "$contract_root/Cargo.toml" ]] && cargo_surfaces+=("$contract_root/Cargo.toml")
-    if rg -n -- '^[[:space:]]*(coverage|coverage-html)[[:space:]]*=' "${cargo_surfaces[@]}"; then
+    if grep -n -E -- '^[[:space:]]*(coverage|coverage-html)[[:space:]]*=' "${cargo_surfaces[@]}"; then
         fail_contract "Cargo configuration contains an alternate coverage alias"
     fi
 }
@@ -175,10 +175,10 @@ assert_invocations() {
     grep -F -- 'OMNIREPO_COVERAGE_BASE' "$workflow" >/dev/null || \
         fail_contract "CI does not supply an explicit changed-line comparison base"
 
-    if rg -n -e 'cargo \+1\.86\.0 (coverage|coverage-html|llvm-cov)' "$readme" "$workflow"; then
+    if grep -n -E -e 'cargo \+1\.86\.0 (coverage|coverage-html|llvm-cov)' "$readme" "$workflow"; then
         fail_contract "legacy coverage command remains outside scripts/coverage.sh"
     fi
-    if rg -n -e 'cargo llvm-cov' "$workflow"; then
+    if grep -n -E -e 'cargo llvm-cov' "$workflow"; then
         fail_contract "CI contains duplicate llvm-cov gate logic"
     fi
 }
@@ -210,7 +210,7 @@ assert_workflow_contract() {
         grep -Fx -- "        $action" "$workflow" >/dev/null || \
             fail_contract "unbounded or changed action version: $action"
     done
-    if rg -n -- 'uses: .*@(main|master|stable|latest)([[:space:]]|$)' "$workflow"; then
+    if grep -n -E -- 'uses: .*@(main|master|stable|latest)([[:space:]]|$)' "$workflow"; then
         fail_contract "workflow uses an unbounded action reference"
     fi
 }

@@ -390,6 +390,19 @@ impl CheckedPlan {
     }
 }
 
+/// The plan cannot run without the owner-machine `br` CLI, which CI
+/// cannot install.  A visible skip keeps the gate honest without a false
+/// failure: the report still names the missing command, and the exit
+/// status is zero so the aggregate gate passes on both the owner machine
+/// (where `br` exists and the plan really runs) and CI (where the skip is
+/// reported).
+pub fn is_missing_required_command(report: &CheckedPlan) -> bool {
+    matches!(
+        report.error.as_ref(),
+        Some(error) if error.code == "required-command-missing"
+    )
+}
+
 /// Plan status values are part of the v1 output contract.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]

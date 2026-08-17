@@ -6,7 +6,7 @@ expected="${1:?expected capability class is required}"
 output="$(mktemp)"
 trap 'rm -f -- "$output"' EXIT
 
-if ! cargo test --bin omnirepo --locked -- --nocapture >"$output" 2>&1; then
+if ! cargo test --bin omnirepo --all-targets --locked -- --nocapture >"$output" 2>&1; then
     cat "$output" >&2
     exit 1
 fi

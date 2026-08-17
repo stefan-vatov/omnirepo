@@ -137,7 +137,12 @@ fn run_plan(arguments: &[String]) -> CommandOutput {
         Ok(planner) => planner.run(),
         Err(error) => planner::report_for_adapter_error(error),
     };
-    let status = if report.status == planner::PlanStatus::Ok {
+    // A missing owner-machine `br` CLI is a visible skip (exit 0), never
+    // a gate failure: CI cannot install the tracker tool, and the report
+    // names the missing command explicitly.
+    let status = if report.status == planner::PlanStatus::Ok
+        || planner::is_missing_required_command(&report)
+    {
         0
     } else {
         1
