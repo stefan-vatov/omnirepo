@@ -157,7 +157,13 @@ fn text_output_keeps_the_legacy_success_and_failure_projection() {
         .current_dir(&root)
         .output()
         .expect("run text validator");
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "unexpected exit; stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert!(output.stdout.is_empty());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
