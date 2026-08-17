@@ -315,7 +315,7 @@ fn a_failing_declared_command_gates_the_commit() {
     let destination = setup_destination(&fixture, "destination-a", "v1\n");
     fs::write(
         destination.join(".omnirepo.yaml"),
-        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/bin/false]\n",
+        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/usr/bin/false]\n",
     )
     .expect("policy");
     let home = fixture.path().join("home");
@@ -359,7 +359,7 @@ fn a_passing_declared_command_allows_the_commit() {
     let destination = setup_destination(&fixture, "destination-a", "v1\n");
     fs::write(
         destination.join(".omnirepo.yaml"),
-        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/bin/true]\n",
+        "version: 1\nallow:\n  - item-1\ncommands:\n  - [/usr/bin/true]\n",
     )
     .expect("policy");
     let home = fixture.path().join("home");
