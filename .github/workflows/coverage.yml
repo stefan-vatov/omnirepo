@@ -30,6 +30,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
+        with:
+          # The changed-line gate diffs against the explicit base commit; a
+          # shallow checkout cannot resolve it.
+          fetch-depth: 0
 
       - name: Verify coverage workflow contract
         run: bash tests/coverage_workflow_contract.sh
