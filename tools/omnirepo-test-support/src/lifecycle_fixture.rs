@@ -895,7 +895,14 @@ impl LifecycleFixture {
     }
 
     pub fn create(spec: FixtureSpec) -> Result<Self, FixtureError> {
-        let temp = Builder::new().prefix("omnirepo-fixture-").tempdir()?;
+        // The system temp dir on macOS lives under /var/folders, and /var
+        // is a symlink there; the runner's evidence store validates its
+        // root as symlink-free, so fixtures live under the crate's target.
+        let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+        std::fs::create_dir_all(&base).map_err(FixtureError::Io)?;
+        let temp = Builder::new()
+            .prefix("omnirepo-fixture-")
+            .tempdir_in(&base)?;
         let roots = RootSet::create(temp.path().to_path_buf())?;
         let environment = FixtureEnvironment::new(&roots)?;
         let clock = DeterministicClock::new();
