@@ -34,7 +34,8 @@
   "gates": [
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "fmt",
         "--all",
         "--",
@@ -45,12 +46,13 @@
       "id": "fmt",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "clippy",
         "--workspace",
         "--all-targets",
@@ -65,12 +67,13 @@
       "id": "clippy",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "test",
         "--workspace",
         "--all-targets",
@@ -82,12 +85,13 @@
       "id": "tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "test",
         "--workspace",
         "--doc",
@@ -99,12 +103,13 @@
       "id": "doctests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "build",
         "--workspace",
         "--all-targets",
@@ -116,7 +121,7 @@
       "id": "build",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
@@ -135,7 +140,8 @@
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "run",
         "--quiet",
         "--locked",
@@ -149,12 +155,13 @@
       "id": "beads-validate",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "test",
         "--quiet",
         "--locked",
@@ -168,12 +175,13 @@
       "id": "beads-validator-tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "run",
         "--quiet",
         "--locked",
@@ -190,12 +198,13 @@
       "id": "beads-plan",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.95.0",
         "test",
         "--quiet",
         "--locked",
@@ -209,7 +218,7 @@
       "id": "beads-plan-tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
@@ -222,12 +231,13 @@
       "id": "coverage",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.34",
-      "toolchain": "rust-1.86.0/cargo-llvm-cov-0.8.7",
+      "toolchain": "rust-1.95.0/cargo-llvm-cov-0.8.7",
       "working_directory": "."
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.86.0",
         "test",
         "--workspace",
         "--all-targets",
@@ -244,7 +254,8 @@
     },
     {
       "argv": [
-        "scripts/cargo-1.86",
+        "scripts/cargo-pinned",
+        "1.86.0",
         "test",
         "--workspace",
         "--doc",

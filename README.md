@@ -149,11 +149,11 @@ failure. The Cargo aliases remain available as fast shortcuts for the
 five Rust-only gates:
 
 ```sh
-cargo +1.86.0 fmt-check
-cargo +1.86.0 lint
-cargo +1.86.0 test-all
-cargo +1.86.0 test-docs
-cargo +1.86.0 build-all
+cargo fmt-check
+cargo lint
+cargo test-all
+cargo test-docs
+cargo build-all
 ```
 
 All dependency-resolving commands use `--locked`, so local checks
@@ -180,7 +180,7 @@ cargo run --quiet --locked \
   --profile coverage --json
 ```
 
-The manifest-owned `coverage` profile uses Rust 1.86.0 and cargo-llvm-cov
+The manifest-owned `coverage` profile uses Rust 1.95.0 and cargo-llvm-cov
 0.8.7, enforces the configured thresholds, and writes text, LCOV, HTML,
 ownership, and changed-line reports below the ignored `coverage/`
 directory. The changed executable-line gate compares the current `HEAD`

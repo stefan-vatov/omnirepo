@@ -70,10 +70,15 @@ pub fn run_normative_gates(gates: &[(String, Vec<String>)]) -> Vec<GateRun> {
     gates
         .iter()
         .map(|(name, argv)| {
-            let output = Command::new(&argv[0])
+            // The bounded ETXTBSY retry (the shared check-runner pattern)
+            // makes spawning a just-materialized gate script robust.
+            let mut command = Command::new(&argv[0]);
+            command
                 .args(&argv[1..])
-                .output()
-                .expect("gate");
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped());
+            let child = crate::lifecycle::check_runner::spawn_retry(&mut command).expect("gate");
+            let output = child.wait_with_output().expect("gate output");
             let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
             let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
             GateRun {

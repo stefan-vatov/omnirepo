@@ -25,21 +25,21 @@ repos:
   hooks:
   - id: validate-beads-decisions
     name: validate Beads decision workflow
-    entry: scripts/cargo-1.86 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions
+    entry: scripts/cargo-pinned 1.95.0 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions
     language: system
     pass_filenames: false
   - id: test-beads-decisions
     name: test Beads decision workflow
-    entry: scripts/cargo-1.86 test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract
+    entry: scripts/cargo-pinned 1.95.0 test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract
     language: system
     pass_filenames: false
   - id: checked-agent-plan
     name: checked autonomous Beads plan
-    entry: scripts/cargo-1.86 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json
+    entry: scripts/cargo-pinned 1.95.0 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json
     language: system
     pass_filenames: false
   - id: test-checked-agent-plan
     name: test checked autonomous Beads plan
-    entry: scripts/cargo-1.86 test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test planner_contract
+    entry: scripts/cargo-pinned 1.95.0 test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test planner_contract
     language: system
     pass_filenames: false

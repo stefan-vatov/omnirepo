@@ -300,6 +300,13 @@ pub struct BrAdapterConfig {
 }
 
 impl BrAdapterConfig {
+    /// Whether the owner-machine `br` CLI is discoverable on PATH.  CI
+    /// cannot install it; live-beads tests use this to skip with a visible
+    /// note instead of failing on a missing tracker tool.
+    pub fn is_br_on_path() -> bool {
+        find_on_path(OsStr::new("br")).ok().flatten().is_some()
+    }
+
     /// Discover `br` from the caller's PATH and freeze the resulting identity.
     pub fn discover(repository_root: impl AsRef<Path>) -> Result<Self, BrAdapterError> {
         let executable =

@@ -37,8 +37,8 @@ jobs:
       - name: Verify Linux authority filesystem capability
         run: bash tests/authority_capability.sh linux-ext-family
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: llvm-tools-preview
 

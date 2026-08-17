@@ -27,8 +27,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.commit || github.sha }}
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
 
       - name: Verify the exact-SHA trigger
         run: >-

@@ -11,6 +11,10 @@ trap 'rm -rf -- "$test_root"' EXIT
 
 git -C "$repository_root" check-ignore -q coverage/summary.txt
 
+# The gate fixtures intercept the toolchain through their exported `cargo`
+# function; the override makes coverage.sh use it instead of the repo shim.
+export OMNIREPO_COVERAGE_CARGO=cargo
+
 fake_cargo() {
     if [[ -n "${FAKE_CARGO_LOG:-}" ]]; then
         printf '%s\n' "$*" >> "$FAKE_CARGO_LOG"
@@ -209,13 +213,13 @@ run_gate threshold-failure 1
 [[ -s "$test_root/threshold-failure/coverage/lcov.info" ]]
 [[ -s "$test_root/threshold-failure/coverage/index.html" ]]
 [[ -s "$test_root/threshold-failure/coverage/ownership.json" ]]
-grep -F -- 'scripts/cargo-1.86 llvm-cov --workspace --all-targets --all-features --locked --no-report' \
+grep -F -- 'llvm-cov --workspace --all-targets --all-features --locked --no-report' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
-grep -F -- 'scripts/cargo-1.86 llvm-cov report --summary-only --fail-under-lines 90 --fail-under-functions 80 --fail-under-regions 80' \
+grep -F -- 'llvm-cov report --summary-only --fail-under-lines 90 --fail-under-functions 80 --fail-under-regions 80' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
-grep -F -- 'scripts/cargo-1.86 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- coverage-ownership' \
+grep -F -- 'run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- coverage-ownership' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
-grep -F -- 'scripts/cargo-1.86 run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- changed-coverage' \
+grep -F -- 'run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- changed-coverage' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
 
 export FAKE_SUMMARY_STATUS=0

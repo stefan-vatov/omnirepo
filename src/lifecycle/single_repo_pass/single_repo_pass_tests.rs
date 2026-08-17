@@ -318,8 +318,7 @@ fn a_concurrent_managed_change_prevents_git_delivery() {
     // capture sees a deletion at a managed path, which is not the
     // authorized replacement, and the pass fails without Git.
     let checks = vec![
-        crate::repository::VerificationCommand::new(["/usr/bin/rm", "managed.txt"])
-            .expect("command"),
+        crate::repository::VerificationCommand::new(["/bin/rm", "managed.txt"]).expect("command"),
     ];
     let outcome = run_single_repository_pass(
         &root,

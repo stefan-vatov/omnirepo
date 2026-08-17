@@ -1890,6 +1890,15 @@ mod tests {
 
     #[test]
     fn live_export_drift_is_diagnostic_only() {
+        // This is a live-beads test: it needs the owner-machine `br` CLI on
+        // PATH.  CI cannot install it, so the test skips with a visible
+        // note there and runs for real on the owner machine.
+        if !crate::br_adapter::BrAdapterConfig::is_br_on_path() {
+            eprintln!(
+                "authority-capability: skipped-live-br (the owner-machine br CLI is not installed)"
+            );
+            return;
+        }
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .and_then(Path::parent)

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly RUST_TOOLCHAIN="1.86.0"
+readonly RUST_TOOLCHAIN="1.95.0"
 readonly CARGO_LLVM_COV_VERSION="0.8.7"
 readonly COVERAGE_LINES_MIN=90
 readonly COVERAGE_FUNCTIONS_MIN=80
@@ -14,12 +14,15 @@ if [[ ! -f Cargo.toml ]]; then
 fi
 
 readonly coverage_dir="$PWD/coverage"
-readonly cargo_llvm_cov=(scripts/cargo-1.86 llvm-cov)
+# The cargo resolution is overridable so the gate fixtures can intercept the
+# toolchain via their exported `cargo` function; real runs use the repo shim.
+readonly cargo_command=(${OMNIREPO_COVERAGE_CARGO:-scripts/cargo-pinned 1.95.0})
+readonly cargo_llvm_cov=("${cargo_command[@]}" llvm-cov)
 readonly coverage_ownership_matrix="$PWD/tests/traceability/matrix.json"
 readonly coverage_ownership_map="$PWD/tests/traceability/coverage-ownership.json"
 readonly coverage_ownership_manifest="tools/omnirepo-dev/Cargo.toml"
-readonly coverage_ownership_command=(scripts/cargo-1.86 run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- coverage-ownership --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --matrix "$coverage_ownership_matrix" --ownership "$coverage_ownership_map" --json)
-readonly coverage_changed_command=(scripts/cargo-1.86 run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- changed-coverage --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --base "${OMNIREPO_COVERAGE_BASE:-}" --json)
+readonly coverage_ownership_command=("${cargo_command[@]}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- coverage-ownership --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --matrix "$coverage_ownership_matrix" --ownership "$coverage_ownership_map" --json)
+readonly coverage_changed_command=("${cargo_command[@]}" run --quiet --locked --manifest-path "$coverage_ownership_manifest" -- changed-coverage --repo-root "$PWD" --lcov "$coverage_dir/lcov.info" --base "${OMNIREPO_COVERAGE_BASE:-}" --json)
 
 printf 'coverage: rust-toolchain=%s cargo-llvm-cov=%s lines>=%s functions>=%s regions>=%s\n' \
     "$RUST_TOOLCHAIN" \

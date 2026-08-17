@@ -44,7 +44,7 @@ assert_gate_contract() {
     [[ -x "$authority_capability" ]] || fail_contract "authority capability probe is not executable: $authority_capability"
 
     for expected in \
-        'readonly RUST_TOOLCHAIN="1.86.0"' \
+        'readonly RUST_TOOLCHAIN="1.95.0"' \
         'readonly CARGO_LLVM_COV_VERSION="0.8.7"' \
         'readonly COVERAGE_LINES_MIN=90' \
         'readonly COVERAGE_FUNCTIONS_MIN=80' \
@@ -203,7 +203,7 @@ assert_workflow_contract() {
         fail_contract "coverage workflow permissions are not bounded to contents: read"
     for action in \
         'uses: actions/checkout@v7.0.1' \
-        'uses: dtolnay/rust-toolchain@1.86.0' \
+        'uses: dtolnay/rust-toolchain@1.95.0' \
         'uses: Swatinem/rust-cache@v2.9.2' \
         'uses: taiki-e/install-action@v2.85.11' \
         'uses: actions/upload-artifact@v7.0.1'; do

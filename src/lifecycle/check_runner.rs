@@ -175,7 +175,9 @@ fn terminate(child: &mut std::process::Child) {
 /// materialized by the harness can briefly be seen as "text file busy"
 /// by a racing exec; the retry makes the spawn robust without waiting
 /// for a fsync.
-fn spawn_retry(command: &mut std::process::Command) -> std::io::Result<std::process::Child> {
+pub(crate) fn spawn_retry(
+    command: &mut std::process::Command,
+) -> std::io::Result<std::process::Child> {
     let mut attempt = 0;
     loop {
         match command.spawn() {
