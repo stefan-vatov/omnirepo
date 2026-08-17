@@ -455,7 +455,13 @@ fn signal_and_spawn_failures_are_typed_and_replayable() {
     fs::remove_dir_all(&signal_report.root).expect("remove retained signal evidence");
 
     let invalid_executable = tempfile::NamedTempFile::new().expect("invalid executable fixture");
-    fs::write(invalid_executable.path(), [0xff, 0x00, 0x01]).expect("write invalid executable");
+    // A shebang whose interpreter does not exist fails at exec time on
+    // every platform, which is the portable typed-spawn-failure trigger.
+    fs::write(
+        invalid_executable.path(),
+        b"#!/definitely/missing/interpreter\n",
+    )
+    .expect("write invalid executable");
     let spawn_case = RunnerCase::new(
         "spawn-failure",
         FixtureBinarySpec::existing("invalid", invalid_executable.path()),
