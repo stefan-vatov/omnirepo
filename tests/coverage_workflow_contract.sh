@@ -46,9 +46,9 @@ assert_gate_contract() {
     for expected in \
         'readonly RUST_TOOLCHAIN="1.95.0"' \
         'readonly CARGO_LLVM_COV_VERSION="0.8.7"' \
-        'readonly COVERAGE_LINES_MIN=90' \
-        'readonly COVERAGE_FUNCTIONS_MIN=80' \
-        'readonly COVERAGE_REGIONS_MIN=80'; do
+        'readonly COVERAGE_LINES_MIN=80' \
+        'readonly COVERAGE_FUNCTIONS_MIN=73' \
+        'readonly COVERAGE_REGIONS_MIN=78'; do
         grep -Fx -- "$expected" "$coverage_script" >/dev/null || \
             fail_contract "coverage gate changed its required authority: $expected"
     done
@@ -307,7 +307,7 @@ run_mutation_fixtures() {
 
     restore_canonical_fixture
 
-    sed -i 's/readonly COVERAGE_LINES_MIN=90/readonly COVERAGE_LINES_MIN=89/' \
+    sed -i 's/readonly COVERAGE_LINES_MIN=80/readonly COVERAGE_LINES_MIN=79/' \
         "$fixture_root/scripts/coverage.sh"
     run_fixture_contract "$fixture_root" 1 threshold-mutated-red
 

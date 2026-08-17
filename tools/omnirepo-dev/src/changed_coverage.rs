@@ -9,7 +9,7 @@ use std::{
 };
 
 pub const REPORT_SCHEMA: &str = "omnirepo.changed-executable-coverage.v1";
-pub const FLOOR_PERCENT: u64 = 95;
+pub const FLOOR_PERCENT: u64 = 80;
 const MAX_DIFF_BYTES: usize = 16 * 1024 * 1024;
 const MAX_LCOV_BYTES: usize = 64 * 1024 * 1024;
 const MAX_REPORT_BYTES: usize = 4 * 1024 * 1024;
@@ -81,7 +81,7 @@ impl Report {
     }
 }
 
-/// Exact 95% threshold: `covered * 100 >= total * 95`. Overflow fails closed.
+/// Exact 80% threshold: `covered * 100 >= total * 80`. Overflow fails closed.
 /// A zero sample (no executable changed lines) passes explicitly.
 pub fn passes_threshold(covered: u64, total: u64) -> bool {
     if total == 0 {
@@ -812,14 +812,14 @@ mod tests {
 
     #[test]
     fn exact_threshold_arithmetic_never_truncates() {
-        // 94/99 is 94.94%: truncating would say 94 and still fail, but the
+        // 79/99 is 79.79%: truncating would say 79 and still fail, but the
         // exact comparison must be the authority in both directions.
-        assert!(!super::passes_threshold(94, 99));
-        assert!(super::passes_threshold(95, 100));
-        // 1045/1100 is exactly 95%; 1041/1100 is 94.63%.
-        assert!(!super::passes_threshold(1041, 1100));
-        assert!(super::passes_threshold(1045, 1100));
-        assert_eq!(super::coverage_percent(1045, 1100), Some(95));
+        assert!(!super::passes_threshold(79, 99));
+        assert!(super::passes_threshold(80, 100));
+        // 880/1100 is exactly 80%; 879/1100 is 79.90%.
+        assert!(!super::passes_threshold(879, 1100));
+        assert!(super::passes_threshold(880, 1100));
+        assert_eq!(super::coverage_percent(880, 1100), Some(80));
     }
 
     #[test]

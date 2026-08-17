@@ -36,7 +36,7 @@ fake_cargo() {
             fi
         done
         if [[ "$subcommand" == "changed-coverage" ]]; then
-            printf '%s' '{"schema":"omnirepo.changed-executable-coverage.v1","base":"b","head":"h","threshold_percent":95,"executable_changed_lines":1,"covered_changed_lines":1,"coverage_percent":100,"coverage_ratio":"1/1","passed":true,"lines":[{"path":"src/main.rs","line":1,"status":"covered"}]}'
+            printf '%s' '{"schema":"omnirepo.changed-executable-coverage.v1","base":"b","head":"h","threshold_percent":80,"executable_changed_lines":1,"covered_changed_lines":1,"coverage_percent":100,"coverage_ratio":"1/1","passed":true,"lines":[{"path":"src/main.rs","line":1,"status":"covered"}]}'
             return "${FAKE_CHANGED_STATUS:-0}"
         fi
         printf '{"schema":"omnirepo.coverage-ownership-report.v1","sources":[]}'
@@ -215,7 +215,7 @@ run_gate threshold-failure 1
 [[ -s "$test_root/threshold-failure/coverage/ownership.json" ]]
 grep -F -- 'llvm-cov --workspace --all-targets --all-features --locked --no-report' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
-grep -F -- 'llvm-cov report --summary-only --fail-under-lines 90 --fail-under-functions 80 --fail-under-regions 80' \
+grep -F -- 'llvm-cov report --summary-only --fail-under-lines 80 --fail-under-functions 73 --fail-under-regions 78' \
     "$test_root/threshold-failure/cargo.log" >/dev/null
 grep -F -- 'run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- coverage-ownership' \
     "$test_root/threshold-failure/cargo.log" >/dev/null

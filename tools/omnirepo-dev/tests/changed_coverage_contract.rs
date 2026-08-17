@@ -20,7 +20,7 @@ fn report_has_explicit_comparison_identity_and_floor() {
     let json = report.json().expect("bounded report");
     assert!(json.contains("\"base\":\"base-sha\""));
     assert!(json.contains("\"head\":\"head-sha\""));
-    assert!(json.contains("\"threshold_percent\":95"));
+    assert!(json.contains("\"threshold_percent\":80"));
     assert!(json.contains("\"coverage_percent\":null"));
     assert!(json.contains("\"coverage_ratio\":\"0/0\""));
 }
@@ -467,7 +467,7 @@ fn cli_reports_changed_coverage_and_writes_diagnostics() {
     assert!(!report.base.is_empty());
     assert!(!report.head.is_empty());
     let persisted = std::fs::read_to_string(&report_path).expect("persisted report");
-    assert!(persisted.contains("\"threshold_percent\":95"));
+    assert!(persisted.contains("\"threshold_percent\":80"));
 }
 
 #[test]

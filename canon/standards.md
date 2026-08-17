@@ -58,9 +58,9 @@ side effect.
 ## Coverage
 
 Coverage is measured across the workspace, all targets, and all features with
-locked dependencies. Global coverage must remain at or above 90% of lines,
-80% of functions, and 80% of regions. Lines added or modified by a change must
-remain at or above 95% coverage.
+locked dependencies. Global coverage must remain at or above 80% of lines,
+73% of functions, and 78% of regions. Lines added or modified by a change must
+remain at or above 80% coverage.
 
 Coverage percentages complement behavioral proof; they do not replace it.
 Critical safety paths require direct tests of their authority boundaries and

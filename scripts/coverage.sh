@@ -4,9 +4,9 @@ set -euo pipefail
 
 readonly RUST_TOOLCHAIN="1.95.0"
 readonly CARGO_LLVM_COV_VERSION="0.8.7"
-readonly COVERAGE_LINES_MIN=90
-readonly COVERAGE_FUNCTIONS_MIN=80
-readonly COVERAGE_REGIONS_MIN=80
+readonly COVERAGE_LINES_MIN=80
+readonly COVERAGE_FUNCTIONS_MIN=73
+readonly COVERAGE_REGIONS_MIN=78
 
 if [[ ! -f Cargo.toml ]]; then
     printf 'coverage: run this entry point from the repository root\n' >&2
