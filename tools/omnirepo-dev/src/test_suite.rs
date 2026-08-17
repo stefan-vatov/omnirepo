@@ -270,6 +270,11 @@ pub enum CaseOutcome {
     Passed,
     Failed,
     UnsupportedCapability,
+    /// The case requires a host-bound capability (for example a filesystem
+    /// family) that this host does not provide.  The case is a recorded,
+    /// visible skip, not a failure: the manifest is shared across hosts and
+    /// the host resolves the reality.
+    HostUnsupported,
     MissingTool,
     TimedOut,
     HarnessFailure,
@@ -278,16 +283,27 @@ pub enum CaseOutcome {
 
 impl CaseOutcome {
     pub const fn success(self) -> bool {
-        matches!(self, Self::Passed)
+        matches!(self, Self::Passed | Self::HostUnsupported)
     }
 
     fn evidence_outcome(self) -> Outcome {
         match self {
             Self::Passed => Outcome::Passed,
-            Self::UnsupportedCapability => Outcome::Skipped,
+            Self::UnsupportedCapability | Self::HostUnsupported => Outcome::Skipped,
             Self::Failed | Self::TimedOut => Outcome::Failed,
             Self::MissingTool | Self::HarnessFailure | Self::Cancelled => Outcome::HarnessFailure,
         }
+    }
+}
+
+/// Host-bound capability names and the hosts that provide them.  A capability
+/// name that is not in this table is resolved solely by the manifest's
+/// declaration.
+fn host_support(name: &str) -> Option<bool> {
+    match name {
+        "linux-ext-family" => Some(cfg!(target_os = "linux")),
+        "macos-apfs" => Some(cfg!(target_os = "macos")),
+        _ => None,
     }
 }
 
@@ -1049,6 +1065,23 @@ fn execute_case(
                 "unsupported capability {}: {}",
                 capability.name,
                 capability.detail.as_deref().unwrap_or("not available")
+            )),
+            duration_ms: 0,
+        }
+    } else if let Some(capability) = case
+        .capabilities()
+        .find(|capability| host_support(&capability.name) == Some(false))
+    {
+        ProcessResult {
+            outcome: CaseOutcome::HostUnsupported,
+            exit_code: None,
+            signal: None,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            diagnostic: Some(format!(
+                "host does not support capability {} (host {}): case skipped",
+                capability.name,
+                std::env::consts::OS
             )),
             duration_ms: 0,
         }

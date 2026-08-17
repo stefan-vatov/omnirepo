@@ -113,3 +113,10 @@ jobs:
           --full --jobs 2 --artifacts target/omnirepo-test-artifacts --json
         env:
           RUSTFLAGS: "-D warnings"
+
+      - name: Surface failing case logs
+        if: failure()
+        run: >-
+          find target/omnirepo-test-artifacts -type f -path '*/cases/*' -name '*.log'
+          -exec sh -c 'echo "===== {} ====="; cat "{}"' \;
+        shell: bash

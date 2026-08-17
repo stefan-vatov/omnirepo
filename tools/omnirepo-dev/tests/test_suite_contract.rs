@@ -261,6 +261,49 @@ fn unsupported_capability_and_missing_tool_are_typed_failures() {
 }
 
 #[test]
+fn host_bound_capability_mismatch_is_a_visible_skip() {
+    let fixture = root("host-skip");
+    let path = fixture.join("test-suite.json");
+    let manifest = json!({
+        "schema": TEST_SUITE_MANIFEST_SCHEMA,
+        "version": 1,
+        "suites": [{
+            "id": "platform",
+            "kind": "platform",
+            "cases": [{
+                "id": "host-bound",
+                "argv": ["/bin/sh", "-c", "echo should-not-run"],
+                "capabilities": [{"name": "linux-ext-family", "supported": true}]
+            }]
+        }]
+    });
+    fs::write(
+        &path,
+        serde_json::to_vec(&manifest).expect("serialize host fixture"),
+    )
+    .expect("write host fixture");
+
+    let report = run(&options(&path, &fixture)).expect("host resolution remains reportable");
+    // The shared manifest declares the capability; the host resolves it.  On
+    // Linux the case runs; on any other host it is a recorded visible skip,
+    // and the run stays green either way.
+    assert!(report.success, "host resolution must not fail the run");
+    if cfg!(target_os = "linux") {
+        assert_eq!(report.cases[0].outcome, CaseOutcome::Passed);
+    } else {
+        assert_eq!(report.cases[0].outcome, CaseOutcome::HostUnsupported);
+        assert!(
+            report.cases[0]
+                .diagnostic
+                .as_deref()
+                .is_some_and(|diagnostic| diagnostic.contains("host does not support")),
+            "the skip reason is visible in the report"
+        );
+    }
+    cleanup(&fixture);
+}
+
+#[test]
 fn invalid_manifest_and_zero_parallelism_fail_before_spawning() {
     let fixture = root("preflight");
     let marker = fixture.join("started");
