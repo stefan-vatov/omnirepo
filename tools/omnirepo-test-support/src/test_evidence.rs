@@ -2564,7 +2564,14 @@ mod tests {
     fn artifact_paths_reject_escape_and_symlink_components() {
         assert!(ArtifactReference::new("../escape", "replay").is_err());
         assert!(ArtifactReference::new("/absolute", "replay").is_err());
-        let directory = tempfile::tempdir().unwrap();
+        // The system temp dir on macOS lives under /var/folders, and /var
+        // is a symlink there; the store validates its root as symlink-free.
+        let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+        std::fs::create_dir_all(&base).expect("fixture base");
+        let directory = tempfile::Builder::new()
+            .prefix("evidence-src-root-")
+            .tempdir_in(&base)
+            .expect("fixture dir");
         let store = ArtifactStore::new(directory.path()).unwrap();
         let pointer = store.write_bytes("nested/evidence.jsonl", b"{}\n").unwrap();
         assert_eq!(pointer.path.as_deref(), Some("nested/evidence.jsonl"));
