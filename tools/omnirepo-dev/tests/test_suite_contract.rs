@@ -25,7 +25,12 @@ fn root(name: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .expect("clock is after epoch")
         .as_nanos();
-    let root = std::env::temp_dir().join(format!(
+    // The system temp dir on macOS lives under /var/folders, and /var is a
+    // symlink there; the test-suite runner validates the artifact root as
+    // symlink-free, so fixtures live under the repository.
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base).expect("fixture base");
+    let root = base.join(format!(
         "omnirepo-test-suite-{name}-{}-{sequence}-{stamp}",
         std::process::id()
     ));
