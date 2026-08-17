@@ -726,7 +726,10 @@ fn new_hard_link_to_the_controlled_canary_fails_without_byte_drift() {
 }
 
 #[test]
-#[cfg(unix)]
+// macOS APFS requires valid UTF-8 filenames and rejects non-UTF-8 names
+// with EILSEQ at the filesystem level, so raw-byte path identity is a
+// Linux-only capability.
+#[cfg(target_os = "linux")]
 fn raw_non_utf8_expected_file_preserves_lossless_identity() {
     let raw_name = b"raw-\xff.txt".to_vec();
     let expected = ExpectedFile::raw_path_with_contents(raw_name.clone(), b"raw-bytes\n".to_vec())
@@ -735,7 +738,7 @@ fn raw_non_utf8_expected_file_preserves_lossless_identity() {
         "raw-path-identity",
         FixtureBinarySpec::shell(
             "raw-path-identity",
-            "#!/bin/sh\nset -eu\nexport LC_ALL=C\nname=$(printf 'raw-\\377.txt')\nprintf 'raw-bytes\\n' > \"$OMNIREPO_E2E_EFFECTS_ROOT/$name\"\n",
+            "#!/bin/sh\nset -eu\nname=$(printf 'raw-\\377.txt')\nprintf 'raw-bytes\\n' > \"$OMNIREPO_E2E_EFFECTS_ROOT/$name\"\n",
         ),
     )
     .expect("valid raw path case")
