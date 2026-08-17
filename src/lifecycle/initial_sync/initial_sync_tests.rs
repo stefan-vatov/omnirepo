@@ -41,6 +41,7 @@ fn item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncItem {
         target: target.to_owned(),
         frozen_bytes: frozen.to_vec(),
         current_bytes: current.to_vec(),
+        replacement: frozen.to_vec(),
         fail: None,
     }
 }
@@ -51,6 +52,7 @@ fn failing_item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncIt
         target: target.to_owned(),
         frozen_bytes: frozen.to_vec(),
         current_bytes: current.to_vec(),
+        replacement: frozen.to_vec(),
         fail: Some("simulated failure".to_owned()),
     }
 }
@@ -58,6 +60,8 @@ fn failing_item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncIt
 #[test]
 fn every_operation_has_intent_and_result_and_unchanged_performs_no_write() {
     let (_fixture, mut journal, run_id) = journal_fixture();
+    std::fs::write(_fixture.path().join("managed.txt"), b"v1\n").expect("managed fixture");
+    std::fs::write(_fixture.path().join("changed.txt"), b"v2\n").expect("changed fixture");
     let items = vec![
         item("a", "managed.txt", b"v1\n", b"v1\n"),
         item("b", "changed.txt", b"v1\n", b"v2\n"),
@@ -66,6 +70,7 @@ fn every_operation_has_intent_and_result_and_unchanged_performs_no_write() {
         &journal.handle,
         &run_id,
         "dest-a",
+        _fixture.path(),
         &items,
         FailurePolicy::Continue,
     )
@@ -83,6 +88,7 @@ fn every_operation_has_intent_and_result_and_unchanged_performs_no_write() {
 #[test]
 fn failure_leaves_exactly_the_residue_and_later_items_follow_policy() {
     let (_fixture, mut journal, run_id) = journal_fixture();
+    std::fs::write(_fixture.path().join("later.txt"), b"v2\n").expect("later fixture");
     let items = vec![
         failing_item("a", "managed.txt", b"v1\n", b"v2\n"),
         item("b", "later.txt", b"v1\n", b"v2\n"),
@@ -91,6 +97,7 @@ fn failure_leaves_exactly_the_residue_and_later_items_follow_policy() {
         &journal.handle,
         &run_id,
         "dest-a",
+        _fixture.path(),
         &items,
         FailurePolicy::Continue,
     )
@@ -117,6 +124,7 @@ fn failure_leaves_exactly_the_residue_and_later_items_follow_policy() {
         &journal2.handle,
         &run_id2,
         "dest-a",
+        _fixture2.path(),
         &items,
         FailurePolicy::StopOnFailure,
     )
@@ -141,6 +149,7 @@ fn outside_scope_content_is_protected() {
         &journal.handle,
         &run_id,
         "dest-a",
+        _fixture.path(),
         &items,
         FailurePolicy::Continue,
     )
@@ -161,6 +170,7 @@ fn report_is_ordered_and_complete() {
         &journal.handle,
         &run_id,
         "dest-a",
+        _fixture.path(),
         &items,
         FailurePolicy::Continue,
     )

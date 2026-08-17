@@ -67,6 +67,7 @@ fn item(id: &str) -> PlanItem {
         id: id.to_owned(),
         target: format!("apps/{id}.yaml"),
         source: "source-a".to_owned(),
+        source_path: String::new(),
         source_order: 0,
         kind: ItemKind::WholeFile,
         decision: PlanDecision::Selected {

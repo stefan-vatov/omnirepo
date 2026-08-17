@@ -14,6 +14,7 @@ mod identity;
 mod paths;
 mod roots;
 
+pub use backend::resolve_mutation;
 pub use identity::{
     AuthorityAdapterKind, AuthorityIdentity, FilesystemIdentity, FilesystemKind, MutationIntent,
     ObjectClass, ObjectIdentity, PathError,

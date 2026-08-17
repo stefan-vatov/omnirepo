@@ -11,6 +11,7 @@
 - Make architectural decisions for the long term. Do not accept a stopgap that only works for now and is meant to be replaced later.
 - Always talk in ASD-STE100 Simplified Technical English.
 - Always talk to me like I have ADHD.
+- Round-trip rule: the destination follows the source.
 <!-- omnirepo-end -->
 ```
 <!-- BEGIN PROJECT CONSTITUTION -->

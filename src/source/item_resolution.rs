@@ -70,6 +70,8 @@ pub struct ItemDeclaration {
     pub target: String,
     /// The owning source in declared precedence order.
     pub source: String,
+    /// The source-relative file path that carries the payload.
+    pub source_path: String,
     pub kind: ItemKind,
     pub section: Option<(u64, u64)>,
     pub source_order: usize,

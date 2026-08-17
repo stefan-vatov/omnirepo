@@ -13,6 +13,7 @@ fn selected(id: &str, target: &str) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: "primary".to_owned(),
+        source_path: String::new(),
         source_order: 1,
         kind: ItemKind::WholeFile,
         decision: PlanDecision::Selected {
@@ -99,6 +100,7 @@ fn one_repository_failure_does_not_alter_peer_eligibility() {
             id: "a".to_owned(),
             target: "t".to_owned(),
             source: "broken".to_owned(),
+            source_path: String::new(),
             source_order: 1,
             kind: ItemKind::WholeFile,
             decision: PlanDecision::Rejected {
@@ -137,6 +139,7 @@ fn every_operation_outcome_carries_source_plan_and_target_identities() {
         id: "item-b".to_owned(),
         target: "apps/broken.yaml".to_owned(),
         source: "broken".to_owned(),
+        source_path: String::new(),
         source_order: 2,
         kind: ItemKind::WholeFile,
         decision: PlanDecision::Rejected {

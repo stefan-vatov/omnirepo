@@ -12,8 +12,11 @@ use crate::lifecycle::event::{EvidenceKind, EvidenceRef, JournalEvent};
 #[cfg(test)]
 mod initial_sync_tests;
 use crate::lifecycle::journal::{JournalError, JournalHandle};
-use crate::platform::RelativePath;
-use std::{error::Error, fmt};
+use crate::platform::{
+    AuthorityRoot, DestinationRepositoryRoot, Mutate, MutationIntent, RelativePath,
+    resolve_mutation,
+};
+use std::{error::Error, fmt, io::Write, path::Path};
 
 /// The declared failure policy for later items.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -31,6 +34,10 @@ pub struct SyncItem {
     pub target: String,
     pub frozen_bytes: Vec<u8>,
     pub current_bytes: Vec<u8>,
+    /// The exact bytes to write when the item is a replacement (the
+    /// composed destination content for sections, the authoritative bytes
+    /// for whole files).
+    pub replacement: Vec<u8>,
     /// Deterministic failure seam (test and fault-injection use).
     pub fail: Option<String>,
 }
@@ -94,12 +101,37 @@ fn residue_for(target: &str) -> String {
     format!("{target}.omnirepo-tmp")
 }
 
+/// Write the replacement bytes to the destination target through the
+/// mutation authority (no-follow, identity-revalidated, synced).
+fn write_replacement(working: &Path, target: &str, bytes: &[u8]) -> Result<(), String> {
+    let root = AuthorityRoot::<DestinationRepositoryRoot, Mutate>::open(working)
+        .map_err(|error| format!("open root: {error}"))?;
+    let relative = RelativePath::parse(target).map_err(|error| format!("parse: {error}"))?;
+    let mutation = resolve_mutation(&root, &relative, MutationIntent::Replace)
+        .map_err(|error| format!("resolve: {error}"))?;
+    // resolve_mutation validated the leaf and kept its O_RDWR handle;
+    // revalidate_mutation returns the parent (the create path), so the
+    // write goes through the leaf handle directly.
+    let mut file = mutation
+        .handle
+        .ok_or_else(|| format!("replace target {target} has no write handle"))?;
+    file.set_len(0)
+        .map_err(|error| format!("set_len: {error}"))?;
+    file.write_all(bytes)
+        .map_err(|error| format!("write: {error}"))?;
+    file.sync_all().map_err(|error| format!("sync: {error}"))?;
+    Ok(())
+}
+
 /// Execute the pass: validate every target first (outside-scope content is
-/// protected), then classify and journal each item in declared order.
+/// protected), then classify, apply, and journal each item in declared
+/// order.  A replacement writes exactly the prepared replacement bytes to
+/// the destination target through the mutation authority.
 pub fn execute_sync_pass(
     journal: &JournalHandle,
     run_id: &str,
     repository: &str,
+    working: &Path,
     items: &[SyncItem],
     policy: FailurePolicy,
 ) -> Result<SyncPassReport, SyncPassError> {
@@ -137,7 +169,13 @@ pub fn execute_sync_pass(
         } else if item.frozen_bytes == item.current_bytes {
             SyncOutcome::Unchanged
         } else {
-            SyncOutcome::Replacement
+            match write_replacement(working, &item.target, &item.replacement) {
+                Ok(()) => SyncOutcome::Replacement,
+                Err(reason) => SyncOutcome::Failed {
+                    residue: vec![residue_for(&item.target)],
+                    reason,
+                },
+            }
         };
         if matches!(outcome, SyncOutcome::Failed { .. }) && policy == FailurePolicy::StopOnFailure {
             stopped = true;

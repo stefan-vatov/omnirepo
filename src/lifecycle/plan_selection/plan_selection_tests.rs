@@ -10,6 +10,7 @@ fn item(id: &str, decision: PlanDecision) -> PlanItem {
         id: id.to_owned(),
         target: "t".to_owned(),
         source: "primary".to_owned(),
+        source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::WholeFile,
         decision,

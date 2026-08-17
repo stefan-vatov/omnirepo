@@ -9,6 +9,7 @@ fn selected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: source.to_owned(),
+        source_path: String::new(),
         source_order: order,
         kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Selected {
@@ -22,6 +23,7 @@ fn rejected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: source.to_owned(),
+        source_path: String::new(),
         source_order: order,
         kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Rejected {

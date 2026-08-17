@@ -11,6 +11,7 @@ fn selected(id: &str, target: &str) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: "primary".to_owned(),
+        source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Selected {
@@ -24,6 +25,7 @@ fn rejected(id: &str, target: &str) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: "legacy".to_owned(),
+        source_path: String::new(),
         source_order: 2,
         kind: crate::source::ItemKind::WholeFile,
         decision: PlanDecision::Rejected {
@@ -73,6 +75,7 @@ fn section_items_are_rejected() {
         id: "a".to_owned(),
         target: "f.txt".to_owned(),
         source: "primary".to_owned(),
+        source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::Section,
         decision: PlanDecision::Selected {

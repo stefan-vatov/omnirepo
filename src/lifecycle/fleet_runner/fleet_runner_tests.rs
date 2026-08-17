@@ -67,10 +67,22 @@ fn destination(root: &Path, id: &str) -> DestinationRepository {
 }
 
 fn machine(repositories: Vec<DestinationRepository>) -> MachineConfiguration {
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/fleet-runner-sources");
+    fs::create_dir_all(base.join("source-a")).expect("source dir");
+    fs::write(base.join("source-a/managed.txt"), "v1\n").expect("source file");
+    let source = crate::configuration::SourceReference::new(
+        crate::configuration::SourceId::parse("source-a").expect("source id"),
+        crate::configuration::SourceLocation::local(
+            crate::configuration::AbsolutePath::parse(
+                base.join("source-a").to_str().expect("utf8"),
+            )
+            .expect("source path"),
+        ),
+    );
     MachineConfiguration::new(
         SchemaVersion::new(1).expect("version"),
         repositories,
-        Vec::new(),
+        vec![source],
         None,
         MachineConcurrency::new(4, 8).expect("concurrency"),
         RepairControls::default(),
@@ -94,6 +106,7 @@ fn plan_item(id: &str, target: &str) -> PlanItem {
         id: id.to_owned(),
         target: target.to_owned(),
         source: "source-a".to_owned(),
+        source_path: "managed.txt".to_owned(),
         source_order: 0,
         kind: ItemKind::WholeFile,
         decision: PlanDecision::Selected {

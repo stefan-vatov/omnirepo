@@ -135,6 +135,7 @@ fn to_item(declaration: &SourceDeclaration, index: usize) -> Result<ItemDeclarat
         id,
         target,
         source: declaration.source.as_str().to_owned(),
+        source_path: declaration.path.clone(),
         kind,
         section: None,
         source_order: index,

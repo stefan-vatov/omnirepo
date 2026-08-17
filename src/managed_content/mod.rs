@@ -14,6 +14,7 @@ mod whole_file;
 
 pub(crate) use compare::CompareOutcome;
 pub(crate) use delimiters::{DelimiterError, DelimiterSyntax, lookup_by_extension};
+pub(crate) use partial_scan::{Bounds, Topology, scan_partial};
 pub(crate) use representation::{Representation, check_exact_representation};
 pub(crate) use transaction::{TempCandidate, TransactionPlan};
 

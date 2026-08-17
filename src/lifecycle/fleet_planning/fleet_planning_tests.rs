@@ -63,6 +63,7 @@ fn item(id: &str, source: &str, order: usize) -> ItemDeclaration {
         id: id.to_owned(),
         target: format!("apps/{id}.yaml"),
         source: source.to_owned(),
+        source_path: String::new(),
         kind: ItemKind::WholeFile,
         section: None,
         source_order: order,

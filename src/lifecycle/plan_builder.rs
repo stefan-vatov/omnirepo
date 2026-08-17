@@ -105,6 +105,7 @@ pub fn build_repository_plan(
             id: winner.id.clone(),
             target: winner.target.clone(),
             source: declared[winner.winner].source.clone(),
+            source_path: declared[winner.winner].source_path.clone(),
             source_order: declared[winner.winner].source_order,
             kind: winner.kind,
             decision: PlanDecision::Selected {

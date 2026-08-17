@@ -63,6 +63,17 @@ pub fn run_fleet_initial_passes(
             )
         })
         .collect::<HashMap<String, String>>();
+    let sources = config
+        .sources()
+        .iter()
+        .filter_map(|source| match source.location() {
+            crate::configuration::SourceLocation::Local(path) => Some((
+                source.id().as_str().to_owned(),
+                std::path::PathBuf::from(path.as_str()),
+            )),
+            crate::configuration::SourceLocation::Remote(_) => None,
+        })
+        .collect::<HashMap<String, std::path::PathBuf>>();
     let plans = plans
         .iter()
         .map(|plan| {
@@ -84,12 +95,14 @@ pub fn run_fleet_initial_passes(
             ),
         >>();
     let destinations = Arc::new(destinations);
+    let sources = Arc::new(sources);
     let plans = Arc::new(plans);
     let journal_handle = journal.clone();
     let run_id_owned = run_id.to_owned();
     let mut lease_check = |_repository: &str| true;
     let runner = {
         let destinations = Arc::clone(&destinations);
+        let sources = Arc::clone(&sources);
         let plans = Arc::clone(&plans);
         move |item: &WorkItem| match item {
             WorkItem::Skip { repository, reason } => RepoResult::Skipped {
@@ -126,6 +139,8 @@ pub fn run_fleet_initial_passes(
                     repository,
                     &snapshot,
                     &checks,
+                    &plan,
+                    &sources,
                     SYNC_COMMIT_MESSAGE,
                 ) {
                     Ok(crate::lifecycle::single_repo_pass::PassOutcome::Delivered { oid }) => {

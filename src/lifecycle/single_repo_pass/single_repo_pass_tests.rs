@@ -130,6 +130,8 @@ fn each_run_yields_one_replayable_initial_result_and_exact_residue() {
         "dest-a",
         &snapshot_for(&root),
         &[],
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -164,6 +166,8 @@ fn no_duplicate_git_effect_on_redelivery() {
         "dest-a",
         &snapshot_for(&root),
         &[],
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -207,6 +211,8 @@ fn protected_state_remains_intact() {
         "dest-a",
         &snapshot_for(&root),
         &[],
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -230,6 +236,8 @@ fn cancellation_records_an_unambiguous_result() {
         "dest-a",
         &snapshot_for(&root),
         &[],
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -258,6 +266,8 @@ fn a_failing_declared_check_prevents_git_delivery() {
         "dest-a",
         &snapshot_for(&root),
         &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -298,6 +308,8 @@ fn a_passing_declared_check_allows_git_delivery() {
         "dest-a",
         &snapshot_for(&root),
         &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
@@ -327,6 +339,8 @@ fn a_concurrent_managed_change_prevents_git_delivery() {
         "dest-a",
         &snapshot_for(&root),
         &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
         "sync managed",
     )
     .expect("pass");
