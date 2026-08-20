@@ -9,8 +9,16 @@
       "row_id": "behavior-configuration-authority"
     },
     {
+      "path": "src/configuration/section_id.rs",
+      "row_id": "behavior-configuration-authority"
+    },
+    {
       "path": "src/configuration/yaml_subset.rs",
       "row_id": "behavior-configuration-authority"
+    },
+    {
+      "path": "src/lifecycle/doctor.rs",
+      "row_id": "behavior-doctor"
     },
     {
       "path": "src/lifecycle/mod.rs",
@@ -129,7 +137,7 @@
       "row_id": "behavior-configuration-authority"
     },
     {
-      "path": "src/managed_content/section_builder.rs",
+      "path": "src/managed_content/section_apply.rs",
       "row_id": "behavior-partial-section-sync"
     },
     {
@@ -171,10 +179,6 @@
     {
       "path": "src/lifecycle/repository_preflight.rs",
       "row_id": "behavior-configuration-authority"
-    },
-    {
-      "path": "src/managed_content/section_append.rs",
-      "row_id": "behavior-partial-section-sync"
     },
     {
       "path": "src/lifecycle/diagnostic_aggregation.rs",
