@@ -92,84 +92,75 @@ pub fn run_single_repository_pass(
     sources: &std::collections::HashMap<String, std::path::PathBuf>,
     message: &str,
 ) -> Result<PassOutcome, PassError> {
-    // Build the authorized operations and the sync items with the real
-    // payloads, in plan order.  An absent target (creation) is not part of
-    // the replace-only pass contract and fails typed instead of panicking.
+    // Group the selected plan items by destination target, in plan order:
+    // all operations targeting one destination file form one atomic group
+    // (canon/architecture/fleet-lifecycle.md).  Rejected items never
+    // execute.  A group that cannot compose (absent target, unknown
+    // destination format, ambiguous topology, unreadable source) becomes
+    // a failed item: one group's failure never prevents independent
+    // groups in the same repository from being attempted.
+    let mut groups: Vec<(&str, Vec<&crate::lifecycle::sync_plan::PlanItem>)> = Vec::new();
+    for plan_item in plan.items.iter() {
+        if !matches!(
+            plan_item.decision,
+            crate::lifecycle::sync_plan::PlanDecision::Selected { .. }
+        ) {
+            continue;
+        }
+        match groups
+            .iter_mut()
+            .find(|(target, _)| *target == plan_item.target)
+        {
+            Some((_, members)) => members.push(plan_item),
+            None => groups.push((plan_item.target.as_str(), vec![plan_item])),
+        }
+    }
+    // One authority root per configured source, opened once for the pass.
+    let mut source_roots = std::collections::HashMap::new();
+    for (_, members) in &groups {
+        for member in members {
+            if source_roots.contains_key(&member.source) {
+                continue;
+            }
+            let root_path = sources.get(&member.source).ok_or_else(|| PassError::Plan {
+                reason: format!("source {} has no configured local root", member.source),
+            })?;
+            let root =
+                AuthorityRoot::<crate::platform::SourceSnapshotRoot, ReadOnly>::open(root_path)
+                    .map_err(|error| PassError::Plan {
+                        reason: format!(
+                            "cannot open the source root {}: {error}",
+                            root_path.display()
+                        ),
+                    })?;
+            source_roots.insert(member.source.clone(), root);
+        }
+    }
     let mut operations = Vec::new();
     let mut items = Vec::new();
-    for plan_item in plan.items.iter() {
-        let target = &plan_item.target;
-        let observed = snapshot
-            .targets()
-            .iter()
-            .find(|target_entry| target_entry.path().as_bytes() == target.as_bytes());
-        let Some(identity) = observed.and_then(|entry| entry.observed_file().cloned()) else {
-            return Err(PassError::Plan {
-                reason: format!(
-                    "managed target {} is absent; creation is not part of the replace-only pass",
-                    target
-                ),
-            });
-        };
-        operations.push(PlannedOperation::replaced(
-            observed.expect("observed target was found").path().clone(),
-            identity.clone(),
-            identity,
-        ));
-        // The source payload and the destination's current payload.
-        let syntax = if plan_item.kind == crate::source::ItemKind::Section {
-            Some(
-                crate::managed_content::lookup_by_extension(&plan_item.source_path).map_err(
-                    |error| PassError::Plan {
-                        reason: format!(
-                            "no delimiter syntax for source {}: {error}",
-                            plan_item.source_path
-                        ),
-                    },
-                )?,
-            )
-        } else {
-            None
-        };
-        let source_root = sources
-            .get(&plan_item.source)
-            .ok_or_else(|| PassError::Plan {
-                reason: format!("source {} has no configured local root", plan_item.source),
-            })?;
-        let source_bytes = read_source_file(source_root, &plan_item.source_path)?;
-        let (authoritative, _) = payload(
-            &source_bytes,
-            &plan_item.source_path,
-            plan_item.kind,
-            syntax,
-        )?;
-        let current_bytes =
-            std::fs::read(working.join(target)).map_err(|error| PassError::Plan {
-                reason: format!("cannot read the current managed target {target}: {error}"),
-            })?;
-        let (current_payload, destination_bounds) =
-            payload(&current_bytes, target, plan_item.kind, syntax)?;
-        let replacement = match plan_item.kind {
-            crate::source::ItemKind::WholeFile => authoritative.clone(),
-            crate::source::ItemKind::Section => match destination_bounds {
-                Some(bounds) => compose_section(&current_bytes, &authoritative, bounds),
-                None => {
-                    return Err(PassError::Plan {
-                        reason: format!(
-                            "the destination target {target} has no managed section markers"
-                        ),
-                    });
-                }
-            },
-        };
-        items.push(SyncItem {
-            plan_item_id: plan_item.id.clone(),
-            target: target.clone(),
-            frozen_bytes: authoritative,
-            current_bytes: current_payload,
-            replacement,
-            fail: None,
-        });
+    for (target, members) in &groups {
+        match compose_group(working, snapshot, &source_roots, target, members) {
+            Ok((operation, current_bytes, replacement)) => {
+                operations.push(operation);
+                items.push(SyncItem {
+                    plan_item_id: (*target).to_owned(),
+                    target: (*target).to_owned(),
+                    current_bytes,
+                    replacement,
+                    fail: None,
+                });
+            }
+            Err(reason) => {
+                // The group is failed, not the pass: peers still apply.
+                items.push(SyncItem {
+                    plan_item_id: (*target).to_owned(),
+                    target: (*target).to_owned(),
+                    current_bytes: Vec::new(),
+                    replacement: Vec::new(),
+                    fail: Some(reason),
+                });
+            }
+        }
     }
     let delta = build_authorized_delta(snapshot, operations).map_err(|error| PassError::Plan {
         reason: error.to_string(),
@@ -186,15 +177,17 @@ pub fn run_single_repository_pass(
         FailurePolicy::Continue,
     )
     .map_err(|error| PassError::Journal(error.to_journal()))?;
-    // A failed item fails the pass: no Git delivery for a partially
-    // applied or unapplied managed change.
+    // A failed group fails the pass outcome — no Git delivery for a
+    // partially applied repository — but only after every independent
+    // group had its attempt; successful group writes stay in the
+    // worktree for repair (canon/architecture/fleet-lifecycle.md).
     for execution in &sync_report.items {
         if let crate::lifecycle::initial_sync::SyncOutcome::Failed { reason, .. } =
             &execution.outcome
         {
             return Ok(PassOutcome::Failed {
                 reason: format!(
-                    "managed item {} failed to apply: {reason}",
+                    "managed group {} failed to apply: {reason}",
                     execution.plan_item_id
                 ),
             });
@@ -328,114 +321,101 @@ impl ToJournalError for crate::lifecycle::initial_sync::SyncPassError {
 }
 
 /// Read one source file through the typed source authority (no-follow).
-fn read_source_file(root: &Path, source_path: &str) -> Result<Vec<u8>, PassError> {
+fn read_source_file(
+    authority: &AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+    source_path: &str,
+) -> Result<Vec<u8>, String> {
     use std::io::Read;
-    let authority = AuthorityRoot::<crate::platform::SourceSnapshotRoot, ReadOnly>::open(root)
-        .map_err(|error| PassError::Plan {
-            reason: format!("cannot open the source root {}: {error}", root.display()),
-        })?;
-    let relative =
-        crate::platform::RelativePath::parse(source_path).map_err(|error| PassError::Plan {
-            reason: format!("source path {source_path:?} is invalid: {error}"),
-        })?;
+    let relative = crate::platform::RelativePath::parse(source_path)
+        .map_err(|error| format!("source path {source_path:?} is invalid: {error}"))?;
     let target = authority
         .resolve_read(&relative, crate::platform::ObjectClass::RegularFile)
-        .map_err(|error| PassError::Plan {
-            reason: format!("cannot resolve the source file {source_path}: {error}"),
-        })?;
-    let mut handle = target.try_clone_file().map_err(|error| PassError::Plan {
-        reason: format!("cannot open the source file {source_path}: {error}"),
-    })?;
+        .map_err(|error| format!("cannot resolve the source file {source_path}: {error}"))?;
+    let mut handle = target
+        .try_clone_file()
+        .map_err(|error| format!("cannot open the source file {source_path}: {error}"))?;
     let mut bytes = Vec::new();
     handle
         .read_to_end(&mut bytes)
-        .map_err(|error| PassError::Plan {
-            reason: format!("cannot read the source file {source_path}: {error}"),
-        })?;
+        .map_err(|error| format!("cannot read the source file {source_path}: {error}"))?;
     Ok(bytes)
 }
 
-/// Extract the payload for one item: the whole file, or the managed
-/// section between the canonical marker pair.  The bounds are returned for
-/// sections so the caller can compose the destination replacement.
-fn payload(
-    bytes: &[u8],
-    path: &str,
-    kind: crate::source::ItemKind,
-    syntax: Option<&crate::managed_content::DelimiterSyntax>,
-) -> Result<(Vec<u8>, Option<crate::managed_content::Bounds>), PassError> {
-    match kind {
-        crate::source::ItemKind::WholeFile => Ok((bytes.to_vec(), None)),
-        crate::source::ItemKind::Section => {
-            let syntax = syntax.expect("section items always resolve their delimiter syntax");
-            let text = String::from_utf8_lossy(bytes);
-            match crate::managed_content::scan_partial(&text, syntax) {
-                crate::managed_content::Topology::ExactlyOne { bounds } => {
-                    let start = bounds.start_line + 1;
-                    let end = bounds.end_line - 1;
-                    let section = if start <= end {
-                        crate::source::extract_payload(
-                            path,
-                            bytes,
-                            &crate::source::PayloadKind::Section {
-                                start_line: start,
-                                end_line: end,
-                            },
-                        )
-                        .map_err(|error| PassError::Plan {
-                            reason: format!(
-                                "cannot extract the managed section from {path}: {error}"
-                            ),
-                        })?
-                        .bytes
-                    } else {
-                        Vec::new()
-                    };
-                    Ok((section, Some(bounds)))
-                }
-                crate::managed_content::Topology::Absent => Err(PassError::Plan {
-                    reason: format!("no managed section markers in {path}"),
-                }),
-                crate::managed_content::Topology::Ambiguous { reason } => Err(PassError::Plan {
-                    reason: format!("{path}: {reason}"),
-                }),
-            }
+/// Compose one destination-file group: resolve the frozen identity, read
+/// the destination once, and build the complete replacement bytes.  Any
+/// failure is returned as the group's reason and contained to the group.
+fn compose_group(
+    working: &Path,
+    snapshot: &RepositorySnapshot,
+    source_roots: &std::collections::HashMap<
+        String,
+        AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+    >,
+    target: &str,
+    members: &[&crate::lifecycle::sync_plan::PlanItem],
+) -> Result<(PlannedOperation, Vec<u8>, Vec<u8>), String> {
+    let observed = snapshot
+        .targets()
+        .iter()
+        .find(|target_entry| target_entry.path().as_bytes() == target.as_bytes());
+    let Some(identity) = observed.and_then(|entry| entry.observed_file().cloned()) else {
+        return Err(format!(
+            "managed target {target} is absent; creation is not part of the replace-only pass"
+        ));
+    };
+    let operation = PlannedOperation::replaced(
+        observed.expect("observed target was found").path().clone(),
+        identity.clone(),
+        identity,
+    );
+    let current_bytes = std::fs::read(working.join(target))
+        .map_err(|error| format!("cannot read the current managed target {target}: {error}"))?;
+    let whole_file = members
+        .iter()
+        .any(|member| member.kind == crate::source::ItemKind::WholeFile);
+    let replacement = if whole_file {
+        // Resolution keeps targets homogeneous; a mixed or multi-claim
+        // whole-file group cannot reach a valid plan.
+        if members.len() != 1 {
+            return Err(format!(
+                "target {target} carries a whole-file claim beside other items"
+            ));
         }
-    }
+        authoritative_bytes(source_roots, members[0])?
+    } else {
+        // Named sections: the whole source file is the section body;
+        // the delimiter syntax follows the destination file format.
+        let syntax = crate::managed_content::lookup_by_extension(target)
+            .map_err(|error| format!("no delimiter syntax for destination {target}: {error}"))?;
+        let mut writes = Vec::with_capacity(members.len());
+        for member in members {
+            let Some(section) = member.section.clone() else {
+                return Err(format!("section item {} has no section id", member.id));
+            };
+            writes.push(crate::managed_content::SectionWrite {
+                id: section,
+                payload: authoritative_bytes(source_roots, member)?,
+            });
+        }
+        crate::managed_content::apply_sections(&current_bytes, syntax, &writes)
+            .map_err(|error| format!("target {target}: {error}"))?
+            .content
+    };
+    Ok((operation, current_bytes, replacement))
 }
 
-/// Compose the full destination content for a section replacement: the
-/// bytes before and including the open marker, the authoritative section,
-/// then the close marker onward.
-fn compose_section(
-    current: &[u8],
-    authoritative: &[u8],
-    bounds: crate::managed_content::Bounds,
-) -> Vec<u8> {
-    let lines = split_lines(current);
-    let mut replacement = Vec::with_capacity(current.len() + authoritative.len());
-    for line in &lines[..bounds.start_line as usize] {
-        replacement.extend_from_slice(line);
-    }
-    replacement.extend_from_slice(authoritative);
-    for line in &lines[(bounds.end_line - 1) as usize..] {
-        replacement.extend_from_slice(line);
-    }
-    replacement
-}
-
-/// Split content into lines that keep their trailing newline.
-fn split_lines(content: &[u8]) -> Vec<&[u8]> {
-    let mut lines = Vec::new();
-    let mut start = 0;
-    for (index, byte) in content.iter().enumerate() {
-        if *byte == b'\n' {
-            lines.push(&content[start..=index]);
-            start = index + 1;
-        }
-    }
-    if start < content.len() {
-        lines.push(&content[start..]);
-    }
-    lines
+/// Read one plan item's authoritative bytes: the exact source file.
+/// Whole files replace the destination; section files are the exact
+/// section body.
+fn authoritative_bytes(
+    source_roots: &std::collections::HashMap<
+        String,
+        AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+    >,
+    item: &crate::lifecycle::sync_plan::PlanItem,
+) -> Result<Vec<u8>, String> {
+    let root = source_roots
+        .get(&item.source)
+        .ok_or_else(|| format!("source {} has no opened authority root", item.source))?;
+    read_source_file(root, &item.source_path)
 }

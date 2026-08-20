@@ -16,13 +16,14 @@ replacement, and the guidance pointer; actionable guidance lives in
 | 4 | Legacy config loader (0.8.x `Config`/`RepoConfig`/template authority) | The typed machine configuration authority | `docs/breaking-guidance.md#legacy-config` |
 | 5 | General orchestrator / deployment / dependency surfaces | None (outside the constitutional purpose) | `docs/breaking-guidance.md#orchestrator` |
 | 6 | Legacy logging, progress, table, and verbose output flags | Quiet human output + `--output json` | `docs/breaking-guidance.md#output` |
+| 7 | Unnamed partial-section markers (`# omnirepo-start` / `# omnirepo-end`) and source-side marker extraction | Named markers (`# omnirepo:start <section-id>`) written by omnirepo; the whole source file is the section body | `docs/breaking-guidance.md#named-markers` |
+| 8 | `validate` command stub | `doctor` — the machine diagnostic without destination effects | `docs/breaking-guidance.md#doctor` |
 
 ## Misleading legacy text still present
 
 | # | Location | Misleading text | Action |
 |---|----------|-----------------|--------|
 | 1 | `omnirepo setup --help` / setup invocation | "setup is not available in this build" | The setup machinery exists; the CLI wiring lands with the setup command completion |
-| 2 | `omnirepo validate --help` / validate invocation | "validate is not available in this build" | The validation surface lands with the validate command completion |
 | 3 | `after_help` in `--help` | "Legacy general orchestration surfaces are unsupported and are not migrated automatically" | Lawful decline text; verify it never claims a migrating capability |
 
 ## Inventory contract

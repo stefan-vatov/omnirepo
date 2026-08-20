@@ -115,9 +115,9 @@ pub fn generate_managed_content(seed: u64, size: usize, kind: ContentKind) -> Ve
         ContentKind::Section => {
             // The section kind carries a stable envelope around the
             // deterministic payload.
-            let mut section = b"# omnirepo-start\n".to_vec();
+            let mut section = b"# omnirepo:start generated\n".to_vec();
             section.extend_from_slice(&bytes);
-            section.extend_from_slice(b"\n# omnirepo-end\n");
+            section.extend_from_slice(b"\n# omnirepo:end generated\n");
             section
         }
     }

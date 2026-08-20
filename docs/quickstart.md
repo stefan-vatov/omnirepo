@@ -42,7 +42,30 @@ concurrency:
 Sources declare their managed content in
 `<source-root>/.omnirepo/source.yaml`. Each declaration has a stable
 ID, a whole-file or section mode, contained paths, and optional
-destination tags.
+destination tags:
+
+```text
+omnirepo-declarations-v1
+source=upstream revision=<pinned-sha> path=managed.txt id=item-1 mode=sync destination=managed.txt
+source=upstream revision=<pinned-sha> path=partials/rust-rules.md id=agents-rust mode=section destination=AGENTS.md section=rust-rules
+```
+
+`mode=sync` replaces the whole destination file byte-exactly.
+`mode=section` manages one named block of the destination file: the
+whole source file is the block's body, and `sync` writes the named
+markers (`<!-- omnirepo:start rust-rules -->` … in Markdown) itself.
+Many sections from many sources may share one destination file; content
+outside the managed sections stays local and untouched.
+
+Check the machine before the first run:
+
+```sh
+omnirepo doctor
+```
+
+Doctor reports source availability, every managed item, and every
+cross-source conflict with its declared winner — without touching any
+destination.
 
 ## 3. Run the first synchronization
 

@@ -84,13 +84,19 @@ pub fn dispatch_fleet(
     }
 }
 
-/// Run the configured fleet pipeline end to end.
-fn run_configured(
-    journal: &JournalHandle,
-    run_id: &str,
+/// The effect-free planning prefix shared by `sync` and `doctor`:
+/// catalog, pinned declarations, policies, bindings, and the
+/// per-repository plans.  No destination managed content is read or
+/// written; only each destination's `.omnirepo.yaml` policy is loaded.
+pub struct FleetPlanning {
+    pub catalog: crate::source::SourceCatalog,
+    pub plans: Vec<crate::lifecycle::fleet_planning::RepositoryPlan>,
+}
+
+/// Build the planning prefix for a configured machine authority.
+pub fn plan_configured_fleet(
     config: &crate::configuration::MachineConfiguration,
-    record_path: &Path,
-) -> Result<DispatchOutcome, DispatchError> {
+) -> Result<FleetPlanning, DispatchError> {
     // 1. The source catalog in declared order.
     let catalog = build_runtime_catalog(config).map_err(|error| DispatchError::Pipeline {
         reason: error.to_string(),
@@ -129,6 +135,18 @@ fn run_configured(
         })?;
     // 5. The per-repository plans.
     let plans = build_repository_plans(config, &catalog, &bindings, &policies);
+    Ok(FleetPlanning { catalog, plans })
+}
+
+/// Run the configured fleet pipeline end to end.
+fn run_configured(
+    journal: &JournalHandle,
+    run_id: &str,
+    config: &crate::configuration::MachineConfiguration,
+    record_path: &Path,
+) -> Result<DispatchOutcome, DispatchError> {
+    // 1-5. The effect-free planning prefix.
+    let FleetPlanning { catalog, plans } = plan_configured_fleet(config)?;
     // 6. The composed fleet with the frozen concurrency limit.
     let composed = compose_configured_fleet(config, &catalog, &plans, None).map_err(|error| {
         DispatchError::Pipeline {

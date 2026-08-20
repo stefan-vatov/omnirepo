@@ -56,6 +56,7 @@ mod command_spec;
 mod commit_journal;
 mod diagnostic_aggregation;
 mod diagnostics;
+mod doctor;
 mod event;
 mod exit_status;
 mod final_gate;

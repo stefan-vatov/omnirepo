@@ -189,7 +189,7 @@ pub fn canonical_journey_matrix() -> Vec<AcceptanceJourney> {
         AcceptanceJourney {
             id: "packaging-surface",
             kind: JourneyKind::Packaging,
-            expected_effect: "the binary surface is exactly sync/setup/validate",
+            expected_effect: "the binary surface is exactly sync/setup/doctor",
             negative_assertions: &["no hidden command", "no legacy general orchestrator"],
             replay_link: "cli surface contract",
         },
@@ -325,11 +325,11 @@ pub fn run_journey(
 fn check_journey(journey: &AcceptanceJourney, clean_home: &Path) -> Result<JourneyOutcome, String> {
     match journey.id {
         "migration-declined" | "packaging-surface" => {
-            // The public surface is exactly sync/setup/validate: the
+            // The public surface is exactly sync/setup/doctor: the
             // runtime clap surface carries no migration path.
             let mut names = crate::configuration::command_surface();
             names.sort();
-            if names != vec!["setup", "sync", "validate"] {
+            if names != vec!["doctor", "setup", "sync"] {
                 return Ok(JourneyOutcome::Failed {
                     reason: format!("unexpected surface {names:?}"),
                 });
@@ -376,7 +376,7 @@ fn check_journey(journey: &AcceptanceJourney, clean_home: &Path) -> Result<Journ
             // Byte-exact content: the representation check is exact.
             let exact = matches!(
                 crate::managed_content::check_exact_representation(
-                    b"# omnirepo-start\nv1\n# omnirepo-end\n",
+                    b"# omnirepo:start exactness\nv1\n# omnirepo:end exactness\n",
                     true
                 ),
                 crate::managed_content::Representation::Exact

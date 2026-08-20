@@ -52,6 +52,7 @@ fn item(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         source_path: String::new(),
         source_order: order,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "inferred".to_owned(),
         },

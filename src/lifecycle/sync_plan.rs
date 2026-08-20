@@ -34,6 +34,8 @@ pub struct PlanItem {
     pub source_order: usize,
     /// The item kind (whole file or section).
     pub kind: crate::source::ItemKind,
+    /// The named section for section items; None for whole files.
+    pub section: Option<crate::configuration::SectionId>,
     pub decision: PlanDecision,
 }
 
@@ -67,8 +69,12 @@ impl SyncPlan {
                 PlanDecision::Selected { .. } => "selected",
                 PlanDecision::Rejected { .. } => "rejected",
             };
+            let section = match &item.section {
+                Some(section) => format!(" section={section}"),
+                None => String::new(),
+            };
             out.push_str(&format!(
-                "item={} target={} source={} order={} {decision}\n",
+                "item={} target={} source={} order={}{section} {decision}\n",
                 item.id, item.target, item.source, item.source_order
             ));
         }
@@ -81,6 +87,9 @@ impl SyncPlan {
 pub enum PlanError {
     Empty { destination: String },
     DuplicateItem { id: String },
+    DuplicateTarget { target: String },
+    DuplicateSection { target: String, section: String },
+    IncompatibleClaims { target: String },
 }
 
 impl fmt::Display for PlanError {
@@ -90,27 +99,73 @@ impl fmt::Display for PlanError {
                 write!(formatter, "plan for {destination} has no items")
             }
             Self::DuplicateItem { id } => write!(formatter, "plan item {id} is duplicated"),
+            Self::DuplicateTarget { target } => write!(
+                formatter,
+                "plan target {target} carries more than one whole-file claim"
+            ),
+            Self::DuplicateSection { target, section } => write!(
+                formatter,
+                "plan target {target} carries section {section} more than once"
+            ),
+            Self::IncompatibleClaims { target } => write!(
+                formatter,
+                "plan target {target} carries both a whole-file claim and a section claim"
+            ),
         }
     }
 }
 impl Error for PlanError {}
 
-/// Validate a plan before it is committed: non-empty, unique items,
+/// Validate a plan before it is committed: non-empty, unique selected
+/// items, one authority per whole file and per named section,
 /// deterministic order already enforced by construction.
 pub fn validate_plan(plan: &SyncPlan) -> Result<(), PlanError> {
-    if plan.items.is_empty() {
+    let selected = plan
+        .items
+        .iter()
+        .filter(|item| matches!(item.decision, PlanDecision::Selected { .. }))
+        .collect::<Vec<_>>();
+    // Rejected losers never execute: a plan with no selected item is
+    // empty work, however many documented losers it carries.
+    if selected.is_empty() {
         return Err(PlanError::Empty {
             destination: plan.destination.clone(),
         });
     }
-    let mut seen = Vec::with_capacity(plan.items.len());
-    for item in &plan.items {
+    let mut seen = Vec::with_capacity(selected.len());
+    for item in &selected {
         if seen.contains(&item.id) {
             return Err(PlanError::DuplicateItem {
                 id: item.id.clone(),
             });
         }
         seen.push(item.id.clone());
+    }
+    for (index, item) in selected.iter().enumerate() {
+        for other in &selected[..index] {
+            if item.target != other.target {
+                continue;
+            }
+            match (&item.section, &other.section) {
+                (Some(section), Some(other_section)) if section == other_section => {
+                    return Err(PlanError::DuplicateSection {
+                        target: item.target.clone(),
+                        section: section.as_str().to_owned(),
+                    });
+                }
+                (Some(_), Some(_)) => {}
+                (None, None) => {
+                    return Err(PlanError::DuplicateTarget {
+                        target: item.target.clone(),
+                    });
+                }
+                _ => {
+                    return Err(PlanError::IncompatibleClaims {
+                        target: item.target.clone(),
+                    });
+                }
+            }
+        }
     }
     Ok(())
 }

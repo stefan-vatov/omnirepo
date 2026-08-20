@@ -7,7 +7,7 @@ use std::{fs, path::Path};
 fn the_readme_describes_only_the_constitutional_surface() {
     let readme = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md"))
         .expect("readme");
-    for command in ["sync", "setup", "validate"] {
+    for command in ["sync", "setup", "doctor"] {
         assert!(readme.contains(command), "missing {command}");
     }
     // No legacy surface is claimed as available.  The migrate mention
@@ -48,5 +48,5 @@ fn the_readme_usage_matches_the_runtime_surface() {
         .expect("readme");
     assert!(readme.contains("| `sync` |"));
     assert!(readme.contains("| `setup` |"));
-    assert!(readme.contains("| `validate` |"));
+    assert!(readme.contains("| `doctor` |"));
 }

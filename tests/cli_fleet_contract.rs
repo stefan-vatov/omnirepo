@@ -64,7 +64,7 @@ fn help_and_version_are_config_independent_and_side_effect_free() {
         .success()
         .stdout(predicate::str::contains("sync"))
         .stdout(predicate::str::contains("setup"))
-        .stdout(predicate::str::contains("validate"));
+        .stdout(predicate::str::contains("doctor"));
     command(home.path(), workspace.path())
         .arg("--version")
         .assert()
@@ -149,7 +149,7 @@ fn human_and_agent_subprocesses_expose_identical_capabilities() {
     );
     assert_eq!(human_help.status.code(), agent_help.status.code());
     // No hidden agent-only flag exists: the parsed surface is exactly
-    // sync/setup/validate plus the decided --output selector.  (The help
+    // sync/setup/doctor plus the decided --output selector.  (The help
     // prose lawfully documents the migration decline; the command itself
     // is rejected by the legacy-command test.)
     let help = String::from_utf8(human_help.stdout).expect("utf8");

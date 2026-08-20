@@ -38,16 +38,27 @@ Partial sections use exact full-line named delimiters:
 
 `<comment-token> omnirepo:end <section-id>`
 
-The built-in registry supplies line-comment tokens for common formats: `#`
-for YAML, TOML, shell, Python, Ruby, and Make-style files; `//` for
-JavaScript, TypeScript, Rust, and C-family files; `;` for INI-style files; and
-`--` for SQL files. Unknown, extensionless, unnamed, whitespace-altered,
-mismatched-ID, interleaved, nested, or payload-like marker cases are invalid.
-User-defined and block-comment marker syntax is not supported.
+A section's authoritative body is the exact bytes of its declared source
+file; source files carry no markers. Omnirepo writes and owns the
+destination marker lines.
 
-When appending an absent section, Omnirepo inserts one separating newline,
-preserves a detectable LF or CRLF style, and uses LF when no style is
-detectable.
+The built-in registry supplies comment tokens for common formats: `#` for
+YAML, TOML, shell, Python, and Ruby files; `//` for JSON, JavaScript,
+TypeScript, and Rust files; `;` for INI files; `--` for SQL files; and the
+exact full-line `<!-- … -->` comment pair for Markdown and HTML files. The
+format resolves from the destination path's extension (last dot-separated
+component, lowercase). Unknown, extensionless, unnamed, whitespace-altered,
+mismatched-ID, duplicate-ID, interleaved, nested, or payload-like marker
+cases are invalid. User-defined marker syntax is not supported; block
+comments are supported only as the exact Markdown/HTML full-line forms
+above.
+
+When appending an absent section, Omnirepo ensures one separating blank
+line — terminating an unterminated final local line first — preserves a
+detectable LF or CRLF style, and uses LF when no style is detectable. The
+style is detected from the file's first line terminator, so payload bytes
+never flip it between runs. An empty payload still materializes the
+marker pair with an empty body: the section exists, visibly owned.
 
 Local edits inside a managed file or section are drift. Synchronization
 replaces them without confirmation; this overwrite is expected behavior.

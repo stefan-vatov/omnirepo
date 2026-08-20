@@ -31,7 +31,7 @@ const MAX_RECORD_BYTES: usize = 64 * 1_024;
 const CONSTITUTION_PATH: &str = "CONSTITUTION.md";
 const TENSION_ONE_LIMITS: &[&str] = &["outside-machine-fleet", "managed-partial-delimiters"];
 
-const REQUIRED_COMMANDS: &[&str] = &["command:sync", "command:setup", "command:validate"];
+const REQUIRED_COMMANDS: &[&str] = &["command:sync", "command:setup", "command:doctor"];
 
 const REQUIRED_FAILURE_STAGES: &[&str] = &[
     "failure:invocation",
@@ -64,7 +64,7 @@ const REQUIRED_BEHAVIORS: &[&str] = &[
     "behavior:run-record",
     "behavior:repair-causation",
     "behavior:setup",
-    "behavior:validate",
+    "behavior:doctor",
     "behavior:packaging",
 ];
 

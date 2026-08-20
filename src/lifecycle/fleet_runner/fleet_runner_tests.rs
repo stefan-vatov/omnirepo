@@ -109,6 +109,7 @@ fn plan_item(id: &str, target: &str) -> PlanItem {
         source_path: "managed.txt".to_owned(),
         source_order: 0,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "inferred".to_owned(),
         },

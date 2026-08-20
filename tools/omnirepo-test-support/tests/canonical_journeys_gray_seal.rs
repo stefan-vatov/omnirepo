@@ -292,7 +292,7 @@ fn groups_for(reference: &str) -> BTreeSet<JourneyGroup> {
         "behavior:repair-causation" => {
             add(&mut groups, JourneyGroup::RepairParity);
         }
-        "behavior:setup" | "behavior:validate" | "behavior:packaging" => {
+        "behavior:setup" | "behavior:doctor" | "behavior:packaging" => {
             add(&mut groups, JourneyGroup::SetupPackaging);
         }
         _ => panic!("canonical reference has no journey group: {reference}"),
@@ -303,8 +303,8 @@ fn groups_for(reference: &str) -> BTreeSet<JourneyGroup> {
 fn invocation_for(reference: &str) -> PublicInvocation {
     let command = if matches!(reference, "command:setup" | "behavior:setup") {
         "setup"
-    } else if matches!(reference, "command:validate" | "behavior:validate") {
-        "validate"
+    } else if matches!(reference, "command:doctor" | "behavior:doctor") {
+        "doctor"
     } else {
         "sync"
     };

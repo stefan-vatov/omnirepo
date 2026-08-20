@@ -13,6 +13,7 @@ fn item(id: &str, decision: PlanDecision) -> PlanItem {
         source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::WholeFile,
+        section: None,
         decision,
     }
 }
@@ -151,4 +152,30 @@ fn zero_item_plans_are_represented() {
     )
     .expect("select");
     assert!(selections.is_empty());
+}
+
+#[test]
+fn an_explicit_include_never_resurrects_a_declared_loser() {
+    let loser = item(
+        "loser",
+        PlanDecision::Rejected {
+            reason: "shadowed by a higher-precedence source".to_owned(),
+        },
+    );
+    let selections = select_items(
+        &[selected_item("winner"), loser],
+        &Policy::Explicit {
+            include: vec!["winner".to_owned(), "loser".to_owned()],
+            exclude: vec![],
+        },
+    )
+    .expect("selections");
+    assert!(matches!(
+        selections[0].decision,
+        SelectionDecision::Selected { .. }
+    ));
+    assert!(
+        matches!(selections[1].decision, SelectionDecision::Rejected { .. }),
+        "declared precedence is unbreachable by policy selection"
+    );
 }

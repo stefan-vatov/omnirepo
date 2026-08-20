@@ -56,7 +56,7 @@ fn the_executable_surface_matches_the_documented_commands() {
     .expect("help");
     assert!(help.status.success());
     let text = String::from_utf8(help.stdout).expect("utf8");
-    for command in ["sync", "setup", "validate"] {
+    for command in ["sync", "setup", "doctor"] {
         assert!(text.contains(command), "missing {command}");
     }
 }

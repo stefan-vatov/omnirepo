@@ -1,91 +1,129 @@
-//! Focused proof for the delimiter syntax registry.
+//! Focused proof for the named delimiter registry and marker parsing.
 
 #![allow(dead_code, unused_imports)]
 
-use super::{DelimiterError, lookup, lookup_by_extension};
+use super::{DelimiterError, LineClass, lookup, lookup_by_extension};
+use crate::configuration::SectionId;
+
+fn id(value: &str) -> SectionId {
+    SectionId::new(value).expect("valid id")
+}
 
 #[test]
-fn every_supported_format_round_trips_canonical_markers() {
-    for entry in super::REGISTRY {
-        let (open, close) = entry.round_trip();
-        assert!(!open.is_empty(), "{}", entry.format);
-        assert!(!close.is_empty(), "{}", entry.format);
-        assert_ne!(open, close, "{}", entry.format);
-        assert!(open.contains("omnirepo"), "{}", entry.format);
-        // The canonical markers parse back to the same syntax.
-        let looked_up = lookup(entry.format).expect("registry entry");
-        assert_eq!(looked_up.open, open);
-        assert_eq!(looked_up.close, close);
+fn markers_round_trip_per_format() {
+    let yaml = lookup("yaml").expect("yaml");
+    assert_eq!(yaml.open_marker(&id("rules")), "# omnirepo:start rules");
+    assert_eq!(yaml.close_marker(&id("rules")), "# omnirepo:end rules");
+    let markdown = lookup("markdown").expect("markdown");
+    assert_eq!(
+        markdown.open_marker(&id("rust-rules")),
+        "<!-- omnirepo:start rust-rules -->"
+    );
+    assert_eq!(
+        markdown.close_marker(&id("rust-rules")),
+        "<!-- omnirepo:end rust-rules -->"
+    );
+    let sql = lookup("sql").expect("sql");
+    assert_eq!(sql.open_marker(&id("s.1")), "-- omnirepo:start s.1");
+    let ini = lookup("ini").expect("ini");
+    assert_eq!(ini.close_marker(&id("s_2")), "; omnirepo:end s_2");
+}
+
+#[test]
+fn classification_is_exact_and_named() {
+    let yaml = lookup("yaml").expect("yaml");
+    assert_eq!(
+        yaml.classify_line(b"# omnirepo:start rules"),
+        LineClass::Open(id("rules"))
+    );
+    assert_eq!(
+        yaml.classify_line(b"# omnirepo:end rules"),
+        LineClass::Close(id("rules"))
+    );
+    assert_eq!(yaml.classify_line(b"ordinary: line"), LineClass::Content);
+    // Marker-shaped lines that are not exact named markers are
+    // marker-like: invalid, never content and never a marker.
+    for hostile in [
+        b"# omnirepo:start".as_slice(),
+        b"  # omnirepo:start rules",
+        b"# omnirepo:start Rules",
+        b"#omnirepo:start rules",
+        b"# omnirepo:start rules trailing",
+        b"omnirepo:end rules",
+    ] {
+        assert!(
+            matches!(yaml.classify_line(hostile), LineClass::MarkerLike { .. }),
+            "{:?}",
+            String::from_utf8_lossy(hostile)
+        );
     }
-}
-
-#[test]
-fn lookup_follows_decided_case_and_extension_rules() {
-    // Exact format names.
-    assert_eq!(lookup("yaml").expect("yaml").open, "# omnirepo-start");
-    assert_eq!(lookup("json").expect("json").open, "// omnirepo-start");
+    // Prose that mentions a keyword mid-line is ordinary content: the
+    // exact-marker rule governs marker-shaped lines, not documentation
+    // about them.
+    for prose in [
+        b"say omnirepo:end somewhere".as_slice(),
+        b"add `# omnirepo:start rules` to the file",
+        b"sections are delimited by omnirepo:start markers",
+    ] {
+        assert_eq!(
+            yaml.classify_line(prose),
+            LineClass::Content,
+            "{:?}",
+            String::from_utf8_lossy(prose)
+        );
+    }
+    // Legacy unnamed markers are refused, never content: silently
+    // appending beside a stale legacy block would duplicate content.
+    for legacy in [
+        b"# omnirepo-start".as_slice(),
+        b"# omnirepo-end",
+        b"omnirepo-start",
+    ] {
+        assert!(
+            matches!(yaml.classify_line(legacy), LineClass::MarkerLike { .. }),
+            "{:?}",
+            String::from_utf8_lossy(legacy)
+        );
+    }
+    // A prose mention of the legacy keyword stays content.
     assert_eq!(
-        lookup("markdown").expect("markdown").open,
-        "<!-- omnirepo-start -->"
+        yaml.classify_line(b"the old omnirepo-start form is gone"),
+        LineClass::Content
     );
-    // Case-sensitive format names by rule: "YAML" is unknown.
+    // The markdown suffix must close the comment exactly.
+    let markdown = lookup("markdown").expect("markdown");
+    assert_eq!(
+        markdown.classify_line(b"<!-- omnirepo:start rust-rules -->"),
+        LineClass::Open(id("rust-rules"))
+    );
     assert!(matches!(
-        lookup("YAML"),
-        Err(DelimiterError::UnknownFormat { .. })
+        markdown.classify_line(b"<!-- omnirepo:start rust-rules"),
+        LineClass::MarkerLike { .. }
     ));
-    // Extensions map to formats; extension case is folded.
-    assert_eq!(
-        lookup_by_extension("apps/app.YAML")
-            .expect("yaml ext")
-            .format,
-        "yaml"
-    );
-    assert_eq!(
-        lookup_by_extension("apps/app.ts").expect("ts ext").format,
-        "typescript"
-    );
-    assert_eq!(
-        lookup_by_extension("apps/app.html")
-            .expect("html ext")
-            .format,
-        "html"
-    );
+    assert!(matches!(
+        markdown.classify_line(b"<!-- omnirepo-start -->"),
+        LineClass::MarkerLike { .. }
+    ));
 }
 
 #[test]
-fn unknown_and_extensionless_cases_fail_or_behave_per_policy() {
-    // Unknown format: fail closed.
+fn unknown_format_and_extension_matching_follow_policy() {
     assert!(matches!(
         lookup("makefile"),
         Err(DelimiterError::UnknownFormat { .. })
     ));
-    // Extensionless path: fail closed with the decided rule.
     assert!(matches!(
         lookup_by_extension("apps/Dockerfile"),
         Err(DelimiterError::UnknownExtension { .. })
     ));
-    // Unknown extension: fail closed.
     assert!(matches!(
         lookup_by_extension("apps/app.xyz"),
         Err(DelimiterError::UnknownExtension { .. })
     ));
-    // Empty input: fail typed.
-    assert!(matches!(lookup(""), Err(DelimiterError::Empty)));
-    assert!(matches!(
-        lookup_by_extension(""),
-        Err(DelimiterError::Empty)
-    ));
-}
-
-#[test]
-fn registry_contains_no_config_parser() {
-    // The registry is pure data: the module exposes only lookup functions
-    // and the static table.  (Compile-time contract; the assertion pins
-    // the shape.)
-    #[allow(clippy::const_is_empty)]
-    {
-        assert!(!super::REGISTRY.is_empty());
-    }
-    let _ = lookup;
-    let _ = lookup_by_extension;
+    assert_eq!(lookup_by_extension("a.yaml").expect("yaml").format, "yaml");
+    assert_eq!(lookup_by_extension("a.YML").expect("yaml").format, "yaml");
+    assert_eq!(lookup_by_extension("a.md").expect("md").format, "markdown");
+    assert_eq!(lookup_by_extension("a.rb").expect("rb").format, "ruby");
+    assert_eq!(lookup_by_extension("a.sql").expect("sql").format, "sql");
+    assert_eq!(lookup_by_extension("a.ini").expect("ini").format, "ini");
 }

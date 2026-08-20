@@ -11,7 +11,7 @@ fn reference() -> String {
 #[test]
 fn the_cli_reference_matches_the_runtime_surface_and_exit_map() {
     let text = reference();
-    for command in ["`omnirepo sync`", "`omnirepo setup", "`omnirepo validate`"] {
+    for command in ["`omnirepo sync`", "`omnirepo setup", "`omnirepo doctor`"] {
         assert!(text.contains(command), "missing {command}");
     }
     for (code, meaning) in [
@@ -50,13 +50,15 @@ fn the_delimiter_reference_covers_the_registered_formats() {
         "yaml / toml / shell",
         "json / javascript / typescript",
         "markdown / html",
-        "python",
+        "python / ruby",
         "rust",
+        "ini",
+        "sql",
     ] {
         assert!(text.contains(&format!("| {format} |")), "missing {format}");
     }
-    assert!(text.contains("# omnirepo-start"));
-    assert!(text.contains("<!-- omnirepo-start -->"));
+    assert!(text.contains("# omnirepo:start <section-id>"));
+    assert!(text.contains("<!-- omnirepo:start <section-id> -->"));
 }
 
 #[test]

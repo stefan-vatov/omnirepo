@@ -32,7 +32,7 @@ fn help_is_available_without_a_global_config() {
         .stdout(predicate::str::contains("Usage: omnirepo"))
         .stdout(predicate::str::contains("sync"))
         .stdout(predicate::str::contains("setup"))
-        .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("doctor"))
         .stdout(predicate::str::contains("--output"));
 
     command(home.path(), workspace.path())

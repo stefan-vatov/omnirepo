@@ -16,6 +16,7 @@ fn selected(id: &str, target: &str) -> PlanItem {
         source_path: String::new(),
         source_order: 1,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },
@@ -103,6 +104,7 @@ fn one_repository_failure_does_not_alter_peer_eligibility() {
             source_path: String::new(),
             source_order: 1,
             kind: ItemKind::WholeFile,
+            section: None,
             decision: PlanDecision::Rejected {
                 reason: "source unavailable".to_owned(),
             },
@@ -142,6 +144,7 @@ fn every_operation_outcome_carries_source_plan_and_target_identities() {
         source_path: String::new(),
         source_order: 2,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Rejected {
             reason: "source unavailable".to_owned(),
         },

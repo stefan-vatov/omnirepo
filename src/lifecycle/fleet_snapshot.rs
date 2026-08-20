@@ -63,8 +63,22 @@ pub fn build_frozen_snapshot(
             .and_then(|head| RevisionId::new(head.to_owned()).ok()),
     )
     .map_err(|error| error.to_string())?;
+    // One frozen target per unique selected destination file: sections
+    // sharing one file form one atomic per-file group, so the file is the
+    // unit of frozen identity.  Rejected items freeze nothing.
     let mut targets = Vec::new();
+    let mut seen: Vec<&str> = Vec::new();
     for item in &plan.items {
+        if !matches!(
+            item.decision,
+            crate::lifecycle::sync_plan::PlanDecision::Selected { .. }
+        ) {
+            continue;
+        }
+        if seen.contains(&item.target.as_str()) {
+            continue;
+        }
+        seen.push(item.target.as_str());
         let relative = RelativePath::parse(&item.target).map_err(|error| error.to_string())?;
         let observed = match root.resolve_read(&relative, ObjectClass::RegularFile) {
             Ok(target) => {

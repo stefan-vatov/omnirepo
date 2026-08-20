@@ -5,11 +5,8 @@ pub struct ManagedSectionId(String);
 impl ManagedSectionId {
     pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
         let value = value.into();
-        if value.is_empty()
-            || !value.bytes().all(|byte| {
-                byte.is_ascii_lowercase() || byte.is_ascii_digit() || b"._-".contains(&byte)
-            })
-        {
+        // One rule owner: the managed-content section-ID rule.
+        if !crate::configuration::is_valid_section_id(&value) {
             return Err(DomainError::InvalidManagedSectionId { value });
         }
         Ok(Self(value))

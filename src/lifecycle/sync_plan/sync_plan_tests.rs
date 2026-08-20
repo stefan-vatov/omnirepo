@@ -12,6 +12,7 @@ fn selected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         source_path: String::new(),
         source_order: order,
         kind: crate::source::ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },
@@ -26,6 +27,7 @@ fn rejected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
         source_path: String::new(),
         source_order: order,
         kind: crate::source::ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Rejected {
             reason: "shadowed by a higher-precedence source".to_owned(),
         },
@@ -113,13 +115,47 @@ fn validation_rejects_empty_and_duplicate_plans() {
         "dest-a",
         vec![
             selected("a", "t1", "primary", 1),
-            rejected("a", "t2", "legacy", 2),
+            selected("a", "t2", "legacy", 2),
         ],
     );
     assert!(matches!(
         validate_plan(&duplicate),
         Err(PlanError::DuplicateItem { .. })
     ));
+    // A rejected loser may share the winner's id: losers stay visible in
+    // the plan without failing validation.
+    let with_loser = SyncPlan::new(
+        "dest-a",
+        vec![
+            selected("a", "t1", "primary", 1),
+            rejected("a", "t1", "legacy", 2),
+        ],
+    );
+    assert!(validate_plan(&with_loser).is_ok());
+    // Two selected whole-file claims on one target are invalid.
+    let double_claim = SyncPlan::new(
+        "dest-a",
+        vec![
+            selected("a", "t1", "primary", 1),
+            selected("b", "t1", "legacy", 2),
+        ],
+    );
+    assert!(matches!(
+        validate_plan(&double_claim),
+        Err(PlanError::DuplicateTarget { .. })
+    ));
     let valid = SyncPlan::new("dest-a", vec![selected("a", "t1", "primary", 1)]);
     assert!(validate_plan(&valid).is_ok());
+}
+
+#[test]
+fn a_plan_with_only_rejected_losers_is_empty_work() {
+    // Rejected losers never execute: they must not satisfy the
+    // non-emptiness rule, or a zero-work plan would deliver a no-op
+    // commit.
+    let losers_only = SyncPlan::new("dest-a", vec![rejected("a", "t1", "legacy", 2)]);
+    assert!(matches!(
+        validate_plan(&losers_only),
+        Err(PlanError::Empty { .. })
+    ));
 }

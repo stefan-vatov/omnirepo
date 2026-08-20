@@ -186,7 +186,7 @@ output stays concise.
 A syntactically valid `sync` invocation becomes a fleet run before machine
 configuration is loaded or any source or destination effect begins. The
 journal must be created before those effects. Help, version, parse errors,
-`setup`, and `validate` are not fleet runs. If the journal cannot be created,
+`setup`, and `doctor` are not fleet runs. If the journal cannot be created,
 the run exits before source or repository effects. A corrupt, truncated, or
 unfinalized journal is never interpreted as successful.
 
@@ -221,10 +221,14 @@ effects are reconciled and retained rather than rolled back.
 
 ## Public command outcomes
 
-The public command surface is `sync`, `setup`, and `validate`. Humans and
+The public command surface is `sync`, `setup`, and `doctor`. Humans and
 agents invoke the same commands. Human output is quiet on routine success; a
 versioned `--output json` mode provides the same outcomes without progress or
-diagnostic contamination.
+diagnostic contamination. `doctor` runs the effect-free planning prefix of
+`sync` and reports source availability, managed items, and cross-source
+conflicts with their declared winners; it reads only each destination's
+`.omnirepo.yaml` repository policy, never managed content, and writes
+nothing.
 
 Process exit codes are stable: `0` for success, `2` for invocation or shared
 configuration failure, `3` when some repositories fail and some succeed, `4`

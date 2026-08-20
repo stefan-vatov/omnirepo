@@ -21,7 +21,7 @@ fn the_binary_help_never_claims_removed_surfaces_as_commands() {
         .success()
         .stdout(predicate::str::contains("sync"))
         .stdout(predicate::str::contains("setup"))
-        .stdout(predicate::str::contains("validate"))
+        .stdout(predicate::str::contains("doctor"))
         // The removed surfaces never appear as invocable commands.
         .stdout(predicate::str::contains("clone").not())
         .stdout(predicate::str::contains("run").not());

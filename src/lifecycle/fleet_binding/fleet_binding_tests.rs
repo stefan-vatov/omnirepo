@@ -139,19 +139,70 @@ fn untagged_declarations_apply_to_every_destination() {
 fn the_item_declaration_conversion_is_exact() {
     let fixture = fixture_base();
     let config = machine(vec![destination(fixture.path(), "repo-a", &[])]);
+    let mut section_declaration =
+        declaration("source-a", 0, "item-sec", "apps/app.yaml", "section", "");
+    section_declaration
+        .fields
+        .push(("section".to_owned(), "rules".to_owned()));
     let declarations = vec![
-        declaration("source-a", 0, "item-sec", "apps/app.yaml", "section", ""),
-        declaration("source-a", 1, "item-whole", "apps/app.yaml", "sync", ""),
+        section_declaration,
+        declaration("source-a", 1, "item-whole", "apps/other.yaml", "sync", ""),
     ];
     let bindings = bind_declarations(&config, &declarations).expect("bindings");
     assert_eq!(bindings[0].1.len(), 2);
     assert_eq!(bindings[0].1[0].kind, ItemKind::Section);
+    assert_eq!(
+        bindings[0].1[0]
+            .section
+            .as_ref()
+            .map(|section| section.as_str()),
+        Some("rules"),
+        "the section id is carried from the declaration"
+    );
     assert_eq!(bindings[0].1[0].source_order, 0);
     assert_eq!(bindings[0].1[1].kind, ItemKind::WholeFile);
+    assert_eq!(bindings[0].1[1].section, None);
     assert_eq!(
         bindings[0].1[1].source_order, 1,
         "declared order is preserved"
     );
+}
+
+#[test]
+fn section_declarations_require_a_valid_section_id() {
+    let fixture = fixture_base();
+    let config = machine(vec![destination(fixture.path(), "repo-a", &[])]);
+    // mode=section without a section id fails typed.
+    let missing = vec![declaration(
+        "source-a",
+        0,
+        "item-sec",
+        "apps/app.yaml",
+        "section",
+        "",
+    )];
+    assert!(matches!(
+        bind_declarations(&config, &missing),
+        Err(super::BindingError::MissingSectionId { .. })
+    ));
+    // An invalid section id fails typed.
+    let mut invalid = declaration("source-a", 0, "item-sec", "apps/app.yaml", "section", "");
+    invalid
+        .fields
+        .push(("section".to_owned(), "Not Valid".to_owned()));
+    assert!(matches!(
+        bind_declarations(&config, &[invalid]),
+        Err(super::BindingError::InvalidSectionId { .. })
+    ));
+    // A section id on a whole-file declaration fails typed.
+    let mut misplaced = declaration("source-a", 0, "item-whole", "apps/app.yaml", "sync", "");
+    misplaced
+        .fields
+        .push(("section".to_owned(), "rules".to_owned()));
+    assert!(matches!(
+        bind_declarations(&config, &[misplaced]),
+        Err(super::BindingError::SectionOnWholeFile { .. })
+    ));
 }
 
 #[test]
@@ -193,4 +244,34 @@ fn the_binding_never_probes_destination_content() {
             .next()
             .is_none()
     );
+}
+
+#[test]
+fn invalid_ids_and_protected_targets_fail_typed() {
+    let fixture = fixture_base();
+    let config = machine(vec![destination(fixture.path(), "repo-a", &[])]);
+    // Item IDs follow the stable slug rule.
+    let upper = vec![declaration(
+        "source-a",
+        0,
+        "Item-One",
+        "apps/app.yaml",
+        "sync",
+        "",
+    )];
+    assert!(matches!(
+        bind_declarations(&config, &upper),
+        Err(super::BindingError::InvalidId { .. })
+    ));
+    // A destination's own configuration authority is protected.
+    for protected in [".omnirepo.yaml", ".omnirepo/source.yaml", ".omnirepo"] {
+        let declared = vec![declaration("source-a", 0, "item-1", protected, "sync", "")];
+        assert!(
+            matches!(
+                bind_declarations(&config, &declared),
+                Err(super::BindingError::ProtectedTarget { .. })
+            ),
+            "{protected}"
+        );
+    }
 }

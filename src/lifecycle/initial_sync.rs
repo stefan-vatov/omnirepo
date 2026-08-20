@@ -27,18 +27,18 @@ pub enum FailurePolicy {
     StopOnFailure,
 }
 
-/// One item of the pass.
+/// One item of the pass: one destination-file group.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SyncItem {
     pub plan_item_id: String,
     pub target: String,
-    pub frozen_bytes: Vec<u8>,
+    /// The destination file's exact bytes at composition time.
     pub current_bytes: Vec<u8>,
-    /// The exact bytes to write when the item is a replacement (the
-    /// composed destination content for sections, the authoritative bytes
-    /// for whole files).
+    /// The exact complete destination bytes to write (the composed file
+    /// for section groups, the authoritative bytes for whole files).
     pub replacement: Vec<u8>,
-    /// Deterministic failure seam (test and fault-injection use).
+    /// Deterministic failure seam (group composition failures and
+    /// fault-injection use).
     pub fail: Option<String>,
 }
 
@@ -166,7 +166,7 @@ pub fn execute_sync_pass(
                 residue: vec![residue_for(&item.target)],
                 reason: reason.clone(),
             }
-        } else if item.frozen_bytes == item.current_bytes {
+        } else if item.replacement == item.current_bytes {
             SyncOutcome::Unchanged
         } else {
             match write_replacement(working, &item.target, &item.replacement) {

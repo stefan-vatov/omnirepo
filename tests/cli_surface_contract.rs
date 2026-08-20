@@ -1,7 +1,7 @@
-//! Black-box contract for the owner-approved constitutional CLI surface (.27).
+//! Black-box contract for the owner-approved constitutional CLI surface.
 //! Help/version/parse must be config-independent and side-effect-free; the
-//! tree is exactly sync/setup/validate; legacy and migrate surfaces are
-//! rejected; every command fails closed until the lifecycle slices land.
+//! tree is exactly sync/setup/doctor; legacy and migrate surfaces are
+//! rejected; unlanded commands fail closed until their lifecycle slices land.
 
 use std::{fs, path::Path};
 
@@ -55,7 +55,7 @@ fn help_declares_only_constitutional_commands() {
         .assert()
         .success();
     let stdout = String::from_utf8(output.get_output().stdout.clone()).expect("help is UTF-8");
-    for expected in ["sync", "setup", "validate"] {
+    for expected in ["sync", "setup", "doctor"] {
         assert!(
             stdout.contains(expected),
             "help must declare {expected:?}:\n{stdout}"
@@ -137,24 +137,27 @@ fn sync_is_an_empty_fleet_success_until_a_machine_authority_exists() {
         "sync must create exactly one run record: {stderr}"
     );
 
-    // setup and validate are never fleet runs: no record, no effect.
-    for name in ["setup", "validate"] {
-        let output = command(home.path(), workspace.path())
-            .arg(name)
-            .assert()
-            .code(2)
-            .stderr(predicate::str::contains("not available in this build"));
-        let stderr =
-            String::from_utf8(output.get_output().stderr.clone()).expect("stderr is UTF-8");
-        assert!(
-            stderr.contains(&format!("{name} is not available")),
-            "stub must name the command: {stderr}"
-        );
-    }
+    // setup is never a fleet run: no record, no effect.
+    let output = command(home.path(), workspace.path())
+        .arg("setup")
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("not available in this build"));
+    let stderr = String::from_utf8(output.get_output().stderr.clone()).expect("stderr is UTF-8");
+    assert!(
+        stderr.contains("setup is not available"),
+        "stub must name the command: {stderr}"
+    );
+    // doctor is never a fleet run: it reports and creates no record.
+    command(home.path(), workspace.path())
+        .arg("doctor")
+        .assert()
+        .code(0)
+        .stdout(predicate::str::contains("doctor: healthy"));
     let records = fs::read_dir(home.path().join(".omnirepo/runs"))
         .expect("runs directory")
         .count();
-    assert_eq!(records, 1, "setup/validate must not create run records");
+    assert_eq!(records, 1, "setup/doctor must not create run records");
 }
 
 #[test]

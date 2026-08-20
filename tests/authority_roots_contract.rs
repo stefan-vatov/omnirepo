@@ -112,5 +112,5 @@ fn private_binary_keeps_no_runner_surface() {
         .assert()
         .success()
         .stdout(predicate::str::contains("sync"))
-        .stdout(predicate::str::contains("validate"));
+        .stdout(predicate::str::contains("doctor"));
 }

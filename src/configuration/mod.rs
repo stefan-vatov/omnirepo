@@ -15,9 +15,11 @@ use std::{error::Error, fmt};
 mod unit_tests;
 
 mod discovery;
+mod section_id;
 mod yaml_subset;
 
 pub(crate) use discovery::{Discovery, discover};
+pub(crate) use section_id::{SectionId, is_valid_section_id};
 pub(crate) use yaml_subset::{YValue, parse_yaml_subset};
 
 #[cfg(test)]
@@ -27,7 +29,7 @@ mod discovery_tests;
 mod yaml_subset_tests;
 
 /// Constitutional synchronization surface. The owner-approved command tree
-/// (.27) is exactly `sync`, `setup`, and `validate`; there is no `migrate`
+/// is exactly `sync`, `setup`, and `doctor`; there is no `migrate`
 /// command in the first constitutional release, and legacy general surfaces
 /// (run/new/clone/ad-hoc sync) are absent by boundary decision.
 #[derive(Debug, Parser)]
@@ -36,7 +38,7 @@ mod yaml_subset_tests;
     version,
     about = "Synchronize machine-declared managed content into destination repositories",
     long_about = None,
-    after_help = "Commands: sync, setup, validate.\nMachine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1).\nLegacy general orchestration surfaces are unsupported and are not migrated automatically."
+    after_help = "Commands: sync, setup, doctor.\nMachine configuration: <HOME>/.omnirepo/config.yaml (YAML version: 1).\nLegacy general orchestration surfaces are unsupported and are not migrated automatically."
 )]
 struct Cli {
     /// Emit a versioned machine-readable JSON projection of the outcome.
@@ -60,8 +62,9 @@ pub(crate) enum Command {
     Sync,
     /// Set up machine configuration for a first synchronization.
     Setup(SetupArgs),
-    /// Validate machine configuration and repository policy without effects.
-    Validate,
+    /// Diagnose the machine: configuration, sources, declarations, and
+    /// cross-source conflicts, without any destination effect.
+    Doctor,
 }
 
 #[derive(Debug, Args)]

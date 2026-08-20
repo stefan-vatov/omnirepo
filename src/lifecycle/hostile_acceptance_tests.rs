@@ -106,40 +106,54 @@ fn source_path_rejects_hostile_declarations_typed() {
 
 #[test]
 fn sync_path_rejects_ambiguous_and_conflicting_items_typed() {
-    // Two sections for one target: the owner truth table refuses the
-    // ambiguous topology.
-    let declared = vec![
-        ItemDeclaration {
-            id: "item-1".to_owned(),
-            target: "managed.txt".to_owned(),
-            source: "source-a".to_owned(),
-            source_path: String::new(),
-            kind: ItemKind::Section,
-            section: Some((1, 3)),
-            source_order: 0,
-        },
+    let section_item = |id: &str, source: &str, section: &str, order: usize| ItemDeclaration {
+        id: id.to_owned(),
+        target: "managed.txt".to_owned(),
+        source: source.to_owned(),
+        source_path: String::new(),
+        kind: ItemKind::Section,
+        section: Some(crate::configuration::SectionId::new(section).expect("id")),
+        source_order: order,
+    };
+    // The same named section from two sources: the owner truth table
+    // resolves deterministically by declared precedence — the first
+    // declaration wins and the second becomes a documented loser, never
+    // a silent merge.
+    let same_section = vec![
+        section_item("item-1", "source-a", "rules", 0),
+        section_item("item-2", "source-b", "rules", 1),
+    ];
+    let items = resolve_items(&same_section).expect("resolved");
+    assert_eq!(items.len(), 1, "the loser folds into the winner");
+    assert_eq!(items[0].winner, 0);
+    assert_eq!(items[0].losers.len(), 1, "the loser is documented");
+    // Distinct named sections from two sources are independent: both
+    // win and share the destination file.
+    let distinct = vec![
+        section_item("item-1", "source-a", "rules-a", 0),
+        section_item("item-2", "source-b", "rules-b", 1),
+    ];
+    let items = resolve_items(&distinct).expect("resolved");
+    assert_eq!(items.len(), 2, "distinct sections are independent");
+    assert!(items.iter().all(|item| item.losers.is_empty()));
+    // A whole-file claim beside a section claim is incompatible and
+    // fails typed before any destination mutation.
+    let incompatible = vec![
+        section_item("item-1", "source-a", "rules", 0),
         ItemDeclaration {
             id: "item-2".to_owned(),
             target: "managed.txt".to_owned(),
             source: "source-b".to_owned(),
             source_path: String::new(),
-            kind: ItemKind::Section,
-            section: Some((2, 4)),
+            kind: ItemKind::WholeFile,
+            section: None,
             source_order: 1,
         },
     ];
-    let resolved = resolve_items(&declared);
-    // The overlapping sections resolve deterministically by declared
-    // precedence (the owner truth table): the first declaration wins and
-    // the second becomes a documented loser — never a silent merge.
-    // The overlapping sections resolve deterministically by declared
-    // precedence (the owner truth table): the first declaration wins and
-    // the second becomes a documented loser — never a silent merge.
-    if let Ok(items) = resolved {
-        assert_eq!(items.len(), 1, "the loser folds into the winner");
-        assert_eq!(items[0].winner, 0);
-        assert_eq!(items[0].losers.len(), 1, "the loser is documented");
-    }
+    assert!(matches!(
+        resolve_items(&incompatible),
+        Err(crate::source::ResolutionError::WholeVsSection { .. })
+    ));
     // The empty case fails typed.
     assert!(resolve_items(&[]).is_err());
 }

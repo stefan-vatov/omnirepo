@@ -93,6 +93,42 @@ versioned machine-readable projection.
 **If you do not migrate.** The flags fail with an argument error; the
 record still carries the complete accounting.
 
+## Break 7: named partial-section markers {#named-markers}
+
+**What changed.** Partial sections use exact full-line named markers
+(`<comment-token> omnirepo:start <section-id>` /
+`omnirepo:end <section-id>`). The old unnamed `omnirepo-start` /
+`omnirepo-end` markers are no longer a marker format, and source files
+no longer carry markers at all: the whole source file is the section
+body, and the declaration names the section with a required
+`section=<id>` field.
+
+**How to migrate.** In each source's `.omnirepo/source.yaml`, add
+`section=<id>` to every `mode=section` declaration and strip the old
+marker lines from the source partial files. In destination files, remove
+the legacy `omnirepo-start`/`omnirepo-end` blocks (or rename them by
+hand to the named form); the next `sync` writes the named sections
+itself.
+
+**If you do not migrate.** A destination file that still carries legacy
+marker lines fails its group typed ("legacy unnamed marker"), never
+silently: omnirepo refuses to append a named section beside a stale
+legacy block. A `mode=section` declaration without `section=` fails
+binding typed.
+
+## Break 8: `validate` replaced by `doctor` {#doctor}
+
+**What changed.** The `validate` stub is removed. `doctor` is the one
+machine diagnostic: it runs the effect-free planning prefix of `sync`
+and reports source availability, managed items, shadowed losers, and
+declarations that would fail at sync time.
+
+**How to migrate.** Run `omnirepo doctor`. Exit `0` is healthy; exit
+`2` means problems were found.
+
+**If you do not migrate.** `omnirepo validate` fails with an argument
+error.
+
 ## Optional migration policy
 
 Optional P2 capabilities (automated migration, resource limits,

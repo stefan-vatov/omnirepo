@@ -14,6 +14,7 @@ fn selected(id: &str, target: &str) -> PlanItem {
         source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },
@@ -28,6 +29,7 @@ fn rejected(id: &str, target: &str) -> PlanItem {
         source_path: String::new(),
         source_order: 2,
         kind: crate::source::ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Rejected {
             reason: "shadowed".to_owned(),
         },
@@ -78,6 +80,7 @@ fn section_items_are_rejected() {
         source_path: String::new(),
         source_order: 1,
         kind: crate::source::ItemKind::Section,
+        section: Some(crate::configuration::SectionId::new("rules").expect("id")),
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },

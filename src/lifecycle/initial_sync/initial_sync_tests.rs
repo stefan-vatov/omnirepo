@@ -39,7 +39,6 @@ fn item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncItem {
     SyncItem {
         plan_item_id: id.to_owned(),
         target: target.to_owned(),
-        frozen_bytes: frozen.to_vec(),
         current_bytes: current.to_vec(),
         replacement: frozen.to_vec(),
         fail: None,
@@ -50,7 +49,6 @@ fn failing_item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncIt
     SyncItem {
         plan_item_id: id.to_owned(),
         target: target.to_owned(),
-        frozen_bytes: frozen.to_vec(),
         current_bytes: current.to_vec(),
         replacement: frozen.to_vec(),
         fail: Some("simulated failure".to_owned()),

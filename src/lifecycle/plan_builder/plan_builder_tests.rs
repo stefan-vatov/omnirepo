@@ -116,8 +116,18 @@ fn collision_behavior_follows_identity_policy_only() {
         &Policy::Absent,
     )
     .expect("plan");
-    assert_eq!(first.items.len(), 1);
+    // The winner is selected; the loser stays visible as a rejected item.
+    assert_eq!(first.items.len(), 2);
     assert_eq!(first.items[0].id, "a");
+    assert!(matches!(
+        first.items[0].decision,
+        crate::lifecycle::sync_plan::PlanDecision::Selected { .. }
+    ));
+    assert_eq!(first.items[1].id, "b");
+    assert!(matches!(
+        first.items[1].decision,
+        crate::lifecycle::sync_plan::PlanDecision::Rejected { .. }
+    ));
     let reversed = build_repository_plan(
         "dest-a",
         &catalog,

@@ -38,7 +38,23 @@ pub(crate) fn run_invocation(command: Command) -> u8 {
     match command {
         Command::Sync => run_sync(),
         Command::Setup(_) => unavailable("setup"),
-        Command::Validate => unavailable("validate"),
+        Command::Doctor => {
+            let Some(home) = canonical_home() else {
+                eprintln!("omnirepo: doctor failed: HOME is not an absolute directory");
+                return 2;
+            };
+            // Doctor is never a fleet run: it reports and creates no
+            // record.  The report is the command's product output.
+            let report = super::doctor::diagnose(&home);
+            print!("{}", report.render());
+            if report.healthy() {
+                println!("doctor: healthy");
+                0
+            } else {
+                println!("doctor: problems found");
+                2
+            }
+        }
     }
 }
 

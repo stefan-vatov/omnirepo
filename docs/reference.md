@@ -2,7 +2,7 @@
 
 ## CLI reference
 
-The public command surface is exactly `sync`, `setup`, and `validate`.
+The public command surface is exactly `sync`, `setup`, and `doctor`.
 
 - `omnirepo sync` — a fleet run: creates the durable record at the
   invocation boundary, builds the source catalog and the per-repository
@@ -15,13 +15,20 @@ The public command surface is exactly `sync`, `setup`, and `validate`.
   explicit confirmation (interactive) or `--yes` (non-interactive);
   repeated apply is a no-op; an invalid or conflicting authority is
   never replaced.
-- `omnirepo validate` — validates machine configuration and repository
-  policy without effects.
+- `omnirepo doctor` — the machine diagnostic without effects: runs the
+  same effect-free planning prefix as `sync` (machine configuration,
+  source catalog, pinned declarations, repository policies, bindings,
+  per-repository plans) and reports source availability, every managed
+  item and its section, every shadowed loser with its winner, and
+  declarations that would fail at sync time. Doctor reads only each
+  destination's `.omnirepo.yaml` repository policy, never managed
+  content; it writes nothing and is never a fleet run. Exit `0`
+  healthy, `2` problems.
 - `--output human|json` — the global output selector (quiet human by
   default; versioned machine-readable JSON projection).
 
 Help, version, and argument parsing require no configuration and create
-no run record or repository effect. `sync` and `validate` are
+no run record or repository effect. `sync` and `doctor` are
 prompt-free; setup follows its explicit confirmation contract.
 
 ### Exit codes
@@ -46,9 +53,11 @@ scanned:
   destination fleet, the ordered sources, source priority, the
   concurrency limits, and the repair policy.
 - `<source-root>/.omnirepo/source.yaml` — the source declarations:
-  stable lowercase-slug IDs, whole-file or section mode, contained
-  source and destination paths, optional section ID, optional
-  destination tags.
+  stable lowercase-slug IDs, whole-file (`mode=sync`) or section
+  (`mode=section`) mode, contained source and destination paths, the
+  section ID (`section=<id>`, required for section mode, forbidden
+  otherwise), optional destination tags. For a section, the whole
+  source file is the section body.
 - `<destination-root>/.omnirepo.yaml` — the repository policy:
   all/allow/exclude selection (exclusion wins) and the declared
   verification commands (explicit argument arrays, never shell
@@ -73,20 +82,33 @@ persisted.
 
 ## Delimiter reference
 
-Managed partial sections use comment delimiters per file format:
+Managed partial sections use exact full-line named delimiters in the
+destination format's comment syntax; the section ID names the block:
 
 | Format | Open | Close |
 |--------|------|-------|
-| yaml / toml / shell | `# omnirepo-start` | `# omnirepo-end` |
-| json / javascript / typescript | `// omnirepo-start` | `// omnirepo-end` |
-| markdown / html | `<!-- omnirepo-start -->` | `<!-- omnirepo-end -->` |
-| python | `# omnirepo-start` | `# omnirepo-end` |
-| rust | `// omnirepo-start` | `// omnirepo-end` |
+| yaml / toml / shell | `# omnirepo:start <section-id>` | `# omnirepo:end <section-id>` |
+| python / ruby | `# omnirepo:start <section-id>` | `# omnirepo:end <section-id>` |
+| json / javascript / typescript | `// omnirepo:start <section-id>` | `// omnirepo:end <section-id>` |
+| rust | `// omnirepo:start <section-id>` | `// omnirepo:end <section-id>` |
+| markdown / html | `<!-- omnirepo:start <section-id> -->` | `<!-- omnirepo:end <section-id> -->` |
+| ini | `; omnirepo:start <section-id>` | `; omnirepo:end <section-id>` |
+| sql | `-- omnirepo:start <section-id>` | `-- omnirepo:end <section-id>` |
 
-Managed content is exact text: byte-identical reproduction, no
-normalization, no semantic merge. Outside the delimiters, content is
-preserved verbatim. An ambiguous or missing section is a typed failure,
-never an inference.
+The destination format resolves from the destination path's extension
+(last dot-separated component, lowercase). Section IDs use ASCII
+lowercase letters, digits, dots, underscores, and hyphens, exact and
+case-sensitive.
+
+Multiple non-overlapping named sections may share one destination file;
+each is replaced independently and an absent section is appended after
+the existing content with one separating blank line. Managed content is
+exact text: byte-identical reproduction, no normalization, no semantic
+merge. Outside the delimiters — including sections owned by other
+declarations — content is preserved verbatim. Unnamed,
+whitespace-altered, nested, interleaved, unpaired, duplicate-ID, or
+payload-like marker lines are typed failures, never inferences, and
+leave the file unchanged.
 
 ## Operation reference
 

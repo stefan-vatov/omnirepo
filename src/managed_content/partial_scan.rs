@@ -1,99 +1,147 @@
-//! Partial-file scanning and delimiter topology classification.
+//! Named-section scanning and delimiter topology classification.
 //!
-//! Exactly one ordered, non-nested marker pair yields the bounds; the
-//! absent case is distinct; every ambiguous topology (unpaired, nested,
-//! multiple, reversed) returns a contextual failure.  Scanning is pure:
-//! the original content is never touched.
+//! A file may carry any number of named, non-overlapping managed
+//! sections.  Scanning classifies every line against the format's exact
+//! named markers and yields the ordered sections, or one contextual
+//! failure for any ambiguous topology: unpaired, reversed, nested,
+//! interleaved, duplicate-ID, mismatched-ID, or payload-like marker
+//! lines (canon/architecture/managed-content.md).  Scanning is pure and
+//! byte-exact: the original content is never touched or decoded.
 
 #![allow(dead_code)]
 
-use super::delimiters::DelimiterSyntax;
+use super::delimiters::{DelimiterSyntax, LineClass};
+use crate::configuration::SectionId;
 use std::{error::Error, fmt};
 
-/// The bounds of one managed section (1-based lines).
+/// The bounds of one managed section: 1-based marker line numbers,
+/// inclusive of both marker lines.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Bounds {
     pub start_line: u64,
     pub end_line: u64,
 }
 
-/// The scanned topology.
+/// One named section found in a file, in file order.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Topology {
-    /// No marker pair is present.
-    Absent,
-    /// Exactly one ordered, non-nested pair.
-    ExactlyOne { bounds: Bounds },
-    /// The topology is ambiguous; the reason names the failure.
-    Ambiguous { reason: String },
+pub struct NamedSection {
+    pub id: SectionId,
+    pub bounds: Bounds,
 }
 
-impl fmt::Display for Topology {
+/// The scanned topology: every named section, or one contextual failure.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ScanOutcome {
+    /// Every marker line resolved into ordered, non-nested named pairs
+    /// (the list is empty when no markers are present).
+    Sections(Vec<NamedSection>),
+    /// The topology is ambiguous; the reason names the failure.
+    Invalid { reason: String },
+}
+
+impl fmt::Display for ScanOutcome {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Absent => write!(formatter, "no managed section markers present"),
-            Self::ExactlyOne { bounds } => write!(
-                formatter,
-                "one managed section at lines {}..={}",
-                bounds.start_line, bounds.end_line
-            ),
-            Self::Ambiguous { reason } => {
+            Self::Sections(sections) if sections.is_empty() => {
+                write!(formatter, "no managed section markers present")
+            }
+            Self::Sections(sections) => {
+                write!(formatter, "{} managed section(s)", sections.len())
+            }
+            Self::Invalid { reason } => {
                 write!(formatter, "ambiguous delimiter topology: {reason}")
             }
         }
     }
 }
-impl Error for Topology {}
+impl Error for ScanOutcome {}
 
-/// Scan the content for the syntax's canonical markers and classify the
-/// topology.  Pure: no mutation, no I/O.
-pub fn scan_partial(content: &str, syntax: &DelimiterSyntax) -> Topology {
-    let opens: Vec<u64> = content
-        .lines()
-        .enumerate()
-        .filter(|(_, line)| line.contains(syntax.open))
-        .map(|(index, _)| (index + 1) as u64)
-        .collect();
-    let closes: Vec<u64> = content
-        .lines()
-        .enumerate()
-        .filter(|(_, line)| line.contains(syntax.close))
-        .map(|(index, _)| (index + 1) as u64)
-        .collect();
+/// Split content into lines that keep their exact terminators.
+pub fn split_inclusive_lines(content: &[u8]) -> Vec<&[u8]> {
+    let mut lines = Vec::new();
+    let mut start = 0;
+    for (index, byte) in content.iter().enumerate() {
+        if *byte == b'\n' {
+            lines.push(&content[start..=index]);
+            start = index + 1;
+        }
+    }
+    if start < content.len() {
+        lines.push(&content[start..]);
+    }
+    lines
+}
 
-    if opens.is_empty() && closes.is_empty() {
-        return Topology::Absent;
+/// The logical line: the chunk without its LF or CRLF terminator.
+pub fn logical_line(chunk: &[u8]) -> &[u8] {
+    let chunk = chunk.strip_suffix(b"\n").unwrap_or(chunk);
+    chunk.strip_suffix(b"\r").unwrap_or(chunk)
+}
+
+/// Scan the content for named marker pairs and classify the topology.
+/// Pure: no mutation, no I/O, no decoding of payload bytes.
+pub fn scan_sections(content: &[u8], syntax: &DelimiterSyntax) -> ScanOutcome {
+    let mut sections: Vec<NamedSection> = Vec::new();
+    let mut open: Option<(SectionId, u64)> = None;
+    for (index, chunk) in split_inclusive_lines(content).iter().enumerate() {
+        let line_number = (index + 1) as u64;
+        match syntax.classify_line(logical_line(chunk)) {
+            LineClass::Content => {}
+            LineClass::MarkerLike { reason } => {
+                return ScanOutcome::Invalid {
+                    reason: format!(
+                        "line {line_number} resembles a marker but is invalid: {reason}"
+                    ),
+                };
+            }
+            LineClass::Open(id) => {
+                if let Some((outer, _)) = &open {
+                    return ScanOutcome::Invalid {
+                        reason: format!(
+                            "line {line_number} opens section {id} inside the open section {outer}"
+                        ),
+                    };
+                }
+                if sections.iter().any(|section| section.id == id) {
+                    return ScanOutcome::Invalid {
+                        reason: format!("line {line_number} opens the duplicate section id {id}"),
+                    };
+                }
+                open = Some((id, line_number));
+            }
+            LineClass::Close(id) => match open.take() {
+                None => {
+                    return ScanOutcome::Invalid {
+                        reason: format!(
+                            "line {line_number} closes section {id} without an open marker"
+                        ),
+                    };
+                }
+                Some((opened, start_line)) if opened == id => {
+                    sections.push(NamedSection {
+                        id,
+                        bounds: Bounds {
+                            start_line,
+                            end_line: line_number,
+                        },
+                    });
+                }
+                Some((opened, _)) => {
+                    return ScanOutcome::Invalid {
+                        reason: format!(
+                            "line {line_number} closes section {id} while section {opened} is open"
+                        ),
+                    };
+                }
+            },
+        }
     }
-    if opens.is_empty() {
-        return Topology::Ambiguous {
-            reason: "a close marker exists without an open marker".to_owned(),
+    if let Some((id, start_line)) = open {
+        return ScanOutcome::Invalid {
+            reason: format!("the open marker for section {id} at line {start_line} is unclosed"),
         };
     }
-    if closes.is_empty() {
-        return Topology::Ambiguous {
-            reason: "an open marker exists without a close marker".to_owned(),
-        };
-    }
-    if opens.len() > 1 || closes.len() > 1 {
-        return Topology::Ambiguous {
-            reason: "more than one marker pair is present".to_owned(),
-        };
-    }
-    let (open_line, close_line) = (opens[0], closes[0]);
-    if open_line >= close_line {
-        return Topology::Ambiguous {
-            reason: "the open marker does not precede the close marker".to_owned(),
-        };
-    }
-    // Nested: an open marker inside the section body (the scan only found
-    // one open, so nesting is detected by the marker appearing twice on
-    // one line or the pair-in-pair shape is impossible with one each).
-    Topology::ExactlyOne {
-        bounds: Bounds {
-            start_line: open_line,
-            end_line: close_line,
-        },
-    }
+    ScanOutcome::Sections(sections)
 }
 
 #[cfg(test)]

@@ -229,7 +229,7 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
         String::from_utf8_lossy(&help.stderr)
     );
     let help_text = String::from_utf8(help.stdout).expect("help is UTF-8");
-    for declared in ["sync", "setup", "validate"] {
+    for declared in ["sync", "setup", "doctor"] {
         assert!(
             help_text.contains(declared),
             "help must declare the constitutional command {declared:?}"
@@ -274,26 +274,37 @@ fn cli_help_version_and_forbidden_commands_remain_stable() {
             "forbidden command {forbidden_command:?} must report an argument error"
         );
     }
-    for recognized in ["sync", "setup", "validate"] {
+    for recognized in ["sync", "setup", "doctor"] {
         let output = binary(&[recognized]);
         let status = output.status.code();
-        if recognized == "sync" {
-            // sync with no machine authority is an empty-fleet success
-            // (the .27 contract) in the test environment's HOME.
-            assert!(
-                status == Some(0) || status == Some(2),
-                "{recognized:?} must be a fleet run (success) or fail closed: {status:?}"
-            );
-        } else {
-            assert_eq!(
-                status,
-                Some(2),
-                "{recognized:?} must fail closed with the invocation exit until its lifecycle lands"
-            );
-            assert!(
-                String::from_utf8_lossy(&output.stderr).contains("not available in this build"),
-                "{recognized:?} must not claim landed capabilities"
-            );
+        match recognized {
+            "sync" => {
+                // sync with no machine authority is an empty-fleet success
+                // (the .27 contract) in the test environment's HOME.
+                assert!(
+                    status == Some(0) || status == Some(2),
+                    "{recognized:?} must be a fleet run (success) or fail closed: {status:?}"
+                );
+            }
+            "doctor" => {
+                // doctor with no machine authority is a healthy empty
+                // fleet; with problems it exits 2.  Either way it lands.
+                assert!(
+                    status == Some(0) || status == Some(2),
+                    "{recognized:?} must report healthy or problems: {status:?}"
+                );
+            }
+            _ => {
+                assert_eq!(
+                    status,
+                    Some(2),
+                    "{recognized:?} must fail closed with the invocation exit until its lifecycle lands"
+                );
+                assert!(
+                    String::from_utf8_lossy(&output.stderr).contains("not available in this build"),
+                    "{recognized:?} must not claim landed capabilities"
+                );
+            }
         }
     }
 }

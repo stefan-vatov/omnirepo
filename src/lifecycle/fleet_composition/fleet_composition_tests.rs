@@ -70,6 +70,7 @@ fn item(id: &str) -> PlanItem {
         source_path: String::new(),
         source_order: 0,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "inferred".to_owned(),
         },

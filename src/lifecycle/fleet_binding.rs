@@ -34,6 +34,30 @@ pub enum BindingError {
         provenance: String,
         mode: String,
     },
+    InvalidId {
+        source: String,
+        provenance: String,
+        id: String,
+    },
+    ProtectedTarget {
+        source: String,
+        provenance: String,
+        target: String,
+    },
+    MissingSectionId {
+        source: String,
+        provenance: String,
+    },
+    InvalidSectionId {
+        source: String,
+        provenance: String,
+        section: String,
+    },
+    SectionOnWholeFile {
+        source: String,
+        provenance: String,
+        section: String,
+    },
 }
 
 impl fmt::Display for BindingError {
@@ -56,6 +80,42 @@ impl fmt::Display for BindingError {
             } => write!(
                 formatter,
                 "source {source} declaration {provenance} has unknown mode {mode:?}"
+            ),
+            Self::InvalidId {
+                source,
+                provenance,
+                id,
+            } => write!(
+                formatter,
+                "source {source} declaration {provenance} has an invalid id {id:?}: ids use ASCII lowercase letters, digits, dots, underscores, and hyphens"
+            ),
+            Self::ProtectedTarget {
+                source,
+                provenance,
+                target,
+            } => write!(
+                formatter,
+                "source {source} declaration {provenance} targets the protected authority file {target:?}"
+            ),
+            Self::MissingSectionId { source, provenance } => write!(
+                formatter,
+                "source {source} declaration {provenance} has mode=section but no section id"
+            ),
+            Self::InvalidSectionId {
+                source,
+                provenance,
+                section,
+            } => write!(
+                formatter,
+                "source {source} declaration {provenance} has an invalid section id {section:?}"
+            ),
+            Self::SectionOnWholeFile {
+                source,
+                provenance,
+                section,
+            } => write!(
+                formatter,
+                "source {source} declaration {provenance} declares section {section:?} without mode=section"
             ),
         }
     }
@@ -113,6 +173,15 @@ fn to_item(declaration: &SourceDeclaration, index: usize) -> Result<ItemDeclarat
             provenance: declaration.provenance.clone(),
         });
     }
+    // Item IDs follow the same stable slug rule as section IDs
+    // (canon/architecture/managed-content.md).
+    if !crate::configuration::is_valid_section_id(&id) {
+        return Err(BindingError::InvalidId {
+            source: declaration.source.as_str().to_owned(),
+            provenance: declaration.provenance.clone(),
+            id,
+        });
+    }
     let target = field(declaration, "destination").to_owned();
     if target.is_empty() {
         return Err(BindingError::MissingDestination {
@@ -120,9 +189,44 @@ fn to_item(declaration: &SourceDeclaration, index: usize) -> Result<ItemDeclarat
             provenance: declaration.provenance.clone(),
         });
     }
-    let kind = match field(declaration, "mode") {
-        "sync" | "whole" | "" => ItemKind::WholeFile,
-        "section" => ItemKind::Section,
+    // Protected authority-file targets fail before destination mutation
+    // (canon/architecture/managed-content.md): a source may never manage
+    // a destination's own configuration authority.
+    if target == ".omnirepo.yaml" || target == ".omnirepo" || target.starts_with(".omnirepo/") {
+        return Err(BindingError::ProtectedTarget {
+            source: declaration.source.as_str().to_owned(),
+            provenance: declaration.provenance.clone(),
+            target,
+        });
+    }
+    let section_field = field(declaration, "section");
+    let (kind, section) = match field(declaration, "mode") {
+        "sync" | "whole" | "" => {
+            if !section_field.is_empty() {
+                return Err(BindingError::SectionOnWholeFile {
+                    source: declaration.source.as_str().to_owned(),
+                    provenance: declaration.provenance.clone(),
+                    section: section_field.to_owned(),
+                });
+            }
+            (ItemKind::WholeFile, None)
+        }
+        "section" => {
+            if section_field.is_empty() {
+                return Err(BindingError::MissingSectionId {
+                    source: declaration.source.as_str().to_owned(),
+                    provenance: declaration.provenance.clone(),
+                });
+            }
+            let section = crate::configuration::SectionId::new(section_field).map_err(|_| {
+                BindingError::InvalidSectionId {
+                    source: declaration.source.as_str().to_owned(),
+                    provenance: declaration.provenance.clone(),
+                    section: section_field.to_owned(),
+                }
+            })?;
+            (ItemKind::Section, Some(section))
+        }
         other => {
             return Err(BindingError::InvalidMode {
                 source: declaration.source.as_str().to_owned(),
@@ -137,7 +241,7 @@ fn to_item(declaration: &SourceDeclaration, index: usize) -> Result<ItemDeclarat
         source: declaration.source.as_str().to_owned(),
         source_path: declaration.path.clone(),
         kind,
-        section: None,
+        section,
         source_order: index,
     })
 }

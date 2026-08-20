@@ -42,7 +42,7 @@ complete taxonomy and the exact required sets for:
 
 - constitutional principles, growth directives, boundaries, and tension-pair
   limits;
-- public `sync`, `setup`, and `validate` commands;
+- public `sync`, `setup`, and `doctor` commands;
 - lifecycle failure stages from invocation through cancellation and recovery;
 - product behavior contracts such as authority, source materialization, exact
   whole-file and partial-section sync, verification, Git delivery, run

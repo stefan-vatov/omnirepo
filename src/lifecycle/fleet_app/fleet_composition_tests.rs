@@ -27,6 +27,7 @@ fn selected_item(id: &str) -> PlanItem {
         source_path: String::new(),
         source_order: 1,
         kind: ItemKind::WholeFile,
+        section: None,
         decision: PlanDecision::Selected {
             reason: "declared winner".to_owned(),
         },

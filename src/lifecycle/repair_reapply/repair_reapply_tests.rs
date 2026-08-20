@@ -1,11 +1,9 @@
 //! Focused proof for reapplying authoritative synchronization and rerunning
 //! the frozen verification after a successful repair.
-//!
-//! STRICT TDD: this test file was written and run RED before the
-//! implementation existed.
 
 #![allow(dead_code, unused_imports)]
 
+use crate::configuration::SectionId;
 use crate::lifecycle::repair_reapply::{
     ReapplyError, ReapplyVerdict, reapply_authoritative, rerun_frozen_verification,
 };
@@ -20,22 +18,76 @@ fn fixture_root() -> tempfile::TempDir {
         .expect("fixture")
 }
 
+fn section(id: &str) -> SectionId {
+    SectionId::new(id).expect("valid id")
+}
+
 #[test]
 fn after_reapply_the_frozen_verification_passes() {
     let fixture = fixture_root();
-    fs::write(fixture.path().join("managed.md"), "v1\n").expect("file");
+    fs::write(
+        fixture.path().join("managed.md"),
+        "local\n\n<!-- omnirepo:start rules -->\nv1\n<!-- omnirepo:end rules -->\n",
+    )
+    .expect("file");
     let authoritative = b"authoritative-v2\n";
-    reapply_authoritative(fixture.path(), "managed.md", authoritative).expect("reapply");
+    let rules = section("rules");
+    reapply_authoritative(fixture.path(), "managed.md", Some(&rules), authoritative)
+        .expect("reapply");
     let bytes = fs::read(fixture.path().join("managed.md")).expect("read");
     let text = String::from_utf8(bytes).expect("utf8");
     assert!(
-        text.contains("<!-- omnirepo-start -->") && text.contains("authoritative-v2"),
-        "the authoritative payload is delivered inside the managed section: {text:?}"
+        text.starts_with("local\n")
+            && text.contains("<!-- omnirepo:start rules -->")
+            && text.contains("authoritative-v2"),
+        "the authoritative payload is delivered inside the named section and local content survives: {text:?}"
     );
     assert!(matches!(
         rerun_frozen_verification(
             fixture.path(),
             "managed.md",
+            Some(&rules),
+            authoritative,
+            &["baseline-1".to_owned()],
+        ),
+        Ok(ReapplyVerdict::Verified)
+    ));
+}
+
+#[test]
+fn reapply_preserves_other_named_sections() {
+    let fixture = fixture_root();
+    fs::write(
+        fixture.path().join("managed.md"),
+        "<!-- omnirepo:start alpha -->\na\n<!-- omnirepo:end alpha -->\n\n<!-- omnirepo:start beta -->\nb\n<!-- omnirepo:end beta -->\n",
+    )
+    .expect("file");
+    let alpha = section("alpha");
+    reapply_authoritative(fixture.path(), "managed.md", Some(&alpha), b"a2\n").expect("reapply");
+    let text = String::from_utf8(fs::read(fixture.path().join("managed.md")).expect("read"))
+        .expect("utf8");
+    assert!(text.contains("a2\n"), "{text:?}");
+    assert!(
+        text.contains("<!-- omnirepo:start beta -->\nb\n<!-- omnirepo:end beta -->"),
+        "the untouched section survives byte-exact: {text:?}"
+    );
+}
+
+#[test]
+fn whole_file_reapply_rewrites_byte_exact() {
+    let fixture = fixture_root();
+    fs::write(fixture.path().join("managed.md"), "drifted\n").expect("file");
+    let authoritative = b"authoritative-v2\n";
+    reapply_authoritative(fixture.path(), "managed.md", None, authoritative).expect("reapply");
+    assert_eq!(
+        fs::read(fixture.path().join("managed.md")).expect("read"),
+        authoritative
+    );
+    assert!(matches!(
+        rerun_frozen_verification(
+            fixture.path(),
+            "managed.md",
+            None,
             authoritative,
             &["baseline-1".to_owned()],
         ),
@@ -48,10 +100,24 @@ fn a_drifted_destination_fails_the_frozen_verification() {
     let fixture = fixture_root();
     fs::write(fixture.path().join("managed.md"), "drifted\n").expect("file");
     let authoritative = b"authoritative-v2\n";
+    let rules = section("rules");
+    // Section mode: the named section is absent entirely — drifted.
     assert!(matches!(
         rerun_frozen_verification(
             fixture.path(),
             "managed.md",
+            Some(&rules),
+            authoritative,
+            &["baseline-1".to_owned()],
+        ),
+        Ok(ReapplyVerdict::Drifted)
+    ));
+    // Whole-file mode: different bytes — drifted.
+    assert!(matches!(
+        rerun_frozen_verification(
+            fixture.path(),
+            "managed.md",
+            None,
             authoritative,
             &["baseline-1".to_owned()],
         ),
@@ -63,9 +129,8 @@ fn a_drifted_destination_fails_the_frozen_verification() {
 fn empty_frozen_inputs_fail_the_frozen_verification() {
     let fixture = fixture_root();
     fs::write(fixture.path().join("managed.md"), "x\n").expect("file");
-    let authoritative = b"x\n";
     assert!(matches!(
-        rerun_frozen_verification(fixture.path(), "managed.md", authoritative, &[]),
+        rerun_frozen_verification(fixture.path(), "managed.md", None, b"x\n", &[]),
         Err(ReapplyError::FrozenInputsMissing)
     ));
 }
@@ -76,6 +141,7 @@ fn a_missing_managed_file_fails_typed() {
     let error = rerun_frozen_verification(
         fixture.path(),
         "absent.md",
+        None,
         b"x\n",
         &["baseline-1".to_owned()],
     )

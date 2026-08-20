@@ -108,6 +108,7 @@ pub fn build_repository_plan(
             source_path: declared[winner.winner].source_path.clone(),
             source_order: declared[winner.winner].source_order,
             kind: winner.kind,
+            section: winner.section.clone(),
             decision: PlanDecision::Selected {
                 reason: "declared winner".to_owned(),
             },
@@ -118,11 +119,33 @@ pub fn build_repository_plan(
         select_items(&plan_items, policy).map_err(|error| PlanBuildError::Selection {
             reason: error.to_string(),
         })?;
-    let selected = selections
+    let mut selected = selections
         .into_iter()
         .filter(|selection| matches!(selection.decision, SelectionDecision::Selected { .. }))
         .map(|selection| selection.item)
         .collect::<Vec<_>>();
+    // Losers stay visible: every shadowed declaration appears in the plan
+    // as a rejected item naming its winner, never as a silent drop.
+    for winner in &resolved {
+        for loser in &winner.losers {
+            let declaration = &declared[loser.declaration_index];
+            selected.push(PlanItem {
+                id: declaration.id.clone(),
+                target: declaration.target.clone(),
+                source: declaration.source.clone(),
+                source_path: declaration.source_path.clone(),
+                source_order: declaration.source_order,
+                kind: declaration.kind,
+                section: declaration.section.clone(),
+                decision: PlanDecision::Rejected {
+                    reason: format!(
+                        "{:?} collision: shadowed by item {} from source {}",
+                        loser.collision, winner.id, declared[winner.winner].source
+                    ),
+                },
+            });
+        }
+    }
     let plan = SyncPlan::new(destination, selected);
     validate_plan(&plan).map_err(|error| PlanBuildError::Selection {
         reason: error.to_string(),

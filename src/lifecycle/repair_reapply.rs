@@ -2,21 +2,22 @@
 //! after a successful repair.
 //!
 //! After the post-agent delta is the expected repair effect, the
-//! authoritative content is re-delivered into the managed file (the
-//! synchronization reapplication): the file is rebuilt as the canonical
-//! managed section carrying the authoritative payload, byte-exact.  The
-//! frozen verification is then rerun: the payload inside the managed
-//! section must be byte-identical to the authoritative content while the
-//! frozen repair inputs are still present.
+//! authoritative content is re-delivered into the managed file: a whole
+//! file is rewritten byte-exact; a named section is spliced in place,
+//! preserving every other byte of the file — including other managed
+//! sections.  The frozen verification is then rerun: the managed payload
+//! must be byte-identical to the authoritative content while the frozen
+//! repair inputs are still present.
 
 #![allow(dead_code)]
 
 #[cfg(test)]
 mod repair_reapply_tests;
 
+use crate::configuration::SectionId;
 use crate::managed_content::{
-    DelimiterError, DelimiterSyntax, Representation, check_exact_representation,
-    lookup_by_extension,
+    DelimiterError, DelimiterSyntax, Representation, ScanOutcome, SectionWrite, apply_sections,
+    check_exact_representation, lookup_by_extension, scan_sections, split_inclusive_lines,
 };
 use crate::platform::RelativePath;
 use std::{error::Error, fmt, fs, path::Path};
@@ -49,6 +50,7 @@ pub enum ReapplyError {
     },
     MalformedSection {
         path: std::path::PathBuf,
+        reason: String,
     },
 }
 
@@ -79,10 +81,10 @@ impl fmt::Display for ReapplyError {
                     path.display()
                 )
             }
-            Self::MalformedSection { path } => {
+            Self::MalformedSection { path, reason } => {
                 write!(
                     formatter,
-                    "the managed section in {} is malformed",
+                    "the managed sections in {} are malformed: {reason}",
                     path.display()
                 )
             }
@@ -107,34 +109,48 @@ fn syntax_for(managed: &str) -> Result<&'static DelimiterSyntax, ReapplyError> {
 
 /// Reapply the authoritative content into the managed file.
 ///
-/// The file is rebuilt as the canonical managed section carrying the
-/// authoritative payload byte-exact.  A representation that cannot carry
-/// the bytes exactly fails before any write.
+/// A whole file (`section` is None) is rewritten byte-exact.  A named
+/// section is spliced in place through the grouped section engine; every
+/// byte outside that section is preserved.  A representation that cannot
+/// carry the bytes exactly fails before any write.
 pub fn reapply_authoritative(
     working: &Path,
     managed: &str,
+    section: Option<&SectionId>,
     authoritative: &[u8],
 ) -> Result<(), ReapplyError> {
     let (_base, target) = managed_target(working, managed)?;
-    let syntax = syntax_for(managed)?;
     match check_exact_representation(authoritative, true) {
         Representation::Exact => {}
         other => return Err(ReapplyError::Representation(other)),
     }
-    let payload = std::str::from_utf8(authoritative).map_err(|error| {
-        ReapplyError::Representation(Representation::Unsupported {
-            reason: error.to_string(),
-        })
-    })?;
-    let mut rendered = String::new();
-    rendered.push_str(syntax.open);
-    rendered.push('\n');
-    rendered.push_str(payload);
-    if !payload.ends_with('\n') {
-        rendered.push('\n');
-    }
-    rendered.push_str(syntax.close);
-    rendered.push('\n');
+    let rendered = match section {
+        None => authoritative.to_vec(),
+        Some(section) => {
+            let syntax = syntax_for(managed)?;
+            let current = fs::read(&target).map_err(|error| ReapplyError::Read {
+                path: target.clone(),
+                reason: error.to_string(),
+            })?;
+            let applied = apply_sections(
+                &current,
+                syntax,
+                &[SectionWrite {
+                    id: section.clone(),
+                    payload: authoritative.to_vec(),
+                }],
+            )
+            .map_err(|error| ReapplyError::MalformedSection {
+                path: target.clone(),
+                reason: error.to_string(),
+            })?;
+            // An unchanged target receives no filesystem write.
+            if !applied.changed {
+                return Ok(());
+            }
+            applied.content
+        }
+    };
     fs::write(&target, rendered).map_err(|error| ReapplyError::Write {
         path: target.clone(),
         reason: error.to_string(),
@@ -142,12 +158,13 @@ pub fn reapply_authoritative(
     Ok(())
 }
 
-/// Rerun the frozen verification: the payload inside the managed section
-/// must be byte-identical to the authoritative content, and the frozen
-/// repair inputs must still be present.
+/// Rerun the frozen verification: the managed payload must be
+/// byte-identical to the authoritative content, and the frozen repair
+/// inputs must still be present.
 pub fn rerun_frozen_verification(
     working: &Path,
     managed: &str,
+    section: Option<&SectionId>,
     authoritative: &[u8],
     frozen_inputs: &[String],
 ) -> Result<ReapplyVerdict, ReapplyError> {
@@ -155,35 +172,43 @@ pub fn rerun_frozen_verification(
         return Err(ReapplyError::FrozenInputsMissing);
     }
     let (_base, target) = managed_target(working, managed)?;
-    let syntax = syntax_for(managed)?;
     let bytes = fs::read(&target).map_err(|error| ReapplyError::Read {
         path: target.clone(),
         reason: error.to_string(),
     })?;
-    let text = std::str::from_utf8(&bytes).map_err(|error| {
-        ReapplyError::Representation(Representation::Unsupported {
-            reason: error.to_string(),
-        })
-    })?;
-    let start = match text.find(syntax.open) {
-        Some(start) => start,
-        None => return Ok(ReapplyVerdict::Drifted),
+    let Some(section) = section else {
+        return Ok(if bytes == authoritative {
+            ReapplyVerdict::Verified
+        } else {
+            ReapplyVerdict::Drifted
+        });
     };
-    let after_start = start + syntax.open.len();
-    let after_start = if text[after_start..].starts_with('\n') {
-        after_start + 1
+    let syntax = syntax_for(managed)?;
+    // One scan; the verdict compares the section body bytes directly, so
+    // marker-line details (a missing final terminator, the file's newline
+    // style) never mask a byte-identical payload.
+    let sections = match scan_sections(&bytes, syntax) {
+        ScanOutcome::Sections(sections) => sections,
+        ScanOutcome::Invalid { .. } => return Ok(ReapplyVerdict::Drifted),
+    };
+    let Some(found) = sections.iter().find(|found| &found.id == section) else {
+        return Ok(ReapplyVerdict::Drifted);
+    };
+    let chunks = split_inclusive_lines(&bytes);
+    let body: Vec<u8> =
+        chunks[found.bounds.start_line as usize..(found.bounds.end_line - 1) as usize].concat();
+    // The written body is the exact payload, plus one terminator when a
+    // nonempty payload lacks its own (the engine's block rule).
+    let verified = body == authoritative
+        || (!authoritative.is_empty()
+            && !authoritative.ends_with(b"\n")
+            && body
+                .strip_suffix(b"\r\n")
+                .or_else(|| body.strip_suffix(b"\n"))
+                == Some(authoritative));
+    Ok(if verified {
+        ReapplyVerdict::Verified
     } else {
-        after_start
-    };
-    let rest = &text[after_start..];
-    let end = match rest.find(syntax.close) {
-        Some(offset) => after_start + offset,
-        None => return Ok(ReapplyVerdict::Drifted),
-    };
-    let payload = &text[after_start..end];
-    if payload.as_bytes() == authoritative {
-        Ok(ReapplyVerdict::Verified)
-    } else {
-        Ok(ReapplyVerdict::Drifted)
-    }
+        ReapplyVerdict::Drifted
+    })
 }

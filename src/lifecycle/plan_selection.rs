@@ -96,7 +96,13 @@ pub fn select_items(items: &[PlanItem], policy: &Policy) -> Result<Vec<Selection
                         id: item.id.clone(),
                     });
                 }
-                let decision = if included {
+                // Declared precedence is unbreachable: a collision loser
+                // stays rejected even when explicitly included.
+                let decision = if let PlanDecision::Rejected { reason } = &item.decision {
+                    SelectionDecision::Rejected {
+                        reason: format!("declared loser: {reason}"),
+                    }
+                } else if included {
                     SelectionDecision::Selected {
                         reason: "explicit include".to_owned(),
                     }

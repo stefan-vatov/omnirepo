@@ -79,8 +79,20 @@ pub fn compose_configured_fleet(
                 continue;
             }
         };
+        // Only selected items compose work: rejected losers never
+        // execute, so they must not gate admission or availability.
         let items: Vec<crate::lifecycle::sync_plan::PlanItem> = match &plan.plan {
-            Ok(plan) => plan.items.clone(),
+            Ok(plan) => plan
+                .items
+                .iter()
+                .filter(|item| {
+                    matches!(
+                        item.decision,
+                        crate::lifecycle::sync_plan::PlanDecision::Selected { .. }
+                    )
+                })
+                .cloned()
+                .collect(),
             Err(_) => Vec::new(),
         };
         entries.push((plan.repository.clone(), policy, items));

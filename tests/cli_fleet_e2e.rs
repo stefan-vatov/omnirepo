@@ -385,3 +385,175 @@ fn a_passing_declared_command_allows_the_commit() {
         "base plus the scoped commit object after a passing check"
     );
 }
+
+/// One source repo providing a named AGENTS.md section from one partial
+/// file.
+fn setup_partial_source(
+    fixture: &tempfile::TempDir,
+    source_id: &str,
+    item_id: &str,
+    section: &str,
+    body: &str,
+) -> std::path::PathBuf {
+    let source = fixture.path().join(source_id);
+    git_repo(&source);
+    fs::create_dir_all(source.join("partials")).expect("partials");
+    fs::write(source.join("partials/rules.md"), body).expect("partial");
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(&source)
+            .output()
+            .expect("git");
+        assert!(output.status.success(), "git {args:?}: {:?}", output);
+    };
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "source"]);
+    let head = git_text(&source, &["rev-parse", "HEAD"]);
+    fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
+    fs::write(
+        source.join(".omnirepo/source.yaml"),
+        format!(
+            "omnirepo-declarations-v1\nsource={source_id} revision={head} path=partials/rules.md id={item_id} mode=section destination=AGENTS.md section={section}\n"
+        ),
+    )
+    .expect("declarations");
+    source
+}
+
+#[test]
+fn two_sources_manage_named_sections_in_one_destination_file() {
+    let fixture = fixture("e2e-partials-");
+    let source_a = setup_partial_source(
+        &fixture,
+        "source-a",
+        "agents-rust",
+        "rust-rules",
+        "Use the pinned toolchain.\n",
+    );
+    let source_b = setup_partial_source(
+        &fixture,
+        "source-b",
+        "agents-security",
+        "security-rules",
+        "Never log credentials.\n",
+    );
+    let destination = fixture.path().join("destination-a");
+    git_repo(&destination);
+    fs::write(
+        destination.join("AGENTS.md"),
+        "# Local title\n\nLocal notes stay local.\n",
+    )
+    .expect("agents");
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(&destination)
+            .output()
+            .expect("git");
+        assert!(output.status.success(), "git {args:?}: {:?}", output);
+    };
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "base"]);
+    let home = fixture.path().join("home");
+    fs::create_dir_all(&home).expect("home");
+    write_machine_config(
+        &home,
+        &[("destination-a", &destination)],
+        &[("source-a", &source_a), ("source-b", &source_b)],
+    );
+    command(&home, fixture.path()).arg("sync").assert().code(0);
+    let agents = fs::read_to_string(destination.join("AGENTS.md")).expect("agents");
+    assert!(
+        agents.starts_with("# Local title\n\nLocal notes stay local.\n"),
+        "local content survives byte-exact: {agents:?}"
+    );
+    assert!(
+        agents.contains(
+            "<!-- omnirepo:start rust-rules -->\nUse the pinned toolchain.\n<!-- omnirepo:end rust-rules -->"
+        ),
+        "the source-a section landed: {agents:?}"
+    );
+    assert!(
+        agents.contains(
+            "<!-- omnirepo:start security-rules -->\nNever log credentials.\n<!-- omnirepo:end security-rules -->"
+        ),
+        "the source-b section landed: {agents:?}"
+    );
+    // One scoped commit delivered the grouped file write.
+    let objects = git_text(
+        &destination,
+        &[
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ],
+    );
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 2, "base plus one scoped sync commit");
+    // A second run is a true no-op: byte-identical file, no new commit.
+    let head_after_first = git_text(&destination, &["rev-parse", "HEAD"]);
+    command(&home, fixture.path()).arg("sync").assert().code(0);
+    assert_eq!(
+        fs::read_to_string(destination.join("AGENTS.md")).expect("agents"),
+        agents,
+        "the second run changes nothing"
+    );
+    assert_eq!(
+        git_text(&destination, &["rev-parse", "HEAD"]),
+        head_after_first,
+        "an unchanged repository creates no commit"
+    );
+}
+
+#[test]
+fn the_same_section_from_two_sources_follows_source_order() {
+    let fixture = fixture("e2e-precedence-");
+    let source_a = setup_partial_source(
+        &fixture,
+        "source-a",
+        "agents-rules-a",
+        "shared-rules",
+        "Primary rules win.\n",
+    );
+    let source_b = setup_partial_source(
+        &fixture,
+        "source-b",
+        "agents-rules-b",
+        "shared-rules",
+        "Secondary rules lose.\n",
+    );
+    let destination = fixture.path().join("destination-a");
+    git_repo(&destination);
+    fs::write(destination.join("AGENTS.md"), "# Local\n").expect("agents");
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(&destination)
+            .output()
+            .expect("git");
+        assert!(output.status.success(), "git {args:?}: {:?}", output);
+    };
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "base"]);
+    let home = fixture.path().join("home");
+    fs::create_dir_all(&home).expect("home");
+    write_machine_config(
+        &home,
+        &[("destination-a", &destination)],
+        &[("source-a", &source_a), ("source-b", &source_b)],
+    );
+    command(&home, fixture.path()).arg("sync").assert().code(0);
+    let agents = fs::read_to_string(destination.join("AGENTS.md")).expect("agents");
+    assert!(
+        agents.contains("Primary rules win.\n"),
+        "the configured source order decides the shared section: {agents:?}"
+    );
+    assert!(
+        !agents.contains("Secondary rules lose.\n"),
+        "the losing source never reaches the destination: {agents:?}"
+    );
+}

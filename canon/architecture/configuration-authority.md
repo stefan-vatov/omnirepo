@@ -20,9 +20,11 @@ authority for:
 Source repositories contain authoritative managed content and declare the files
 and sections they provide in `<source-root>/.omnirepo/source.yaml`. Each
 declaration has an explicit stable lowercase-slug ID, a whole-file or section
-mode, contained source and destination paths, an optional section ID, and
-optional destination-repository applicability tags. Managed bytes remain in
-ordinary source files rather than being embedded in YAML. When sources
+mode, contained source and destination paths, a section ID (required for
+section mode, forbidden for whole-file mode), and optional
+destination-repository applicability tags. Managed bytes remain in
+ordinary source files rather than being embedded in YAML; a section's body is
+the exact bytes of its declared source file. When sources
 overlap, their configured order is the sole tiebreaker. Completion order,
 content inspection, and inferred importance must not change precedence.
 

@@ -36,7 +36,7 @@ fn silent_owner_evidence_selects_no_implementation() {
 #[test]
 fn the_public_surface_stays_migration_free() {
     // The public command surface of the first constitutional release.
-    let commands = ["sync".to_owned(), "setup".to_owned(), "validate".to_owned()];
+    let commands = ["sync".to_owned(), "setup".to_owned(), "doctor".to_owned()];
     assert!(assert_migration_free_surface(&commands));
 }
 
@@ -50,9 +50,9 @@ fn a_migrate_command_is_never_admitted() {
 
 #[test]
 fn the_runtime_command_surface_carries_no_migration_path() {
-    // The actual clap surface of the binary: exactly sync, setup, validate.
+    // The actual clap surface of the binary: exactly sync, setup, doctor.
     let mut names = crate::configuration::command_surface();
     names.sort();
-    assert_eq!(names, vec!["setup", "sync", "validate"], "{names:?}");
+    assert_eq!(names, vec!["doctor", "setup", "sync"], "{names:?}");
     assert!(assert_migration_free_surface(&names));
 }
