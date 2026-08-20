@@ -19,10 +19,17 @@ fn fixture_base() -> tempfile::TempDir {
         .expect("fixture")
 }
 
+/// The freshly built binary in this test run's own target directory
+/// (`<target>/debug/deps/<test>` → `<target>/debug/omnirepo`), so the
+/// test never depends on a stale or cache-restored `target/debug` and
+/// works under profile-specific target directories (cargo-llvm-cov).
 fn omnirepo_binary() -> std::path::PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target/debug/omnirepo")
-        .to_path_buf()
+    let mut path = std::env::current_exe().expect("test executable");
+    path.pop();
+    if path.ends_with("deps") {
+        path.pop();
+    }
+    path.join("omnirepo")
 }
 
 fn run(binary: &Path, home: &Path, args: &[&str]) -> std::process::Output {

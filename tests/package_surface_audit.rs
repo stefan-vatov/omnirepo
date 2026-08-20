@@ -46,14 +46,24 @@ fn the_docs_are_development_content_and_stay_out_of_the_package() {
     );
 }
 
+/// The freshly built binary in this test run's own target directory, so
+/// the test never depends on a stale or cache-restored `target/debug`
+/// and works under profile-specific target directories (cargo-llvm-cov).
+fn omnirepo_binary() -> std::path::PathBuf {
+    let mut path = std::env::current_exe().expect("test executable");
+    path.pop();
+    if path.ends_with("deps") {
+        path.pop();
+    }
+    path.join("omnirepo")
+}
+
 #[test]
 fn the_executable_surface_matches_the_documented_commands() {
-    let help = std::process::Command::new(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("target/debug/omnirepo"),
-    )
-    .arg("--help")
-    .output()
-    .expect("help");
+    let help = std::process::Command::new(omnirepo_binary())
+        .arg("--help")
+        .output()
+        .expect("help");
     assert!(help.status.success());
     let text = String::from_utf8(help.stdout).expect("utf8");
     for command in ["sync", "setup", "doctor"] {
