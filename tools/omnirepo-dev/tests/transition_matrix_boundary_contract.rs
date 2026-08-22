@@ -286,10 +286,15 @@ fn timeout_terminates_and_reaps_the_command_tree() {
             pid_file.display()
         ),
     );
+    // The budget bounds every command the run makes, including the
+    // `--version` probe that precedes `init`.  A budget near process-spawn
+    // latency makes the probe, not `init`, the command that times out under
+    // load, which reports an unrelated failure.  `init` blocks forever, so a
+    // budget comfortably above spawn latency still times out exactly there.
     let error = omnirepo_dev::transition_matrix::run_with_br_path_and_timeout(
         &repository_root(),
         br,
-        Duration::from_millis(40),
+        Duration::from_millis(750),
     )
     .expect_err("a command beyond its timeout must fail closed");
     let MatrixError::BrFailed {
@@ -322,14 +327,37 @@ fn timeout_terminates_and_reaps_the_command_tree() {
         .expect("timeout fixture records descendant pid")
         .parse::<i32>()
         .expect("timeout fixture records numeric descendant pid");
-    let status = std::process::Command::new("kill")
-        .args(["-0", &child_pid.to_string()])
-        .status()
-        .expect("probe descendant process state");
+    let descendant_present = || {
+        std::process::Command::new("kill")
+            .args(["-0", &child_pid.to_string()])
+            .status()
+            .expect("probe descendant process state")
+            .success()
+    };
+    // Linux keeps the process group addressable while any member exists,
+    // so the timeout waits for the complete tree and the descendant is
+    // already gone here.
+    #[cfg(target_os = "linux")]
     assert!(
-        !status.success(),
+        !descendant_present(),
         "descendant must be gone when the timeout result is returned"
     );
+    // Darwin drops the group with its leader: once the direct child is
+    // reaped the group can no longer be probed, so an orphan's final reap
+    // belongs to `launchd` and lands shortly after the timeout returns.
+    // The tree is still terminated, so the descendant must disappear
+    // within a bounded wait rather than linger.
+    #[cfg(not(target_os = "linux"))]
+    {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while descendant_present() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "descendant must disappear after the timeout result is returned"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
 }
 
 #[cfg(unix)]

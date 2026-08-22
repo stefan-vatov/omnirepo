@@ -759,6 +759,12 @@ fn terminate_process_tree(pid: u32) {
 /// completed here: the group is polled until it is empty, which is the
 /// point at which the tree is both terminated and reaped.  The wait is
 /// bounded; an exhausted bound returns rather than blocking the run.
+///
+/// This is exact on Linux, where the group stays addressable while any
+/// member exists.  Darwin drops the group together with its leader: once
+/// the direct child is reaped, `kill(-pgid, 0)` reports `ESRCH` even
+/// while descendants live, so the wait completes immediately there and
+/// the final reap of an orphan is left to `launchd`.
 #[cfg(unix)]
 fn await_process_tree_reaped(pid: u32) {
     let pid = pid as i32;
@@ -988,7 +994,11 @@ fn unique_temp_directory() -> Result<PathBuf, MatrixError> {
             std::process::id()
         ));
         match fs::create_dir(&path) {
-            Ok(()) => return Ok(path),
+            // The created directory is returned by its resolved path: the
+            // platform temporary root can itself sit behind a symlink
+            // (macOS `/var` -> `private/var`), and a tracker that refuses a
+            // symlinked parent component would reject the workspace.
+            Ok(()) => return Ok(fs::canonicalize(&path).unwrap_or(path)),
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(source) => {
                 return Err(MatrixError::Io {
