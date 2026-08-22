@@ -43,6 +43,10 @@ pub const CASE_IDS: [&str; 13] = [
 const DECISION_LABELS: [&str; 2] = ["decision-needed", "human-input"];
 const EMPTY_LABELS: [&str; 0] = [];
 const MAX_OUTPUT_BYTES: usize = 1_048_576;
+/// The bound on waiting for a terminated process tree to disappear.
+const REAP_TIMEOUT: Duration = Duration::from_secs(10);
+/// The poll interval used while waiting for that disappearance.
+const REAP_POLL_INTERVAL: Duration = Duration::from_millis(1);
 const MAX_DIAGNOSTIC_BYTES: usize = 4096;
 const DEFAULT_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(10);
@@ -665,6 +669,11 @@ fn capture_command(mut command: Command, timeout: Duration) -> Result<Output, Ca
         }
     }
     let _ = waiter.join();
+    // Every path out of the loop above signalled the tree.  The direct
+    // child is reaped by the joined waiter; this awaits the descendants
+    // so the command tree is gone before any result is returned and the
+    // bounded readers can no longer be held open by a live writer.
+    await_process_tree_reaped(pid);
     let stdout_result = stdout_reader.join();
     let stderr_result = stderr_reader.join();
 
@@ -740,6 +749,35 @@ fn terminate_process_tree(pid: u32) {
         let _ = kill(pid, SIGKILL);
     }
 }
+
+/// Wait until the command's private process group holds no process.
+///
+/// `SIGKILL` delivery is asynchronous: `kill` returns once the signal is
+/// queued, while the kernel still tears the processes down and reaps the
+/// descendants that outlived their killed parent.  Returning at signal
+/// time therefore leaves observable live descendants, so termination is
+/// completed here: the group is polled until it is empty, which is the
+/// point at which the tree is both terminated and reaped.  The wait is
+/// bounded; an exhausted bound returns rather than blocking the run.
+#[cfg(unix)]
+fn await_process_tree_reaped(pid: u32) {
+    let pid = pid as i32;
+    let deadline = Instant::now() + REAP_TIMEOUT;
+    loop {
+        // SAFETY: signal 0 performs only the existence and permission
+        // check for the private group; it delivers no signal.  The group
+        // id is this command's own child pid, so no unrelated group can
+        // be observed while any member of it still exists.
+        let present = unsafe { kill(-pid, 0) } == 0;
+        if !present || Instant::now() >= deadline {
+            return;
+        }
+        thread::sleep(REAP_POLL_INTERVAL);
+    }
+}
+
+#[cfg(not(unix))]
+fn await_process_tree_reaped(_pid: u32) {}
 
 #[cfg(windows)]
 fn terminate_process_tree(pid: u32) {
