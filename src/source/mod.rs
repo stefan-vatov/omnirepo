@@ -9,9 +9,7 @@ mod publish;
 mod snapshot;
 
 pub(crate) use declarations::{DeclarationsError, SourceDeclaration, parse_declarations};
-pub(crate) use extraction::{
-    ExtractedPayload, ExtractionError, PayloadKind, extract_payload, validate_locator,
-};
+pub(crate) use extraction::{PayloadKind, extract_payload};
 pub(crate) use snapshot::{RevisionId, SourceId};
 
 pub(crate) use catalog_state::{CatalogState, SourceCatalog};

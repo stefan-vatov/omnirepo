@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use super::{
+use super::extraction::{
     ExtractedPayload, ExtractionError, PayloadKind, content_identity, extract_payload,
     validate_locator,
 };

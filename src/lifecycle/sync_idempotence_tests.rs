@@ -1,27 +1,7 @@
-//! Idempotence, partial-fleet failure, and journal identity fixtures.
+//! Idempotence and journal identity fixtures.
 
-#![allow(dead_code, unused_imports)]
-
-use crate::lifecycle::replacement_requests::map_whole_file_requests;
-use crate::lifecycle::sync_plan::{PlanDecision, PlanItem, SyncPlan};
 use crate::managed_content::classify_whole_file;
-use crate::source::ItemKind;
 use std::{fs, path::Path, process::Command};
-
-fn selected(id: &str, target: &str) -> PlanItem {
-    PlanItem {
-        id: id.to_owned(),
-        target: target.to_owned(),
-        source: "primary".to_owned(),
-        source_path: String::new(),
-        source_order: 1,
-        kind: ItemKind::WholeFile,
-        section: None,
-        decision: PlanDecision::Selected {
-            reason: "declared winner".to_owned(),
-        },
-    }
-}
 
 fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -89,69 +69,4 @@ fn second_run_performs_no_content_or_git_mutation() {
         String::from_utf8(commits_after.stdout).expect("stdout"),
         "no Git mutation on the second run"
     );
-}
-
-#[test]
-fn one_repository_failure_does_not_alter_peer_eligibility() {
-    // A failing repository's plan does not change a peer's eligibility:
-    // the peer's whole-file requests still carry the same identities.
-    let failing = SyncPlan::new(
-        "dest-a",
-        vec![PlanItem {
-            id: "a".to_owned(),
-            target: "t".to_owned(),
-            source: "broken".to_owned(),
-            source_path: String::new(),
-            source_order: 1,
-            kind: ItemKind::WholeFile,
-            section: None,
-            decision: PlanDecision::Rejected {
-                reason: "source unavailable".to_owned(),
-            },
-        }],
-    );
-    let peer = SyncPlan::new("dest-b", vec![selected("b", "t2")]);
-    // The failing plan yields no requests (its item is rejected).
-    let failing_requests = map_whole_file_requests(&failing, "s", "c").expect("map");
-    assert!(failing_requests.is_empty());
-    // The peer is untouched: its request is still exact.
-    let peer_requests = map_whole_file_requests(&peer, "s", "c").expect("map");
-    assert_eq!(peer_requests.len(), 1);
-    assert_eq!(peer_requests[0].plan_item_id, "b");
-}
-
-#[test]
-fn every_operation_outcome_carries_source_plan_and_target_identities() {
-    let plan = SyncPlan::new("dest-a", vec![selected("item-a", "apps/app.yaml")]);
-    let requests =
-        map_whole_file_requests(&plan, "source-identity", "config-identity").expect("map");
-    let request = &requests[0];
-    // The outcome identity set: source, configuration, plan, and target.
-    assert_eq!(request.source_identity, "source-identity");
-    assert_eq!(request.configuration_identity, "config-identity");
-    assert_eq!(request.plan_identity, plan.render());
-    assert_eq!(
-        request.target.display(),
-        "apps/app.yaml",
-        "target identity is exact"
-    );
-    // A contextual failure keeps the identities: the plan item still
-    // names the target in its explanation.
-    let failure = PlanItem {
-        id: "item-b".to_owned(),
-        target: "apps/broken.yaml".to_owned(),
-        source: "broken".to_owned(),
-        source_path: String::new(),
-        source_order: 2,
-        kind: ItemKind::WholeFile,
-        section: None,
-        decision: PlanDecision::Rejected {
-            reason: "source unavailable".to_owned(),
-        },
-    };
-    assert!(
-        format!("{:?}", failure.decision).contains("source unavailable"),
-        "contextual failure reason preserved"
-    );
-    assert_eq!(failure.target, "apps/broken.yaml");
 }

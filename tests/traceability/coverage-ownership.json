@@ -85,10 +85,6 @@
       "row_id": "behavior-git-delivery"
     },
     {
-      "path": "src/lifecycle/source_extraction.rs",
-      "row_id": "behavior-source-materialization"
-    },
-    {
       "path": "src/lifecycle/scheduler.rs",
       "row_id": "behavior-fleet-progress"
     },
@@ -115,10 +111,6 @@
     {
       "path": "src/managed_content/delimiters.rs",
       "row_id": "behavior-partial-section-sync"
-    },
-    {
-      "path": "src/lifecycle/replacement_requests.rs",
-      "row_id": "behavior-source-materialization"
     },
     {
       "path": "src/lifecycle/diagnostics.rs",

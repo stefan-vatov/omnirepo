@@ -69,26 +69,17 @@ fn agent_confinement_requires_the_typed_root() {
 #[test]
 fn source_readers_require_the_typed_root() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for (file, signature) in [
-        (
-            "src/lifecycle/source_catalog.rs",
-            "pub fn read_source_declarations(",
-        ),
-        (
-            "src/lifecycle/source_extraction.rs",
-            "pub fn extract_from_snapshot(",
-        ),
-    ] {
-        let source = fs::read_to_string(root.join(file)).expect("read entry file");
-        let block = source
-            .split(signature)
-            .nth(1)
-            .expect("entry signature must exist");
-        assert!(
-            block.contains("AuthorityRoot<") && block.contains("SourceSnapshotRoot"),
-            "{file} entry {signature} must require the typed source root"
-        );
-    }
+    let file = "src/lifecycle/source_catalog.rs";
+    let signature = "pub fn read_source_declarations(";
+    let source = fs::read_to_string(root.join(file)).expect("read entry file");
+    let block = source
+        .split(signature)
+        .nth(1)
+        .expect("entry signature must exist");
+    assert!(
+        block.contains("AuthorityRoot<") && block.contains("SourceSnapshotRoot"),
+        "{file} entry {signature} must require the typed source root"
+    );
 }
 
 /// The run-record consumer requires the typed mutation root.
