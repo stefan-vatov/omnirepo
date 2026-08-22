@@ -151,6 +151,11 @@ jobs:
       # x86_64 stays green. This job is the only thing that observes that.
       # `release_platform` builds the shipped x86_64 bundle rather than
       # exercising containment, so it is the one documented exclusion.
+      # Several tests execute the built binary at `target/debug/omnirepo`,
+      # which `cargo test --bin` does not produce on its own.
+      - name: Build the product binary
+        run: cargo build --locked --bin omnirepo
+
       - name: Run the product test suite on arm64
         run: cargo test --bin omnirepo --locked -- --skip release_platform
         env:
