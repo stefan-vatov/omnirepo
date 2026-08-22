@@ -139,6 +139,68 @@ fn a_configured_fleet_runs_end_to_end_and_finalizes_success() {
 }
 
 #[test]
+fn an_unavailable_higher_priority_source_marks_the_repository_affected() {
+    let fixture = fixture_base();
+    // The lower-priority source is complete and declares the managed item.
+    let source = fixture.path().join("source-b");
+    git_repo(&source);
+    fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
+    fs::write(source.join("managed.txt"), "v1\n").expect("source file");
+    let git = |root: &Path, args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(root)
+            .output()
+            .expect("git");
+        assert!(output.status.success(), "git {args:?}: {:?}", output);
+    };
+    git(&source, &["add", "."]);
+    git(&source, &["commit", "--quiet", "--message", "source"]);
+    let source_head = git_text(&source, &["rev-parse", "HEAD"]);
+    fs::write(
+        source.join(".omnirepo/source.yaml"),
+        format!(
+            "omnirepo-declarations-v1\nsource=source-b revision={source_head} path=managed.txt id=item-1 mode=sync destination=managed.txt\n"
+        ),
+    )
+    .expect("declarations");
+    // A valid destination that would otherwise sync successfully.
+    let destination = fixture.path().join("destination-a");
+    git_repo(&destination);
+    fs::write(destination.join("managed.txt"), "v0\n").expect("destination file");
+    git(&destination, &["add", "."]);
+    git(&destination, &["commit", "--quiet", "--message", "base"]);
+    // The HIGHER-priority source (configured first) is unavailable.
+    let home = fixture.path().join("home");
+    fs::create_dir_all(home.join(".omnirepo")).expect("omnirepo dir");
+    let config = format!(
+        "version: 1\nrepositories:\n  - id: destination-a\n    path: {}\nsources:\n  - id: source-a\n    location: {}\n  - id: source-b\n    location: {}\n",
+        destination.display(),
+        "/definitely/not/here",
+        source.display()
+    );
+    fs::write(home.join(".omnirepo/config.yaml"), config).expect("machine config");
+    let (journal, run_id, record_path) = journal_fixture(&home);
+    let outcome = dispatch_fleet(&journal.handle, &run_id, &home, &record_path).expect("dispatch");
+    // The lower source must not be silently promoted into the unavailable
+    // higher source's authority: the repository is affected, and the
+    // destination content stays untouched.
+    assert_eq!(
+        outcome.exit_class,
+        ExitClass::TotalFailure,
+        "the affected repository fails instead of silently syncing"
+    );
+    assert_eq!(
+        fs::read_to_string(destination.join("managed.txt")).expect("destination"),
+        "v0\n",
+        "no lower-source content is applied"
+    );
+    let mut journal = journal;
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
 fn a_missing_source_authority_fails_the_fleet_typed() {
     let fixture = fixture_base();
     let home = fixture.path().join("home");

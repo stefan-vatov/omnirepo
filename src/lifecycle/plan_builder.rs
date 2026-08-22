@@ -124,6 +124,34 @@ pub fn build_repository_plan(
         .filter(|selection| matches!(selection.decision, SelectionDecision::Selected { .. }))
         .map(|selection| selection.item)
         .collect::<Vec<_>>();
+    // An unavailable higher-priority source never silently promotes a
+    // lower source into its authority
+    // (canon/architecture/configuration-authority.md).  Its declarations
+    // are unknowable, so any selected item won by a source configured
+    // after it may be a silent promotion: the plan is affected with the
+    // unavailable source named.
+    for item in &selected {
+        let winner_position = catalog
+            .entries()
+            .iter()
+            .position(|entry| catalog_source(entry).is_some_and(|id| id.as_str() == item.source));
+        let Some(winner_position) = winner_position else {
+            continue;
+        };
+        for entry in &catalog.entries()[..winner_position] {
+            if let CatalogState::Unavailable { source, reason } = entry {
+                return Err(PlanBuildError::Affected {
+                    source: source.as_str().to_owned(),
+                    item: Some(item.id.clone()),
+                    reason: format!(
+                        "the higher-priority source is unavailable ({reason}); \
+                         its authority must not silently pass to the lower source {}",
+                        item.source
+                    ),
+                });
+            }
+        }
+    }
     // Losers stay visible: every shadowed declaration appears in the plan
     // as a rejected item naming its winner, never as a silent drop.
     for winner in &resolved {

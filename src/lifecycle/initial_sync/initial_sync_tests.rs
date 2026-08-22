@@ -41,6 +41,18 @@ fn item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncItem {
         target: target.to_owned(),
         current_bytes: current.to_vec(),
         replacement: frozen.to_vec(),
+        create: false,
+        fail: None,
+    }
+}
+
+fn creation_item(id: &str, target: &str, frozen: &[u8]) -> SyncItem {
+    SyncItem {
+        plan_item_id: id.to_owned(),
+        target: target.to_owned(),
+        current_bytes: Vec::new(),
+        replacement: frozen.to_vec(),
+        create: true,
         fail: None,
     }
 }
@@ -51,6 +63,7 @@ fn failing_item(id: &str, target: &str, frozen: &[u8], current: &[u8]) -> SyncIt
         target: target.to_owned(),
         current_bytes: current.to_vec(),
         replacement: frozen.to_vec(),
+        create: false,
         fail: Some("simulated failure".to_owned()),
     }
 }
@@ -136,6 +149,91 @@ fn failure_leaves_exactly_the_residue_and_later_items_follow_policy() {
         SyncOutcome::Skipped { .. }
     ));
     journal2.shutdown().expect("shutdown");
+}
+
+#[test]
+fn a_replacement_publishes_atomically_and_preserves_the_mode() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, mut journal, run_id) = journal_fixture();
+    fs::write(_fixture.path().join("changed.txt"), b"v1\n").expect("fixture");
+    fs::set_permissions(
+        _fixture.path().join("changed.txt"),
+        fs::Permissions::from_mode(0o664),
+    )
+    .expect("mode");
+    let items = vec![item("a", "changed.txt", b"v2\n", b"v1\n")];
+    let report = execute_sync_pass(
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        _fixture.path(),
+        &items,
+        FailurePolicy::Continue,
+    )
+    .expect("pass");
+    assert!(matches!(report.items[0].outcome, SyncOutcome::Replacement));
+    assert_eq!(
+        fs::read(_fixture.path().join("changed.txt")).expect("content"),
+        b"v2\n"
+    );
+    let mode = fs::metadata(_fixture.path().join("changed.txt"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o664, "the existing mode is preserved exactly");
+    // No temporary residue after a successful replacement.
+    let residue = fs::read_dir(_fixture.path())
+        .expect("dir")
+        .filter(|entry| {
+            entry
+                .as_ref()
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .contains("omnirepo-tmp")
+        })
+        .count();
+    assert_eq!(residue, 0, "no temporary residue after success");
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn an_absent_target_is_a_lawful_creation_with_safe_parents() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, mut journal, run_id) = journal_fixture();
+    // An empty-payload creation still creates the file: absence never
+    // classifies as "unchanged".
+    let items = vec![
+        creation_item("a", "nested/dir/new.txt", b"created\n"),
+        creation_item("b", "empty.txt", b""),
+    ];
+    let report = execute_sync_pass(
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        _fixture.path(),
+        &items,
+        FailurePolicy::Continue,
+    )
+    .expect("pass");
+    assert!(matches!(report.items[0].outcome, SyncOutcome::Replacement));
+    assert!(matches!(report.items[1].outcome, SyncOutcome::Replacement));
+    assert_eq!(
+        fs::read(_fixture.path().join("nested/dir/new.txt")).expect("created"),
+        b"created\n"
+    );
+    assert_eq!(
+        fs::read(_fixture.path().join("empty.txt")).expect("created"),
+        b""
+    );
+    let mode = fs::metadata(_fixture.path().join("nested/dir/new.txt"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode & !0o644, 0, "no bits beyond the 0644 creation mode");
+    journal.shutdown().expect("shutdown");
 }
 
 #[test]

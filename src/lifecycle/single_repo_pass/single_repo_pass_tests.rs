@@ -79,6 +79,19 @@ fn identity(inode: u64) -> FileIdentity {
 }
 
 fn snapshot_for(root: &Path) -> RepositorySnapshot {
+    snapshot_with_targets(
+        root,
+        vec![
+            ManagedTargetIdentity::whole_file(
+                RelativePath::new("managed.txt").expect("path"),
+                Some(identity(11)),
+            )
+            .expect("target"),
+        ],
+    )
+}
+
+fn snapshot_with_targets(root: &Path, targets: Vec<ManagedTargetIdentity>) -> RepositorySnapshot {
     RepositorySnapshot::new(
         crate::repository::RepositoryFacts::new(
             crate::repository::RepositoryId::new("dest-a").expect("id"),
@@ -107,15 +120,80 @@ fn snapshot_for(root: &Path) -> RepositorySnapshot {
         .expect("facts"),
         crate::repository::FrozenWitnesses::new("a", "s", "c", "cfg", "p", vec![], None)
             .expect("witnesses"),
+        targets,
+    )
+    .expect("snapshot")
+}
+
+#[test]
+fn an_absent_target_is_created_and_delivered_as_a_lawful_creation() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    // A source root providing the authoritative bytes for a first-time
+    // destination file in a nested directory.
+    let source_fixture = tempfile::Builder::new()
+        .prefix("single-repo-source-")
+        .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
+        .expect("source fixture");
+    fs::write(source_fixture.path().join("created.txt"), "created-v1\n").expect("source file");
+    let plan = crate::lifecycle::sync_plan::SyncPlan::new(
+        "dest-a",
+        vec![crate::lifecycle::sync_plan::PlanItem {
+            id: "item-created".to_owned(),
+            target: "nested/dir/created.txt".to_owned(),
+            source: "source-a".to_owned(),
+            source_path: "created.txt".to_owned(),
+            source_order: 0,
+            kind: crate::source::ItemKind::WholeFile,
+            section: None,
+            decision: crate::lifecycle::sync_plan::PlanDecision::Selected {
+                reason: "declared winner".to_owned(),
+            },
+        }],
+    );
+    let mut sources = std::collections::HashMap::new();
+    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    // The snapshot freezes the absent target as the lawful creation case.
+    let snapshot = snapshot_with_targets(
+        &root,
         vec![
             ManagedTargetIdentity::whole_file(
-                RelativePath::new("managed.txt").expect("path"),
-                Some(identity(11)),
+                RelativePath::new("nested/dir/created.txt").expect("path"),
+                None,
             )
             .expect("target"),
         ],
+    );
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot,
+        &[],
+        &plan,
+        &sources,
+        "sync managed",
     )
-    .expect("snapshot")
+    .expect("pass");
+    assert!(
+        matches!(outcome, PassOutcome::Delivered { .. }),
+        "the creation delivers: {outcome:?}"
+    );
+    // The first-time file exists with the authoritative bytes, safe
+    // created parents, and the 0644 creation mode (subject to the umask).
+    assert_eq!(
+        fs::read(root.join("nested/dir/created.txt")).expect("created"),
+        b"created-v1\n"
+    );
+    let mode = fs::metadata(root.join("nested/dir/created.txt"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode & !0o644, 0, "no bits beyond the 0644 creation mode");
+    journal.shutdown().expect("shutdown");
 }
 
 #[test]

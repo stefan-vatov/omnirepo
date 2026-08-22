@@ -151,7 +151,17 @@ pub fn reapply_authoritative(
             applied.content
         }
     };
-    fs::write(&target, rendered).map_err(|error| ReapplyError::Write {
+    // Atomic and durable replacement (canon/architecture/managed-content.md):
+    // a same-directory temporary, sync, rename, and parent-directory sync,
+    // so an interrupted reapply exposes only the old or the new complete
+    // file.
+    crate::lifecycle::replace::replace_bytes_atomically(
+        working,
+        managed,
+        "repair-reapply",
+        &rendered,
+    )
+    .map_err(|error| ReapplyError::Write {
         path: target.clone(),
         reason: error.to_string(),
     })?;

@@ -92,13 +92,24 @@ pub fn run_single_repository_pass(
     sources: &std::collections::HashMap<String, std::path::PathBuf>,
     message: &str,
 ) -> Result<PassOutcome, PassError> {
+    // A destination that is not itself a git repository cannot deliver:
+    // fail typed before any effect, so no git command can walk out of the
+    // destination root into an enclosing repository.
+    if matches!(snapshot.facts().git(), GitRepositoryState::NonGit) {
+        return Ok(PassOutcome::Failed {
+            reason: "the destination is not a git repository; no synchronization or Git delivery"
+                .to_owned(),
+        });
+    }
     // Group the selected plan items by destination target, in plan order:
     // all operations targeting one destination file form one atomic group
     // (canon/architecture/fleet-lifecycle.md).  Rejected items never
     // execute.  A group that cannot compose (absent target, unknown
     // destination format, ambiguous topology, unreadable source) becomes
     // a failed item: one group's failure never prevents independent
-    // groups in the same repository from being attempted.
+    // groups in the same repository from being attempted.  An absent
+    // target is a lawful creation case (canon/architecture/managed-content.md):
+    // the sync pass creates it with mode 0644 and safe contained parents.
     let mut groups: Vec<(&str, Vec<&crate::lifecycle::sync_plan::PlanItem>)> = Vec::new();
     for plan_item in plan.items.iter() {
         if !matches!(
@@ -136,19 +147,20 @@ pub fn run_single_repository_pass(
             source_roots.insert(member.source.clone(), root);
         }
     }
-    let mut operations = Vec::new();
+    let mut composed: Vec<ComposedGroup> = Vec::new();
     let mut items = Vec::new();
     for (target, members) in &groups {
         match compose_group(working, snapshot, &source_roots, target, members) {
-            Ok((operation, current_bytes, replacement)) => {
-                operations.push(operation);
+            Ok(group) => {
                 items.push(SyncItem {
                     plan_item_id: (*target).to_owned(),
                     target: (*target).to_owned(),
-                    current_bytes,
-                    replacement,
+                    current_bytes: group.current_bytes.clone(),
+                    replacement: group.replacement.clone(),
+                    create: group.observed.is_none(),
                     fail: None,
                 });
+                composed.push(group);
             }
             Err(reason) => {
                 // The group is failed, not the pass: peers still apply.
@@ -157,14 +169,12 @@ pub fn run_single_repository_pass(
                     target: (*target).to_owned(),
                     current_bytes: Vec::new(),
                     replacement: Vec::new(),
+                    create: false,
                     fail: Some(reason),
                 });
             }
         }
     }
-    let delta = build_authorized_delta(snapshot, operations).map_err(|error| PassError::Plan {
-        reason: error.to_string(),
-    })?;
     // Journal the contained sync pass and apply every replacement to the
     // destination worktree BEFORE the isolated index is staged, so the
     // commit captures the applied content.
@@ -193,6 +203,47 @@ pub fn run_single_repository_pass(
             });
         }
     }
+    // Build the authorized operations after the pass so a created target
+    // contributes its real published identity.
+    let mut operations = Vec::new();
+    let mut created_targets: Vec<Vec<u8>> = Vec::new();
+    let observe_root =
+        AuthorityRoot::<crate::platform::DestinationRepositoryRoot, ReadOnly>::open(working)
+            .map_err(|error| PassError::Plan {
+                reason: error.to_string(),
+            })?;
+    for group in &composed {
+        match &group.observed {
+            Some(identity) => operations.push(PlannedOperation::replaced(
+                group.path.clone(),
+                identity.clone(),
+                identity.clone(),
+            )),
+            None => {
+                let relative =
+                    crate::platform::RelativePath::parse(&group.target).map_err(|error| {
+                        PassError::Plan {
+                            reason: error.to_string(),
+                        }
+                    })?;
+                let after = crate::lifecycle::fleet_snapshot::observe_target_identity(
+                    &observe_root,
+                    working,
+                    &group.target,
+                    &relative,
+                )
+                .map_err(|reason| PassError::Plan { reason })?
+                .ok_or_else(|| PassError::Plan {
+                    reason: format!("created target {} is absent after the pass", group.target),
+                })?;
+                created_targets.push(group.target.as_bytes().to_vec());
+                operations.push(PlannedOperation::added(group.path.clone(), after));
+            }
+        }
+    }
+    let delta = build_authorized_delta(snapshot, operations).map_err(|error| PassError::Plan {
+        reason: error.to_string(),
+    })?;
     let index: IsolatedIndex = prepare_index(working, &delta).map_err(|error| PassError::Plan {
         reason: error.to_string(),
     })?;
@@ -263,7 +314,15 @@ pub fn run_single_repository_pass(
                 .targets()
                 .iter()
                 .any(|target| target.path().as_bytes() == path.as_slice());
-            if target && change != TargetChange::Modified {
+            // The authorized effect is a modification for a replaced
+            // target and an addition for a created target; anything else
+            // at a managed path is a concurrent change.
+            let authorized = if created_targets.iter().any(|created| created == &path) {
+                matches!(change, TargetChange::Added | TargetChange::Untracked)
+            } else {
+                change == TargetChange::Modified
+            };
+            if target && !authorized {
                 return Ok(PassOutcome::Failed {
                     reason: format!(
                         "managed target {} changed concurrently ({change:?}); no Git delivery",
@@ -341,9 +400,22 @@ fn read_source_file(
     Ok(bytes)
 }
 
+/// One composed destination-file group.
+struct ComposedGroup {
+    path: crate::repository::RelativePath,
+    target: String,
+    /// The frozen identity of an existing target; `None` is the lawful
+    /// creation case.
+    observed: Option<crate::repository::FileIdentity>,
+    current_bytes: Vec<u8>,
+    replacement: Vec<u8>,
+}
+
 /// Compose one destination-file group: resolve the frozen identity, read
-/// the destination once, and build the complete replacement bytes.  Any
-/// failure is returned as the group's reason and contained to the group.
+/// the destination once (an absent target composes from empty bytes and
+/// is created by the pass), and build the complete replacement bytes.
+/// Any failure is returned as the group's reason and contained to the
+/// group.
 fn compose_group(
     working: &Path,
     snapshot: &RepositorySnapshot,
@@ -353,23 +425,22 @@ fn compose_group(
     >,
     target: &str,
     members: &[&crate::lifecycle::sync_plan::PlanItem],
-) -> Result<(PlannedOperation, Vec<u8>, Vec<u8>), String> {
-    let observed = snapshot
+) -> Result<ComposedGroup, String> {
+    let Some(entry) = snapshot
         .targets()
         .iter()
-        .find(|target_entry| target_entry.path().as_bytes() == target.as_bytes());
-    let Some(identity) = observed.and_then(|entry| entry.observed_file().cloned()) else {
+        .find(|target_entry| target_entry.path().as_bytes() == target.as_bytes())
+    else {
         return Err(format!(
-            "managed target {target} is absent; creation is not part of the replace-only pass"
+            "managed target {target} is not frozen in the snapshot"
         ));
     };
-    let operation = PlannedOperation::replaced(
-        observed.expect("observed target was found").path().clone(),
-        identity.clone(),
-        identity,
-    );
-    let current_bytes = std::fs::read(working.join(target))
-        .map_err(|error| format!("cannot read the current managed target {target}: {error}"))?;
+    let observed = entry.observed_file().cloned();
+    let current_bytes = match &observed {
+        Some(_) => std::fs::read(working.join(target))
+            .map_err(|error| format!("cannot read the current managed target {target}: {error}"))?,
+        None => Vec::new(),
+    };
     let whole_file = members
         .iter()
         .any(|member| member.kind == crate::source::ItemKind::WholeFile);
@@ -401,7 +472,13 @@ fn compose_group(
             .map_err(|error| format!("target {target}: {error}"))?
             .content
     };
-    Ok((operation, current_bytes, replacement))
+    Ok(ComposedGroup {
+        path: entry.path().clone(),
+        target: target.to_owned(),
+        observed,
+        current_bytes,
+        replacement,
+    })
 }
 
 /// Read one plan item's authoritative bytes: the exact source file.

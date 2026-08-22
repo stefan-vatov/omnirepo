@@ -255,7 +255,8 @@ fn a_failing_repository_never_stops_its_peers() {
         .any(|result| matches!(result, crate::lifecycle::fleet_collector::MemberResult::Failed { repository, .. } if repository == "repo-bad"));
     assert!(
         bad_failed,
-        "repo-bad fails typed without stopping repo-good"
+        "repo-bad fails typed without stopping repo-good: {:?}",
+        response.results
     );
     journal.shutdown().expect("shutdown");
 }

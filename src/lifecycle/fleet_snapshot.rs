@@ -80,32 +80,7 @@ pub fn build_frozen_snapshot(
         }
         seen.push(item.target.as_str());
         let relative = RelativePath::parse(&item.target).map_err(|error| error.to_string())?;
-        let observed = match root.resolve_read(&relative, ObjectClass::RegularFile) {
-            Ok(target) => {
-                let identity = target.identity();
-                let filesystem = domain_filesystem(identity.filesystem());
-                let object = domain_object(identity.object());
-                #[cfg(unix)]
-                let mode = {
-                    use std::os::unix::fs::PermissionsExt;
-                    std::fs::metadata(working.join(&item.target))
-                        .map_err(|error| error.to_string())?
-                        .permissions()
-                        .mode()
-                };
-                #[cfg(not(unix))]
-                let mode = 0o100644;
-                Some(
-                    FileIdentity::new(filesystem, object, EntryKind::RegularFile, mode)
-                        .map_err(|error| error.to_string())?,
-                )
-            }
-            // Only true absence is a lawful creation target; every other
-            // rejection (aliases, links, mounts, non-regular objects) is
-            // a typed failure.
-            Err(crate::platform::PathError::NotFound { .. }) => None,
-            Err(error) => return Err(error.to_string()),
-        };
+        let observed = observe_target_identity(&root, working, &item.target, &relative)?;
         let domain_relative =
             crate::repository::RelativePath::from_bytes(relative.display().as_bytes())
                 .map_err(|error| error.to_string())?;
@@ -115,6 +90,41 @@ pub fn build_frozen_snapshot(
         );
     }
     RepositorySnapshot::new(facts, witnesses, targets).map_err(|error| error.to_string())
+}
+
+/// Observe one destination target's file identity through the typed
+/// read-only root.  Only true absence is a lawful creation target
+/// (`None`); every other rejection (aliases, links, mounts, non-regular
+/// objects) is a typed failure.
+pub(crate) fn observe_target_identity(
+    root: &AuthorityRoot<DestinationRepositoryRoot, ReadOnly>,
+    working: &Path,
+    target: &str,
+    relative: &RelativePath,
+) -> Result<Option<FileIdentity>, String> {
+    match root.resolve_read(relative, ObjectClass::RegularFile) {
+        Ok(resolved) => {
+            let identity = resolved.identity();
+            let filesystem = domain_filesystem(identity.filesystem());
+            let object = domain_object(identity.object());
+            #[cfg(unix)]
+            let mode = {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::metadata(working.join(target))
+                    .map_err(|error| error.to_string())?
+                    .permissions()
+                    .mode()
+            };
+            #[cfg(not(unix))]
+            let mode = 0o100644;
+            Ok(Some(
+                FileIdentity::new(filesystem, object, EntryKind::RegularFile, mode)
+                    .map_err(|error| error.to_string())?,
+            ))
+        }
+        Err(crate::platform::PathError::NotFound { .. }) => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
 }
 
 /// Convert the platform filesystem identity to the domain type.  The

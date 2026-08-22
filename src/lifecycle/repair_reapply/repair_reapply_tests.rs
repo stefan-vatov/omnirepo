@@ -96,6 +96,41 @@ fn whole_file_reapply_rewrites_byte_exact() {
 }
 
 #[test]
+fn reapply_replaces_atomically_without_residue_and_preserves_the_mode() {
+    use std::os::unix::fs::PermissionsExt;
+    let fixture = fixture_root();
+    fs::write(fixture.path().join("managed.md"), "v1\n").expect("file");
+    fs::set_permissions(
+        fixture.path().join("managed.md"),
+        fs::Permissions::from_mode(0o664),
+    )
+    .expect("mode");
+    reapply_authoritative(fixture.path(), "managed.md", None, b"authoritative-v2\n")
+        .expect("reapply");
+    // The replacement went through the same-directory temporary + rename
+    // path: no temporary residue survives a successful reapply, and the
+    // existing mode is preserved exactly.
+    let residue = fs::read_dir(fixture.path())
+        .expect("dir")
+        .filter(|entry| {
+            entry
+                .as_ref()
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .contains("omnirepo-tmp")
+        })
+        .count();
+    assert_eq!(residue, 0, "no temporary residue after success");
+    let mode = fs::metadata(fixture.path().join("managed.md"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o664, "the existing mode is preserved exactly");
+}
+
+#[test]
 fn a_drifted_destination_fails_the_frozen_verification() {
     let fixture = fixture_root();
     fs::write(fixture.path().join("managed.md"), "drifted\n").expect("file");

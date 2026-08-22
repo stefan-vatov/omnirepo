@@ -12,11 +12,9 @@ use crate::lifecycle::event::{EvidenceKind, EvidenceRef, JournalEvent};
 #[cfg(test)]
 mod initial_sync_tests;
 use crate::lifecycle::journal::{JournalError, JournalHandle};
-use crate::platform::{
-    AuthorityRoot, DestinationRepositoryRoot, Mutate, MutationIntent, RelativePath,
-    resolve_mutation,
-};
-use std::{error::Error, fmt, io::Write, path::Path};
+use crate::lifecycle::replace::{owned_temp_display, replace_bytes_atomically};
+use crate::platform::RelativePath;
+use std::{error::Error, fmt, path::Path};
 
 /// The declared failure policy for later items.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -37,6 +35,10 @@ pub struct SyncItem {
     /// The exact complete destination bytes to write (the composed file
     /// for section groups, the authoritative bytes for whole files).
     pub replacement: Vec<u8>,
+    /// True when the target is absent and the item is a lawful creation
+    /// (a creation always writes; equal bytes never make an absent target
+    /// "unchanged").
+    pub create: bool,
     /// Deterministic failure seam (group composition failures and
     /// fault-injection use).
     pub fail: Option<String>,
@@ -97,30 +99,23 @@ impl fmt::Display for SyncPassError {
 impl Error for SyncPassError {}
 
 /// The residue of a failed operation: exactly the temp candidate path.
-fn residue_for(target: &str) -> String {
-    format!("{target}.omnirepo-tmp")
+fn residue_for(target: &str, operation_id: &str) -> String {
+    owned_temp_display(target, operation_id)
 }
 
-/// Write the replacement bytes to the destination target through the
-/// mutation authority (no-follow, identity-revalidated, synced).
-fn write_replacement(working: &Path, target: &str, bytes: &[u8]) -> Result<(), String> {
-    let root = AuthorityRoot::<DestinationRepositoryRoot, Mutate>::open(working)
-        .map_err(|error| format!("open root: {error}"))?;
-    let relative = RelativePath::parse(target).map_err(|error| format!("parse: {error}"))?;
-    let mutation = resolve_mutation(&root, &relative, MutationIntent::Replace)
-        .map_err(|error| format!("resolve: {error}"))?;
-    // resolve_mutation validated the leaf and kept its O_RDWR handle;
-    // revalidate_mutation returns the parent (the create path), so the
-    // write goes through the leaf handle directly.
-    let mut file = mutation
-        .handle
-        .ok_or_else(|| format!("replace target {target} has no write handle"))?;
-    file.set_len(0)
-        .map_err(|error| format!("set_len: {error}"))?;
-    file.write_all(bytes)
-        .map_err(|error| format!("write: {error}"))?;
-    file.sync_all().map_err(|error| format!("sync: {error}"))?;
-    Ok(())
+/// Write the replacement bytes to the destination target atomically and
+/// durably: a same-directory temporary sibling, file synchronization,
+/// rename, and parent-directory synchronization
+/// (canon/architecture/managed-content.md).  An absent target is created
+/// with mode 0644 and safe contained parents.
+fn write_replacement(
+    working: &Path,
+    target: &str,
+    operation_id: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    replace_bytes_atomically(working, target, operation_id, bytes)
+        .map_err(|error| error.to_string())
 }
 
 /// Execute the pass: validate every target first (outside-scope content is
@@ -163,16 +158,16 @@ pub fn execute_sync_pass(
         )?;
         let outcome = if let Some(reason) = &item.fail {
             SyncOutcome::Failed {
-                residue: vec![residue_for(&item.target)],
+                residue: vec![residue_for(&item.target, &item.plan_item_id)],
                 reason: reason.clone(),
             }
-        } else if item.replacement == item.current_bytes {
+        } else if !item.create && item.replacement == item.current_bytes {
             SyncOutcome::Unchanged
         } else {
-            match write_replacement(working, &item.target, &item.replacement) {
+            match write_replacement(working, &item.target, &item.plan_item_id, &item.replacement) {
                 Ok(()) => SyncOutcome::Replacement,
                 Err(reason) => SyncOutcome::Failed {
-                    residue: vec![residue_for(&item.target)],
+                    residue: vec![residue_for(&item.target, &item.plan_item_id)],
                     reason,
                 },
             }

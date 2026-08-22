@@ -2,7 +2,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use super::{ReplaceError, ReplaceRequest, replace};
+use super::{DecidedMode, ReplaceError, ReplaceRequest, replace, replace_bytes_atomically};
 use crate::lifecycle::transaction_evidence::restart_cleanup;
 use crate::managed_content::{ParentDirectories, TransactionPlan};
 use std::{fs, path::Path};
@@ -29,7 +29,11 @@ fn plan(operation: &str, target: &str) -> TransactionPlan {
 }
 
 fn request(operation: &str, target: &str, content: &str) -> ReplaceRequest {
-    ReplaceRequest::new(plan(operation, target), content.as_bytes().to_vec(), 0o644)
+    ReplaceRequest::new(
+        plan(operation, target),
+        content.as_bytes().to_vec(),
+        DecidedMode::Preserve(0o644),
+    )
 }
 
 #[test]
@@ -236,4 +240,95 @@ fn failure_atomicity_observes_only_allowed_states() {
         fs::read(root.join("target.txt")).expect("new"),
         b"new content"
     );
+}
+
+#[test]
+fn a_preserved_mode_is_exact_despite_the_umask() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, root) = fixture_root();
+    fs::write(root.join("target.txt"), b"old").expect("write old");
+    fs::set_permissions(root.join("target.txt"), fs::Permissions::from_mode(0o664))
+        .expect("target mode");
+    // 0o664 carries group-write, which a common umask (022) would strip at
+    // temp creation; the preserved mode must survive exactly.
+    replace_bytes_atomically(&root, "target.txt", "op-1", b"new bytes\n").expect("replace");
+    assert_eq!(
+        fs::read(root.join("target.txt")).expect("content"),
+        b"new bytes\n"
+    );
+    let mode = fs::metadata(root.join("target.txt"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o664, "the existing mode is preserved exactly");
+}
+
+#[test]
+fn an_absent_target_is_created_with_safe_contained_parents() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, root) = fixture_root();
+    replace_bytes_atomically(&root, "nested/dir/new.txt", "op-1", b"content\n").expect("creation");
+    assert_eq!(
+        fs::read(root.join("nested/dir/new.txt")).expect("content"),
+        b"content\n"
+    );
+    // The new file uses mode 0644 subject to the process umask.
+    let mode = fs::metadata(root.join("nested/dir/new.txt"))
+        .expect("metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode & !0o644, 0, "no bits beyond the 0644 creation mode");
+    assert!(mode & 0o600 == 0o600, "owner read/write survive: {mode:o}");
+}
+
+#[test]
+fn a_failed_creation_removes_only_the_empty_parents_it_created() {
+    let (_fixture, root) = fixture_root();
+    fs::write(root.join("keep.txt"), b"peer").expect("peer");
+    // An over-long operation id is a deterministic fault seam: the owned
+    // temporary name exceeds the filesystem name limit, so the executor
+    // fails after the parent directories were created.
+    let too_long = "x".repeat(300);
+    let error = replace_bytes_atomically(&root, "sub/new.txt", &too_long, b"content\n")
+        .expect_err("injected failure");
+    assert!(
+        matches!(error, ReplaceError::CreateTemp { .. }),
+        "{error:?}"
+    );
+    assert!(
+        !root.join("sub").exists(),
+        "the created parent is removed after failure"
+    );
+    assert_eq!(fs::read(root.join("keep.txt")).expect("peer"), b"peer");
+}
+
+#[test]
+fn a_path_shaped_operation_id_keeps_the_temporary_a_sibling() {
+    let (_fixture, root) = fixture_root();
+    fs::create_dir_all(root.join("nested")).expect("parent");
+    fs::write(root.join("nested/target.txt"), b"old").expect("write old");
+    // The group id is the destination path itself in the pass: it must
+    // never turn the temporary into a nested path.
+    replace_bytes_atomically(&root, "nested/target.txt", "nested/target.txt", b"new\n")
+        .expect("replace");
+    assert_eq!(
+        fs::read(root.join("nested/target.txt")).expect("content"),
+        b"new\n"
+    );
+    assert_eq!(
+        super::owned_temp_display("nested/target.txt", "nested/target.txt"),
+        "nested/.target.txt.omnirepo-tmp-nested-target.txt-1.tmp"
+    );
+}
+
+#[test]
+fn a_directory_target_fails_typed_and_stays_intact() {
+    let (_fixture, root) = fixture_root();
+    fs::create_dir_all(root.join("adir")).expect("dir target");
+    let error =
+        replace_bytes_atomically(&root, "adir", "op-1", b"new").expect_err("directory target");
+    assert!(matches!(error, ReplaceError::Resolve { .. }), "{error:?}");
+    assert!(root.join("adir").is_dir(), "the directory is untouched");
 }

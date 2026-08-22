@@ -105,6 +105,67 @@ fn shadowed_sources_affect_the_plan_with_reason() {
 }
 
 #[test]
+fn an_unavailable_higher_priority_source_never_promotes_a_lower_source() {
+    // The unavailable source is configured FIRST (highest priority); its
+    // declarations are unknowable, so a lower source's win would be a
+    // silent promotion and the plan is affected instead.
+    let mut catalog = SourceCatalog::new();
+    catalog
+        .record(CatalogState::Unavailable {
+            source: source("primary-down"),
+            reason: "acquisition failed".to_owned(),
+        })
+        .expect("record");
+    catalog
+        .record(CatalogState::Complete {
+            source: source("secondary"),
+            revision: revision("rev-1"),
+        })
+        .expect("record");
+    let error = build_repository_plan(
+        "dest-a",
+        &catalog,
+        &[item("a", "t1", "secondary", 1)],
+        &Policy::Absent,
+    )
+    .expect_err("affected");
+    match error {
+        PlanBuildError::Affected {
+            source,
+            item,
+            reason,
+        } => {
+            assert_eq!(source, "primary-down", "the unavailable source is named");
+            assert_eq!(item.as_deref(), Some("a"));
+            assert!(reason.contains("unavailable"), "{reason}");
+            assert!(reason.contains("secondary"), "{reason}");
+        }
+        other => panic!("expected affected, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_unavailable_lower_priority_source_does_not_affect_higher_winners() {
+    // The unavailable source is configured AFTER the winner: it could
+    // never have outranked the winner, so the plan proceeds.
+    let mut catalog = complete_catalog();
+    catalog
+        .record(CatalogState::Unavailable {
+            source: source("tertiary-down"),
+            reason: "acquisition failed".to_owned(),
+        })
+        .expect("record");
+    let plan = build_repository_plan(
+        "dest-a",
+        &catalog,
+        &[item("a", "t1", "primary", 1)],
+        &Policy::Absent,
+    )
+    .expect("plan proceeds");
+    assert_eq!(plan.items.len(), 1);
+}
+
+#[test]
 fn collision_behavior_follows_identity_policy_only() {
     let catalog = complete_catalog();
     // Two items on the same target: the declared order decides; content
