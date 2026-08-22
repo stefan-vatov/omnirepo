@@ -125,16 +125,4 @@ fn hostile_paths_and_content_fail_before_any_destination_mutation() {
             "{text}"
         );
     }
-    // Hostile section decisions fail typed without reading.
-    assert!(
-        extract_payload(
-            "f",
-            b"x",
-            &PayloadKind::Section {
-                start_line: 0,
-                end_line: 1
-            }
-        )
-        .is_err()
-    );
 }

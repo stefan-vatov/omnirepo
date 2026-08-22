@@ -9,7 +9,6 @@ mod publish;
 mod snapshot;
 
 pub(crate) use declarations::{DeclarationsError, SourceDeclaration, parse_declarations};
-pub(crate) use extraction::{PayloadKind, extract_payload};
 pub(crate) use snapshot::{RevisionId, SourceId};
 
 pub(crate) use catalog_state::{CatalogState, SourceCatalog};
@@ -27,7 +26,7 @@ pub(crate) use item_resolution::{CollisionKind, LoserRef, ResolutionError};
 pub(crate) use declarations::DECLARATION_VERSION;
 
 #[cfg(test)]
-pub(crate) use extraction::content_identity;
+pub(crate) use extraction::{PayloadKind, content_identity, extract_payload};
 
 #[cfg(test)]
 mod acquisition_tests;
