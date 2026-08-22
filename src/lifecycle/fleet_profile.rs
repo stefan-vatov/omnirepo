@@ -88,6 +88,10 @@ pub fn follow_up_candidates() -> Vec<&'static str> {
 
 /// The process I/O counter (Linux /proc/self/io; 0 elsewhere).
 fn proc_io_counter(read: bool) -> u64 {
+    // The counter file is Linux-only; other platforms report 0 and never
+    // inspect which counter was requested.
+    #[cfg(not(target_os = "linux"))]
+    let _ = read;
     #[cfg(target_os = "linux")]
     {
         if let Ok(io) = std::fs::read_to_string("/proc/self/io") {
