@@ -44,12 +44,71 @@ const REDACTED_MARKER: &str = "[REDACTED]";
 const CONTROL_SEQUENCE_MARKER: &str = "[control-sequence]";
 const MAX_IDENTITY_BYTES: usize = 4096;
 
-#[cfg(target_os = "linux")]
+// `O_NOFOLLOW` and `O_DIRECTORY` are architecture-specific on Linux. The
+// arm family reuses the arm `fcntl.h` values, while x86, riscv, s390x and
+// loongarch use the asm-generic ones. A wrong value never fails loudly: the
+// bit pattern simply means a different flag (the asm-generic `O_NOFOLLOW`
+// is `O_LARGEFILE` on aarch64), so the open silently follows a symlink and
+// voids the containment guarantee in canon/architecture/runtime-platform.md.
+// An architecture whose values are not verified here fails the build instead
+// of opening without no-follow.
+#[cfg(all(target_os = "linux", any(target_arch = "aarch64", target_arch = "arm")))]
+const O_DIRECTORY: c_int = 0o40000;
+#[cfg(all(
+    target_os = "linux",
+    any(
+        target_arch = "x86_64",
+        target_arch = "x86",
+        target_arch = "riscv64",
+        target_arch = "riscv32",
+        target_arch = "s390x",
+        target_arch = "loongarch64"
+    )
+))]
 const O_DIRECTORY: c_int = 0o200000;
 #[cfg(target_os = "linux")]
 const O_CLOEXEC: c_int = 0o2000000;
-#[cfg(target_os = "linux")]
+// `O_NOFOLLOW` and `O_DIRECTORY` are architecture-specific on Linux. The
+// arm family reuses the arm `fcntl.h` values, while x86, riscv, s390x and
+// loongarch use the asm-generic ones. A wrong value never fails loudly: the
+// bit pattern simply means a different flag (the asm-generic `O_NOFOLLOW`
+// is `O_LARGEFILE` on aarch64), so the open silently follows a symlink and
+// voids the containment guarantee in canon/architecture/runtime-platform.md.
+// An architecture whose values are not verified here fails the build instead
+// of opening without no-follow.
+#[cfg(all(target_os = "linux", any(target_arch = "aarch64", target_arch = "arm")))]
+const O_NOFOLLOW: c_int = 0o100000;
+#[cfg(all(
+    target_os = "linux",
+    any(
+        target_arch = "x86_64",
+        target_arch = "x86",
+        target_arch = "riscv64",
+        target_arch = "riscv32",
+        target_arch = "s390x",
+        target_arch = "loongarch64"
+    )
+))]
 const O_NOFOLLOW: c_int = 0o400000;
+#[cfg(all(
+    target_os = "linux",
+    not(any(
+        any(target_arch = "aarch64", target_arch = "arm"),
+        any(
+            target_arch = "x86_64",
+            target_arch = "x86",
+            target_arch = "riscv64",
+            target_arch = "riscv32",
+            target_arch = "s390x",
+            target_arch = "loongarch64"
+        )
+    ))
+))]
+const _UNVERIFIED_LINUX_ARCHITECTURE: () = compile_error!(
+    "this Linux architecture has unverified O_NOFOLLOW/O_DIRECTORY values; \
+add the architecture's exact fcntl.h values rather than building without \
+no-follow containment"
+);
 #[cfg(target_os = "linux")]
 const O_WRONLY: c_int = 0o1;
 #[cfg(target_os = "linux")]

@@ -127,3 +127,31 @@ jobs:
           find target/omnirepo-test-artifacts -type f -path '*/cases/*' -name '*.log'
           -exec sh -c 'echo "===== {} ====="; cat "{}"' \;
         shell: bash
+
+  arm64-containment:
+    name: containment on arm64 Linux
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2.9.2
+
+      # `O_NOFOLLOW` and `O_DIRECTORY` hold different bit patterns on the arm
+      # family than on the asm-generic architectures. A wrong value never
+      # fails loudly: the open silently follows the symlink it was supposed
+      # to refuse, so the containment guarantee disappears on arm64 while
+      # x86_64 stays green. This job is the only thing that observes that.
+      # `release_platform` builds the shipped x86_64 bundle rather than
+      # exercising containment, so it is the one documented exclusion.
+      - name: Run the product test suite on arm64
+        run: cargo test --bin omnirepo --locked -- --skip release_platform
+        env:
+          RUSTFLAGS: "-D warnings"
