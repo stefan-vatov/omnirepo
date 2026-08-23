@@ -244,6 +244,7 @@ pub fn run_single_repository_pass(
     // bounded budget; any non-passed outcome fails the pass and prevents
     // Git.  An absent or empty command list means no verification command
     // is required (canon/architecture/fleet-lifecycle.md).
+    let mut verification_failures = Vec::new();
     if !checks.is_empty() {
         let declared = checks
             .iter()
@@ -261,18 +262,17 @@ pub fn run_single_repository_pass(
             .map_err(|error| PassError::Plan {
                 reason: error.to_string(),
             })?;
-        let mut failures = Vec::new();
         for spec in &specs {
             match run_check(working, spec, spec.timeout) {
                 Ok(result) if !matches!(result.outcome, CheckOutcome::Passed) => {
-                    failures.push(format!(
+                    verification_failures.push(format!(
                         "check {} ({}) {}; no Git delivery",
                         spec.position + 1,
                         spec.argv.join(" "),
                         verification_failure(&result.outcome)
                     ));
                 }
-                Err(error) => failures.push(format!(
+                Err(error) => verification_failures.push(format!(
                     "check {} ({}) failed to run: {error}; no Git delivery",
                     spec.position + 1,
                     spec.argv.join(" ")
@@ -280,16 +280,11 @@ pub fn run_single_repository_pass(
                 Ok(_) => {}
             }
         }
-        if !failures.is_empty() {
-            return Ok(PassOutcome::Failed {
-                reason: failures.join("; "),
-            });
-        }
     }
-    // Passing checks are still untrusted effects. Re-read every selected
-    // managed target through the destination authority and restore the
-    // exact authoritative bytes and mode when a check changed them. The pass
-    // then fails without Git, while successful synchronization writes remain.
+    // Verification checks are untrusted effects. Re-read every selected
+    // managed target through the destination authority and restore the exact
+    // authoritative bytes and mode when a check changed them. The pass then
+    // fails without Git, while successful synchronization writes remain.
     let mut verifier_changes = Vec::new();
     let mut changed_bytes = false;
     let mut changed_metadata = false;
@@ -327,12 +322,15 @@ pub fn run_single_repository_pass(
         if changed_metadata {
             changed.push("managed metadata");
         }
+        verification_failures.push(format!(
+            "verification changed {} at {}; no Git delivery",
+            changed.join(" and "),
+            verifier_changes.join(", ")
+        ));
+    }
+    if !verification_failures.is_empty() {
         return Ok(PassOutcome::Failed {
-            reason: format!(
-                "verification changed {} at {}; no Git delivery",
-                changed.join(" and "),
-                verifier_changes.join(", ")
-            ),
+            reason: verification_failures.join("; "),
         });
     }
     // Concurrent-modification guard: re-capture the current state; any
