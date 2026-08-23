@@ -276,9 +276,8 @@ fn no_duplicate_git_effect_on_redelivery() {
         crate::lifecycle::commit_journal::reconcile_commit(&git_root, &oid).expect("reconcile"),
         "the OID exists once"
     );
-    // The delivery created exactly one commit object on top of the base;
-    // the branch ref is moved by a later step, so the object database is
-    // the duplicate-free witness.
+    // Redelivering a pass with no selected operation creates no commit
+    // object. The frozen base is the stable reconciliation witness.
     let objects = Command::new("git")
         .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args([
@@ -291,7 +290,7 @@ fn no_duplicate_git_effect_on_redelivery() {
         .expect("git");
     let objects = String::from_utf8(objects.stdout).expect("stdout");
     let commits = objects.lines().filter(|line| *line == "commit").count();
-    assert_eq!(commits, 2, "base plus exactly one delivery commit object");
+    assert_eq!(commits, 1, "the base only; no empty delivery commit object");
     journal.shutdown().expect("shutdown");
 }
 

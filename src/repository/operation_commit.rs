@@ -40,6 +40,22 @@ impl fmt::Display for CommitError {
 }
 impl Error for CommitError {}
 
+/// Return whether the isolated operation index is byte-identical to its
+/// committed parent tree. This check creates no commit and changes no ref.
+pub fn index_matches_parent(
+    root: &Path,
+    index: &IsolatedIndex,
+    parent: &str,
+) -> Result<bool, CommitError> {
+    let candidate = git_text_with_index(root, &["write-tree"], &index.index_path)?;
+    let parent_tree = git_text_with_index(
+        root,
+        &["rev-parse", &format!("{parent}^{{tree}}")],
+        &index.index_path,
+    )?;
+    Ok(candidate.trim() == parent_tree.trim())
+}
+
 /// Create the owner-contracted commit from the isolated index without
 /// touching the branch, worktree, or any hook.
 pub fn create_commit(

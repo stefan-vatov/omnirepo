@@ -293,6 +293,12 @@ fn an_unchanged_repository_creates_no_commit() {
         head_before, head_after,
         "an unchanged repository creates no commit"
     );
+    let objects = git_text(&repo, &["cat-file", "--batch-check", "--batch-all-objects"]);
+    let commits = objects
+        .lines()
+        .filter(|line| line.split_whitespace().nth(1) == Some("commit"))
+        .count();
+    assert_eq!(commits, 1, "the no-op pass creates no commit object");
     journal.shutdown().expect("shutdown");
 }
 

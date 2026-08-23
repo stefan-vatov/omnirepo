@@ -367,7 +367,8 @@ fn a_passing_declared_command_allows_the_commit() {
         &[("source-a", &source)],
     );
     command(&home, fixture.path()).arg("sync").assert().code(0);
-    // The passing check permits the scoped commit object (base plus one).
+    // The passing check permits delivery, but byte-identical managed content
+    // remains a true no-op and creates no empty commit object.
     let objects = git_text(
         &destination,
         &[
@@ -378,8 +379,8 @@ fn a_passing_declared_command_allows_the_commit() {
     );
     let commits = objects.lines().filter(|line| *line == "commit").count();
     assert_eq!(
-        commits, 2,
-        "base plus the scoped commit object after a passing check"
+        commits, 1,
+        "the base only; a passing check does not create an empty commit"
     );
 }
 

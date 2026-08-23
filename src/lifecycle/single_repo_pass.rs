@@ -357,6 +357,39 @@ pub fn run_single_repository_pass(
             }
         }
     }
+    // A candidate tree that is byte-identical to the frozen base still runs
+    // its declared checks, but it creates no commit object. Return the base
+    // as the stable delivered identity after the complete gate succeeds.
+    if let Some(base) = snapshot.witnesses().base_head()
+        && crate::repository::index_matches_parent(working, &index, base.as_str()).map_err(
+            |error| PassError::Plan {
+                reason: error.to_string(),
+            },
+        )?
+    {
+        journal
+            .submit(crate::lifecycle::event::JournalEvent::RepositoryIntent {
+                checkpoint: 0,
+                run_id: run_id.to_owned(),
+                repository_id: repository.to_owned(),
+                operation: crate::lifecycle::event::Operation::Synchronize,
+                attempt: 1,
+            })
+            .map_err(PassError::Journal)?;
+        journal
+            .submit(crate::lifecycle::event::JournalEvent::RepositoryResult {
+                checkpoint: 0,
+                run_id: run_id.to_owned(),
+                repository_id: repository.to_owned(),
+                operation: crate::lifecycle::event::Operation::Synchronize,
+                attempt: 1,
+                outcome: crate::lifecycle::event::Outcome::Success,
+            })
+            .map_err(PassError::Journal)?;
+        return Ok(PassOutcome::Delivered {
+            oid: base.as_str().to_owned(),
+        });
+    }
     // The exact base head is the delivery parent.
     let base = match capture_state(working).map_err(|error| PassError::Plan {
         reason: error.to_string(),

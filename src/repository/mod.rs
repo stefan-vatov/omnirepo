@@ -13,7 +13,9 @@ mod state;
 pub(crate) use capture::capture_state;
 pub(crate) use git_index::{IsolatedIndex, prepare_index};
 pub(crate) use manifest::{PlannedOperation, build_authorized_delta};
-pub(crate) use operation_commit::{CommitError, RecordedCommit, create_commit};
+pub(crate) use operation_commit::{
+    CommitError, RecordedCommit, create_commit, index_matches_parent,
+};
 pub(crate) use policy::{RepositoryPolicy, VerificationCommand};
 pub(crate) use policy_loader::{PolicyPresence, load_policy};
 
