@@ -15,7 +15,7 @@ port would add an abstraction without test or behavior gain.
 | Consumer | Effect | Test pain | Extraction changes behavior? |
 |---|---|---|---|
 | `run_record.rs` — run record timestamp (`SystemTime::now`) | durable wall-clock timestamp on every run record (Constitution Tension 5) | records carry real timestamps; tests assert presence/order, not exact values | No; the record must reflect real wall-clock time — an injected clock is needless abstraction |
-| `acquisition.rs`, `capture.rs`, `agent_runtime.rs`, `check_runner.rs` — deadline arithmetic (`Instant::now`) | timeout enforcement, polling budgets, check-run budget | timeout paths already tested via tiny durations and direct deadline math | No |
+| `acquisition.rs`, `capture.rs`, `agent_runtime.rs`, `check_runner.rs`, `release_gates.rs` — deadline arithmetic (`Instant::now`) | timeout enforcement, polling budgets, check-run and release-gate budgets | timeout paths already tested via tiny durations and direct deadline math | No |
 | `remote_push.rs`, `repair_reserve.rs`, `admission.rs` — deadline arithmetic (`Instant::now`) | push timeout, reserve/repair budget, admission window | timeout paths already tested via tiny durations and direct deadline math | No |
 | `fleet_profile.rs`, `fleet_scenarios.rs` — stage/profile timing (`Instant::now`) | profile sampling | profile tests compare relative order, not absolute times | No |
 

@@ -7,10 +7,70 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::lifecycle::release_gates::{
-    GateRun, ProvenanceError, run_normative_gates, verify_candidate_provenance,
+    GateRun, MAX_GATE_OUTPUT_BYTES, ProvenanceError, run_normative_gates,
+    run_normative_gates_with_budget, verify_candidate_provenance,
 };
 use crate::lifecycle::release_manifest::{CandidateManifest, manifest_for};
-use std::{fs, path::Path};
+use std::{
+    fs,
+    io::Write,
+    path::Path,
+    process::{Command, Stdio},
+    time::{Duration, Instant},
+};
+
+const HELPER_TEST_PREFIX: &str = "lifecycle::release_gates::release_gates_tests::";
+
+fn helper_gate(name: &str) -> Vec<String> {
+    vec![
+        std::env::current_exe()
+            .expect("test executable")
+            .display()
+            .to_string(),
+        "--ignored".to_owned(),
+        "--exact".to_owned(),
+        format!("{HELPER_TEST_PREFIX}{name}"),
+        "--nocapture".to_owned(),
+    ]
+}
+
+#[test]
+#[ignore]
+fn passing_gate_helper() {}
+
+#[test]
+#[ignore]
+fn hanging_gate_helper() {
+    std::thread::sleep(Duration::from_secs(60));
+}
+
+#[test]
+#[ignore]
+fn overflowing_gate_helper() {
+    std::io::stdout()
+        .write_all(&vec![b'x'; MAX_GATE_OUTPUT_BYTES + 1])
+        .expect("write gate output");
+}
+
+#[test]
+#[ignore]
+#[allow(clippy::zombie_processes)]
+fn pipe_holding_descendant_gate_helper() {
+    // The gate runner owns and reaps this helper's complete process group.
+    // Let the descendant outlive this direct parent to prove that boundary.
+    Command::new(std::env::current_exe().expect("test executable"))
+        .args([
+            "--ignored",
+            "--exact",
+            &format!("{HELPER_TEST_PREFIX}hanging_gate_helper"),
+            "--nocapture",
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("spawn pipe-holding descendant");
+}
 
 fn fixture_base() -> tempfile::TempDir {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -52,21 +112,12 @@ fn the_gate_orchestrator_runs_every_gate_and_collects_the_results() {
 #[test]
 fn a_gate_spawn_failure_is_collected_without_skipping_later_gates() {
     let fixture = fixture_base();
-    let pass = fixture.path().join("gate-pass");
-    fs::write(&pass, "#!/bin/sh\nexit 0\n").expect("pass");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut permissions = fs::metadata(&pass).expect("meta").permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(&pass, permissions).expect("mode");
-    }
     let gates = vec![
         (
             "missing".to_owned(),
             vec![fixture.path().join("absent").display().to_string()],
         ),
-        ("pass".to_owned(), vec![pass.display().to_string()]),
+        ("pass".to_owned(), helper_gate("passing_gate_helper")),
     ];
 
     let runs = run_normative_gates(&gates);
@@ -75,6 +126,59 @@ fn a_gate_spawn_failure_is_collected_without_skipping_later_gates() {
     assert!(!runs[0].passed);
     assert!(runs[0].evidence.contains("cannot start gate"));
     assert!(runs[1].passed, "a failed peer cannot stop a later gate");
+}
+
+#[test]
+fn a_gate_deadline_is_bounded_without_skipping_later_gates() {
+    let gates = vec![
+        ("hang".to_owned(), helper_gate("hanging_gate_helper")),
+        ("pass".to_owned(), helper_gate("passing_gate_helper")),
+    ];
+
+    let started = Instant::now();
+    let runs = run_normative_gates_with_budget(&gates, Duration::from_millis(50));
+
+    assert!(started.elapsed() < Duration::from_secs(1));
+    assert_eq!(runs.len(), 2);
+    assert!(!runs[0].passed);
+    assert!(runs[0].evidence.contains("exceeded its"));
+    assert!(runs[1].passed, "a timed-out gate cannot stop a later gate");
+}
+
+#[test]
+fn excessive_gate_output_is_bounded_without_skipping_later_gates() {
+    let gates = vec![
+        (
+            "overflow".to_owned(),
+            helper_gate("overflowing_gate_helper"),
+        ),
+        ("pass".to_owned(), helper_gate("passing_gate_helper")),
+    ];
+
+    let runs = run_normative_gates_with_budget(&gates, Duration::from_secs(1));
+
+    assert_eq!(runs.len(), 2);
+    assert!(!runs[0].passed);
+    assert!(runs[0].evidence.contains("output exceeded"));
+    assert!(
+        runs[1].passed,
+        "an overflowing gate cannot stop a later gate"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_gate_cannot_leave_pipe_holding_descendants() {
+    let gates = vec![(
+        "descendant".to_owned(),
+        helper_gate("pipe_holding_descendant_gate_helper"),
+    )];
+
+    let started = Instant::now();
+    let runs = run_normative_gates_with_budget(&gates, Duration::from_secs(1));
+
+    assert!(started.elapsed() < Duration::from_millis(500));
+    assert!(runs[0].passed, "{:?}", runs[0]);
 }
 
 #[test]

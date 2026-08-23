@@ -187,6 +187,7 @@ fn clock_use_is_limited_to_inventory_consumers() {
                     "capture.rs",
                     "agent_runtime.rs",
                     "check_runner.rs",
+                    "release_gates.rs",
                     "fleet_profile.rs",
                     "fleet_scenarios.rs",
                     "remote_push.rs",
