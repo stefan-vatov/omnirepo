@@ -7,9 +7,21 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::lifecycle::release_verify::{
-    Channel, InstallVerification, VerifyError, verify_channel, verify_fresh_install,
+    Channel, InstallVerification, VerifyError, run_with_budget, verify_channel,
+    verify_fresh_install,
 };
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    path::Path,
+    process::Command,
+    time::{Duration, Instant},
+};
+
+#[test]
+#[ignore]
+fn hanging_candidate_helper() {
+    std::thread::sleep(Duration::from_secs(60));
+}
 
 fn fixture_base() -> tempfile::TempDir {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -59,6 +71,29 @@ fn a_missing_binary_fails_typed() {
     let error = verify_fresh_install(&fixture.path().join("missing"), &clean_home)
         .expect_err("missing binary");
     assert!(matches!(error, VerifyError::Binary { .. }), "{error}");
+}
+
+#[test]
+fn a_candidate_process_cannot_bypass_the_verification_deadline() {
+    let fixture = fixture_base();
+    let helper = std::env::current_exe().expect("test executable");
+    let started = Instant::now();
+
+    let passed = run_with_budget(
+        &helper,
+        fixture.path(),
+        &[
+            "--ignored",
+            "--exact",
+            "lifecycle::release_verify::release_verify_tests::hanging_candidate_helper",
+            "--nocapture",
+        ],
+        Duration::from_millis(50),
+    )
+    .expect("bounded verification result");
+
+    assert!(!passed, "a timed-out candidate cannot verify");
+    assert!(started.elapsed() < Duration::from_secs(1));
 }
 
 #[test]

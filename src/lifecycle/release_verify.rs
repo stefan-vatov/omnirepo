@@ -11,7 +11,12 @@
 #[cfg(test)]
 mod release_verify_tests;
 
-use std::{error::Error, fmt, path::Path, process::Command};
+use crate::lifecycle::{
+    check_runner::{CheckOutcome, run_check},
+    command_spec::{CommandSpec, DEFAULT_COMMAND_TIMEOUT},
+};
+use crate::platform::RelativePath;
+use std::{error::Error, fmt, path::Path, time::Duration};
 
 /// The candidate channel.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -82,13 +87,13 @@ pub fn verify_fresh_install(
             reason: "the binary does not exist".to_owned(),
         });
     }
-    let help = run(binary, clean_home, &["--help"])?;
-    let version = run(binary, clean_home, &["--version"])?;
-    let sync = run(binary, clean_home, &["sync"])?;
+    let help_ok = run(binary, clean_home, &["--help"])?;
+    let version_ok = run(binary, clean_home, &["--version"])?;
+    let sync_empty_ok = run(binary, clean_home, &["sync"])?;
     Ok(InstallVerification {
-        help_ok: help.status.success(),
-        version_ok: version.status.success(),
-        sync_empty_ok: sync.status.success(),
+        help_ok,
+        version_ok,
+        sync_empty_ok,
     })
 }
 
@@ -110,19 +115,42 @@ fn promotion_decided() -> bool {
     false
 }
 
-fn run(
+fn run(binary: &Path, clean_home: &Path, args: &[&str]) -> Result<bool, VerifyError> {
+    run_with_budget(binary, clean_home, args, DEFAULT_COMMAND_TIMEOUT)
+}
+
+fn run_with_budget(
     binary: &Path,
     clean_home: &Path,
     args: &[&str],
-) -> Result<std::process::Output, VerifyError> {
-    Command::new(binary)
-        .args(args)
-        .env("HOME", clean_home)
-        .env("USERPROFILE", clean_home)
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .output()
-        .map_err(|error| VerifyError::Run {
-            path: binary.to_path_buf(),
-            reason: error.to_string(),
-        })
+    budget: Duration,
+) -> Result<bool, VerifyError> {
+    let executable = binary.to_str().ok_or_else(|| VerifyError::Binary {
+        path: binary.to_path_buf(),
+        reason: "the binary path is not UTF-8".to_owned(),
+    })?;
+    let mut argv = Vec::with_capacity(args.len() + 1);
+    argv.push(executable.to_owned());
+    argv.extend(args.iter().map(|argument| (*argument).to_owned()));
+    let spec = CommandSpec {
+        repository: "release-candidate".to_owned(),
+        plan_identity: "fresh-install".to_owned(),
+        position: 0,
+        argv,
+        cwd: RelativePath::root(),
+        env: vec![
+            ("HOME".to_owned(), clean_home.display().to_string()),
+            ("USERPROFILE".to_owned(), clean_home.display().to_string()),
+            ("GIT_CONFIG_NOSYSTEM".to_owned(), "1".to_owned()),
+        ],
+        timeout: budget,
+        stdin: None,
+        capture_output: true,
+        shell: None,
+    };
+    let result = run_check(clean_home, &spec, budget).map_err(|error| VerifyError::Run {
+        path: binary.to_path_buf(),
+        reason: error.to_string(),
+    })?;
+    Ok(matches!(result.outcome, CheckOutcome::Passed))
 }
