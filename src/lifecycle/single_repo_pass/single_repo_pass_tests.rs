@@ -568,3 +568,80 @@ fn a_verifier_cannot_replace_authoritative_managed_bytes() {
     assert_eq!(commits, 1, "base only; verifier mutation prevents Git");
     journal.shutdown().expect("shutdown");
 }
+
+#[test]
+fn a_verifier_cannot_change_managed_file_mode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    let source_fixture = tempfile::Builder::new()
+        .prefix("single-repo-source-")
+        .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
+        .expect("source fixture");
+    fs::write(source_fixture.path().join("managed.txt"), "v2\n").expect("source file");
+    let plan = crate::lifecycle::sync_plan::SyncPlan::new(
+        "dest-a",
+        vec![crate::lifecycle::sync_plan::PlanItem {
+            id: "item-managed".to_owned(),
+            target: "managed.txt".to_owned(),
+            source: "source-a".to_owned(),
+            source_path: "managed.txt".to_owned(),
+            source_order: 0,
+            kind: crate::source::ItemKind::WholeFile,
+            section: None,
+            decision: crate::lifecycle::sync_plan::PlanDecision::Selected {
+                reason: "declared winner".to_owned(),
+            },
+        }],
+    );
+    let mut sources = std::collections::HashMap::new();
+    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    let snapshot = snapshot_for(&root);
+    let checks = vec![
+        crate::repository::VerificationCommand::new(["/bin/chmod", "0755", "managed.txt"])
+            .expect("command"),
+    ];
+
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot,
+        &checks,
+        &plan,
+        &sources,
+        "sync managed",
+    )
+    .expect("pass");
+
+    let reason = match outcome {
+        PassOutcome::Failed { reason } => reason,
+        other => panic!("expected verifier mode change to fail the pass: {other:?}"),
+    };
+    assert!(reason.contains("managed metadata"), "{reason}");
+    assert_eq!(
+        fs::metadata(root.join("managed.txt"))
+            .expect("managed metadata")
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o644,
+        "the synchronized file mode is restored"
+    );
+    let objects = Command::new("git")
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args([
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("git");
+    let objects = String::from_utf8(objects.stdout).expect("stdout");
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 1, "base only; verifier mode change prevents Git");
+    journal.shutdown().expect("shutdown");
+}

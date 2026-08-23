@@ -232,6 +232,14 @@ pub fn run_single_repository_pass(
     let index: IsolatedIndex = prepare_index(working, &delta).map_err(|error| PassError::Plan {
         reason: error.to_string(),
     })?;
+    let expected_modes = composed
+        .iter()
+        .map(|group| {
+            read_managed_file(&observe_root, &group.target)
+                .map(|(_, mode)| mode)
+                .map_err(|reason| PassError::Plan { reason })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     // Verification: every declared check runs in configured order with a
     // bounded budget; any non-passed outcome fails the pass and prevents
     // Git.  An absent or empty command list means no verification command
@@ -280,23 +288,29 @@ pub fn run_single_repository_pass(
     }
     // Passing checks are still untrusted effects. Re-read every selected
     // managed target through the destination authority and restore the
-    // exact authoritative bytes when a check changed them. The pass then
-    // fails without Git, while successful synchronization writes remain.
+    // exact authoritative bytes and mode when a check changed them. The pass
+    // then fails without Git, while successful synchronization writes remain.
     let mut verifier_changes = Vec::new();
-    for group in &composed {
-        let changed = match read_managed_file(&observe_root, &group.target) {
-            Ok(bytes) => bytes != group.replacement,
-            Err(_) => true,
-        };
-        if !changed {
+    let mut changed_bytes = false;
+    let mut changed_metadata = false;
+    for (group, expected_mode) in composed.iter().zip(expected_modes) {
+        let (bytes_changed, metadata_changed) =
+            match read_managed_file(&observe_root, &group.target) {
+                Ok((bytes, mode)) => (bytes != group.replacement, mode != expected_mode),
+                Err(_) => (true, true),
+            };
+        if !bytes_changed && !metadata_changed {
             continue;
         }
+        changed_bytes |= bytes_changed;
+        changed_metadata |= metadata_changed;
         let operation_id = format!("verification-restore-{run_id}");
-        let restoration = crate::lifecycle::replace::replace_bytes_atomically(
+        let restoration = crate::lifecycle::replace::replace_bytes_atomically_with_mode(
             working,
             &group.target,
             &operation_id,
             &group.replacement,
+            expected_mode,
         );
         match restoration {
             Ok(()) => verifier_changes.push(format!("{} (restored)", group.target)),
@@ -306,9 +320,17 @@ pub fn run_single_repository_pass(
         }
     }
     if !verifier_changes.is_empty() {
+        let mut changed = Vec::new();
+        if changed_bytes {
+            changed.push("managed bytes");
+        }
+        if changed_metadata {
+            changed.push("managed metadata");
+        }
         return Ok(PassOutcome::Failed {
             reason: format!(
-                "verification changed managed bytes at {}; no Git delivery",
+                "verification changed {} at {}; no Git delivery",
+                changed.join(" and "),
                 verifier_changes.join(", ")
             ),
         });
@@ -463,7 +485,7 @@ fn read_source_file(
 fn read_managed_file(
     authority: &AuthorityRoot<crate::platform::DestinationRepositoryRoot, ReadOnly>,
     target_path: &str,
-) -> Result<Vec<u8>, String> {
+) -> Result<(Vec<u8>, u32), String> {
     use std::io::Read;
     let relative = crate::platform::RelativePath::parse(target_path)
         .map_err(|error| format!("managed path {target_path:?} is invalid: {error}"))?;
@@ -473,11 +495,23 @@ fn read_managed_file(
     let mut handle = target
         .try_clone_file()
         .map_err(|error| format!("cannot open the managed file {target_path}: {error}"))?;
+    #[cfg(unix)]
+    let mode = {
+        use std::os::unix::fs::PermissionsExt;
+        handle
+            .metadata()
+            .map_err(|error| format!("cannot inspect the managed file {target_path}: {error}"))?
+            .permissions()
+            .mode()
+            & 0o7777
+    };
+    #[cfg(not(unix))]
+    let mode = 0o644;
     let mut bytes = Vec::new();
     handle
         .read_to_end(&mut bytes)
         .map_err(|error| format!("cannot read the managed file {target_path}: {error}"))?;
-    Ok(bytes)
+    Ok((bytes, mode))
 }
 
 /// One composed destination-file group.

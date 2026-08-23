@@ -279,6 +279,34 @@ pub fn replace_bytes_atomically(
             });
         }
     };
+    replace_bytes_atomically_with_decided_mode(root, target, operation_id, bytes, mode)
+}
+
+/// Publish exact bytes with an already frozen mode. Verification restoration
+/// uses this path so a verifier cannot make its metadata authoritative.
+pub(crate) fn replace_bytes_atomically_with_mode(
+    root: &Path,
+    target: &str,
+    operation_id: &str,
+    bytes: &[u8],
+    mode: u32,
+) -> Result<(), ReplaceError> {
+    replace_bytes_atomically_with_decided_mode(
+        root,
+        target,
+        operation_id,
+        bytes,
+        DecidedMode::Preserve(mode),
+    )
+}
+
+fn replace_bytes_atomically_with_decided_mode(
+    root: &Path,
+    target: &str,
+    operation_id: &str,
+    bytes: &[u8],
+    mode: DecidedMode,
+) -> Result<(), ReplaceError> {
     // Safe contained parent creation: the target path is validated by the
     // plan contract below before any created directory is used, and the
     // ancestors are created inside the root only.
