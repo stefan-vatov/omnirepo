@@ -692,6 +692,7 @@ pub fn run(options: &RunnerOptions) -> Result<TestSuiteReport, RunnerError> {
     let results = Arc::new(Mutex::new(vec![None; prepared.len()]));
     let cancelled = options.cancellation.clone().unwrap_or_default().cancelled;
     let cancelled = Arc::clone(&cancelled);
+    let build_lease: BuildLease = Arc::new(Mutex::new(()));
     let mut workers = Vec::with_capacity(jobs);
     for _ in 0..jobs {
         let queue = Arc::clone(&queue);
@@ -700,6 +701,7 @@ pub fn run(options: &RunnerOptions) -> Result<TestSuiteReport, RunnerError> {
         let store = store.clone();
         let redactor = redactor.clone();
         let cancelled = Arc::clone(&cancelled);
+        let build_lease = Arc::clone(&build_lease);
         workers.push(thread::spawn(move || {
             loop {
                 let next = queue
@@ -707,7 +709,14 @@ pub fn run(options: &RunnerOptions) -> Result<TestSuiteReport, RunnerError> {
                     .expect("test queue mutex is not poisoned")
                     .pop_front();
                 let Some(case) = next else { break };
-                let result = execute_case(&case, &recorder, &store, &redactor, &cancelled);
+                let result = execute_case(
+                    &case,
+                    &recorder,
+                    &store,
+                    &redactor,
+                    &cancelled,
+                    &build_lease,
+                );
                 results.lock().expect("test results mutex is not poisoned")[case.index] =
                     Some(result);
             }
@@ -1032,12 +1041,32 @@ fn resolve_working_directory(repo_root: &Path, case: &CaseSpec) -> Result<PathBu
     Ok(resolved)
 }
 
+/// Exclusive lease on the workspace cargo build directory.
+///
+/// Every repository case runs in the workspace and drives cargo, directly
+/// or through a script that does, so they all contend for one cargo build
+/// directory lock.  Cargo already serializes them; overlapping them adds
+/// no parallelism and instead spends a case's bounded budget waiting for
+/// a lock it cannot see.  Leasing makes that wait explicit and keeps the
+/// per-case bound measuring case execution, which is what it documents.
+type BuildLease = Arc<Mutex<()>>;
+
+/// Take the build lease.  A case that panicked while holding it poisoned
+/// nothing the next case depends on -- the lease carries no state -- so
+/// the guard is recovered rather than cascading the panic.
+fn acquire_build_lease(lease: &BuildLease) -> std::sync::MutexGuard<'_, ()> {
+    lease
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 fn execute_case(
     case: &PreparedCase,
     recorder: &EventRecorder,
     store: &ArtifactStore,
     redactor: &DiagnosticRedactor,
     cancelled: &AtomicBool,
+    build_lease: &BuildLease,
 ) -> CaseResult {
     let started = Instant::now();
     let guard = recorder.start(case.identity.clone(), case.artifact.clone());
@@ -1086,7 +1115,7 @@ fn execute_case(
             duration_ms: 0,
         }
     } else {
-        execute_process(case, cancelled)
+        execute_process(case, cancelled, build_lease)
     };
 
     let stdout_path = format!(
@@ -1244,7 +1273,14 @@ fn missing_worker_result(case: &PreparedCase) -> CaseResult {
     harness_result(case, "worker did not return a terminal result")
 }
 
-fn execute_process(case: &PreparedCase, cancelled: &AtomicBool) -> ProcessResult {
+fn execute_process(
+    case: &PreparedCase,
+    cancelled: &AtomicBool,
+    build_lease: &BuildLease,
+) -> ProcessResult {
+    // Hold the build directory for the whole case.  The clock starts after
+    // the lease is taken, so a case is never charged for a sibling's build.
+    let _lease = acquire_build_lease(build_lease);
     let started = Instant::now();
     let mut command = Command::new(&case.case.argv[0]);
     command

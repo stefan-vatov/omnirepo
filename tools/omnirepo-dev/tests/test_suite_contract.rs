@@ -504,3 +504,62 @@ fn quality_status_is_delegated_without_reimplementing_gate_policy() {
     assert!(fixture.join("artifacts").join(quality.artifact).is_file());
     cleanup(&fixture);
 }
+
+#[test]
+fn concurrent_jobs_never_overlap_the_shared_build_directory() {
+    // Every repository case drives cargo against one workspace build
+    // directory, so cargo serializes them on a lock the runner cannot
+    // see. When the runner overlapped them anyway, a case spent its
+    // bounded budget blocked on that lock and was killed having executed
+    // nothing (`Blocking waiting for file lock on build directory`).
+    // The runner now leases the build directory, so cases never overlap
+    // and each one's bound measures its own execution.
+    let fixture = root("build-lease");
+    let marker = fixture.join("order.log");
+    let script = |name: &str| {
+        format!(
+            "printf '{name}-start\n' >> {0}; sleep 0.5; printf '{name}-end\n' >> {0}",
+            marker.display()
+        )
+    };
+    let first = script("first");
+    let second = script("second");
+    let manifest = write_manifest(
+        &fixture,
+        json!([suite(
+            "unit",
+            "unit",
+            vec![
+                case("first", &["/bin/sh", "-c", first.as_str()]),
+                case("second", &["/bin/sh", "-c", second.as_str()]),
+            ],
+        )]),
+    );
+
+    let report = run(&options(&manifest, &fixture).with_jobs(2)).expect("run leased suite");
+    assert!(report.success, "both cases must pass: {:?}", report.cases);
+
+    let order = fs::read_to_string(&marker).expect("marker log");
+    let lines = order.lines().collect::<Vec<_>>();
+    assert_eq!(
+        lines.len(),
+        4,
+        "each case writes a start and an end: {lines:?}"
+    );
+    // A case that holds the build directory runs to completion before the
+    // next one starts: no start may appear between another case's start
+    // and its end.
+    assert!(
+        lines[0].ends_with("-start")
+            && lines[1].ends_with("-end")
+            && lines[2].ends_with("-start")
+            && lines[3].ends_with("-end"),
+        "cases overlapped the build directory: {lines:?}"
+    );
+    assert_eq!(
+        lines[0].trim_end_matches("-start"),
+        lines[1].trim_end_matches("-end"),
+        "the first case must finish before the second starts: {lines:?}"
+    );
+    cleanup(&fixture);
+}
