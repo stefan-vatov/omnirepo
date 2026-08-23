@@ -287,14 +287,22 @@ fn timeout_terminates_and_reaps_the_command_tree() {
         ),
     );
     // The budget bounds every command the run makes, including the
-    // `--version` probe that precedes `init`.  A budget near process-spawn
-    // latency makes the probe, not `init`, the command that times out under
-    // load, which reports an unrelated failure.  `init` blocks forever, so a
-    // budget comfortably above spawn latency still times out exactly there.
+    // `--version` probe that precedes `init`.  `init` blocks forever, so the
+    // run always reaches the budget; the case is only meaningful when the
+    // command that reaches it is `init` and not the probe.
+    //
+    // That makes the budget a margin, not a duration to tune down: it must
+    // exceed the worst-case cost of spawning the fake `br` shell script,
+    // which is not bounded by anything this test controls.  A sub-second
+    // budget was exceeded by the probe alone when the suite ran this binary's
+    // cases in parallel, reporting `BrProbeFailed` instead of the `init`
+    // timeout the case exists to prove.  Seconds of margin cost this case one
+    // budget of wall time and remove the race; the probe would have to be
+    // hundreds of times slower than normal to reach it.
     let error = omnirepo_dev::transition_matrix::run_with_br_path_and_timeout(
         &repository_root(),
         br,
-        Duration::from_millis(750),
+        Duration::from_secs(5),
     )
     .expect_err("a command beyond its timeout must fail closed");
     let MatrixError::BrFailed {
@@ -304,7 +312,7 @@ fn timeout_terminates_and_reaps_the_command_tree() {
         stderr,
     } = error
     else {
-        panic!("timeout must return a typed tracker failure");
+        panic!("timeout must return a typed tracker failure, got: {error:?}");
     };
     assert_eq!(operation, "init --prefix omni");
     assert_eq!(code, None, "a timeout has no child exit code");

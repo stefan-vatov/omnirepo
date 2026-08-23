@@ -243,11 +243,22 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     Ok(report)
 }
 
+/// Git's all-zero object id: the sentinel a push event carries in place of
+/// a previous commit when it creates a ref.  It names no commit, so it is
+/// an absent base rather than a revision to resolve; without this it
+/// reaches `git rev-parse` and fails closed with an opaque object-name
+/// error instead of naming the missing base.
+fn is_null_object_id(value: &str) -> bool {
+    let value = value.trim();
+    value.len() >= 40 && value.chars().all(|character| character == '0')
+}
+
 pub fn resolve_base(explicit: Option<&str>) -> Result<String, Error> {
     explicit
         .map(str::to_owned)
         .or_else(|| std::env::var("OMNIREPO_COVERAGE_BASE").ok())
         .filter(|base| !base.trim().is_empty())
+        .filter(|base| !is_null_object_id(base))
         .ok_or(Error::MissingBase)
 }
 fn verify_revision(root: &Path, revision: &str) -> Result<String, Error> {
@@ -634,7 +645,9 @@ fn parse_lcov(root: &Path, text: &str) -> Result<BTreeMap<String, BTreeMap<u64, 
 
 #[cfg(test)]
 mod tests {
-    use super::{FLOOR_PERCENT, REPORT_SCHEMA, Report, parse_diff, parse_name_status};
+    use super::{
+        Error, FLOOR_PERCENT, REPORT_SCHEMA, Report, parse_diff, parse_name_status, resolve_base,
+    };
 
     #[test]
     fn diff_parser_keeps_only_added_new_side_lines() {
@@ -848,5 +861,22 @@ mod tests {
         assert!(json.contains("\"base\":\"base\""));
         assert!(json.contains("\"coverage_percent\":null"));
         assert!(json.contains("\"coverage_ratio\":\"0/0\""));
+    }
+
+    #[test]
+    fn a_created_ref_reports_a_missing_base_not_an_object_name_failure() {
+        // A push that creates a ref carries git's all-zero object id in
+        // place of a previous commit.  It names no commit, so the gate
+        // must fail closed naming the missing base rather than handing
+        // the sentinel to `git rev-parse`.
+        let null = "0".repeat(40);
+        assert!(matches!(resolve_base(Some(&null)), Err(Error::MissingBase)));
+        assert!(matches!(resolve_base(Some("")), Err(Error::MissingBase)));
+        assert!(matches!(resolve_base(None), Err(Error::MissingBase)));
+        // A real revision is still returned verbatim.
+        assert_eq!(
+            resolve_base(Some("a28690bb40389db2fdeaca07238be7d2c525a83b")).expect("base"),
+            "a28690bb40389db2fdeaca07238be7d2c525a83b"
+        );
     }
 }
