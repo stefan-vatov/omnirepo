@@ -14,10 +14,17 @@ mod fleet_catalog_tests;
 use crate::configuration::{MachineConfiguration, SourceLocation};
 use crate::platform::{AuthorityRoot, ReadOnly, SourceSnapshotRoot};
 use crate::source::{
-    AcquireConfig, CatalogState, SourceCatalog, SourceId, acquire, inspect_cached_remote,
-    remote_snapshot_path,
+    AcquireConfig, CatalogState, RevisionId, SourceCatalog, SourceId, acquire,
+    inspect_cached_remote, remote_snapshot_path,
 };
 use std::{collections::HashMap, error::Error, fmt, path::Path, path::PathBuf};
+
+/// One exact source revision and the Git root that owns its objects.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MaterializedSource {
+    pub root: PathBuf,
+    pub revision: RevisionId,
+}
 
 /// Catalog build failures (defensive; availability is per source).
 #[derive(Debug)]
@@ -104,12 +111,12 @@ fn build_catalog(
     Ok(catalog)
 }
 
-/// Resolve the exact filesystem root for every complete catalog entry.
-pub fn materialized_source_roots(
+/// Resolve the exact Git root and revision for every complete catalog entry.
+pub fn materialized_sources(
     config: &MachineConfiguration,
     catalog: &SourceCatalog,
-) -> Result<HashMap<String, PathBuf>, CatalogBuildError> {
-    let mut roots = HashMap::new();
+) -> Result<HashMap<String, MaterializedSource>, CatalogBuildError> {
+    let mut sources = HashMap::new();
     for state in catalog.entries() {
         let CatalogState::Complete { source, revision } = state else {
             continue;
@@ -134,9 +141,15 @@ pub fn materialized_source_roots(
         };
         AuthorityRoot::<SourceSnapshotRoot, ReadOnly>::open(&path)
             .map_err(|_| CatalogBuildError::SourceUnavailable)?;
-        roots.insert(source.as_str().to_owned(), path);
+        sources.insert(
+            source.as_str().to_owned(),
+            MaterializedSource {
+                root: path,
+                revision: revision.clone(),
+            },
+        );
     }
-    Ok(roots)
+    Ok(sources)
 }
 
 /// One local source: the typed read-only root must open (no-follow) and

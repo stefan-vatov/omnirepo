@@ -67,16 +67,17 @@ fn destination(root: &Path, id: &str) -> DestinationRepository {
 }
 
 fn machine(repositories: Vec<DestinationRepository>) -> MachineConfiguration {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/fleet-runner-sources");
-    fs::create_dir_all(base.join("source-a")).expect("source dir");
-    fs::write(base.join("source-a/managed.txt"), "v1\n").expect("source file");
+    let first_repository = repositories.first().expect("at least one repository");
+    let source_root = Path::new(first_repository.path().as_str())
+        .parent()
+        .expect("repository parent")
+        .join("source-a");
+    git_repo(&source_root);
     let source = crate::configuration::SourceReference::new(
         crate::configuration::SourceId::parse("source-a").expect("source id"),
         crate::configuration::SourceLocation::local(
-            crate::configuration::AbsolutePath::parse(
-                base.join("source-a").to_str().expect("utf8"),
-            )
-            .expect("source path"),
+            crate::configuration::AbsolutePath::parse(source_root.to_str().expect("utf8"))
+                .expect("source path"),
         ),
     );
     MachineConfiguration::new(
@@ -90,12 +91,22 @@ fn machine(repositories: Vec<DestinationRepository>) -> MachineConfiguration {
     .expect("machine")
 }
 
-fn complete_catalog(source: &str) -> SourceCatalog {
+fn complete_catalog(config: &MachineConfiguration, source: &str) -> SourceCatalog {
+    let source_root = config
+        .sources()
+        .iter()
+        .find(|entry| entry.id().as_str() == source)
+        .and_then(|entry| match entry.location() {
+            crate::configuration::SourceLocation::Local(path) => Some(Path::new(path.as_str())),
+            crate::configuration::SourceLocation::Remote(_) => None,
+        })
+        .expect("local source root");
     let mut catalog = SourceCatalog::new();
     catalog
         .record(CatalogState::Complete {
             source: SourceId::new(source).expect("source"),
-            revision: RevisionId::new("rev-1").expect("revision"),
+            revision: RevisionId::new(git_text(source_root, &["rev-parse", "HEAD"]))
+                .expect("revision"),
         })
         .expect("record");
     catalog
@@ -146,7 +157,7 @@ fn every_admitted_repository_reaches_exactly_one_result_in_declared_order() {
         destination(fixture.path(), "repo-a"),
         destination(fixture.path(), "repo-b"),
     ]);
-    let catalog = complete_catalog("source-a");
+    let catalog = complete_catalog(&config, "source-a");
     let plans = vec![
         RepositoryPlan {
             repository: "repo-a".to_owned(),
@@ -166,16 +177,15 @@ fn every_admitted_repository_reaches_exactly_one_result_in_declared_order() {
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
-    let source_roots =
-        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
-            .expect("source roots");
+    let sources = crate::lifecycle::fleet_catalog::materialized_sources(&config, &catalog)
+        .expect("materialized sources");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     let response = run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
-        &source_roots,
+        &sources,
         &outcome.composition,
         4,
     )
@@ -216,7 +226,7 @@ fn a_failing_repository_never_stops_its_peers() {
         destination(fixture.path(), "repo-good"),
         destination(fixture.path(), "repo-bad"),
     ]);
-    let catalog = complete_catalog("source-a");
+    let catalog = complete_catalog(&config, "source-a");
     let plans = vec![
         RepositoryPlan {
             repository: "repo-good".to_owned(),
@@ -236,16 +246,15 @@ fn a_failing_repository_never_stops_its_peers() {
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
-    let source_roots =
-        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
-            .expect("source roots");
+    let sources = crate::lifecycle::fleet_catalog::materialized_sources(&config, &catalog)
+        .expect("materialized sources");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     let response = run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
-        &source_roots,
+        &sources,
         &outcome.composition,
         4,
     )
@@ -276,7 +285,7 @@ fn an_unchanged_repository_creates_no_commit() {
     git_repo(&repo);
     let head_before = git_text(&repo, &["rev-parse", "HEAD"]);
     let config = machine(vec![destination(fixture.path(), "repo-a")]);
-    let catalog = complete_catalog("source-a");
+    let catalog = complete_catalog(&config, "source-a");
     let plans = vec![RepositoryPlan {
         repository: "repo-a".to_owned(),
         plan: Ok(SyncPlan::new(
@@ -286,16 +295,15 @@ fn an_unchanged_repository_creates_no_commit() {
         checks: Vec::new(),
     }];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
-    let source_roots =
-        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
-            .expect("source roots");
+    let sources = crate::lifecycle::fleet_catalog::materialized_sources(&config, &catalog)
+        .expect("materialized sources");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
-        &source_roots,
+        &sources,
         &outcome.composition,
         4,
     )

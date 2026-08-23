@@ -14,6 +14,7 @@ use crate::lifecycle::check_runner::{CheckOutcome, run_check};
 use crate::lifecycle::command_spec::{
     DEFAULT_COMMAND_TIMEOUT, DeclaredCommand, translate_commands,
 };
+use crate::lifecycle::fleet_catalog::MaterializedSource;
 use crate::lifecycle::git_delivery::{DeliveryOutcome, coordinate_git_delivery};
 
 #[cfg(test)]
@@ -90,7 +91,7 @@ pub fn run_single_repository_pass(
     snapshot: &RepositorySnapshot,
     checks: &[VerificationCommand],
     plan: &crate::lifecycle::sync_plan::SyncPlan,
-    sources: &std::collections::HashMap<String, std::path::PathBuf>,
+    sources: &std::collections::HashMap<String, MaterializedSource>,
     message: &str,
 ) -> Result<PassOutcome, PassError> {
     // A destination that is not itself a git repository cannot deliver:
@@ -119,18 +120,18 @@ pub fn run_single_repository_pass(
             if source_roots.contains_key(&member.source) {
                 continue;
             }
-            let root_path = sources.get(&member.source).ok_or_else(|| PassError::Plan {
-                reason: format!("source {} has no configured local root", member.source),
+            let source = sources.get(&member.source).ok_or_else(|| PassError::Plan {
+                reason: format!("source {} has no materialized snapshot", member.source),
             })?;
             let root =
-                AuthorityRoot::<crate::platform::SourceSnapshotRoot, ReadOnly>::open(root_path)
+                AuthorityRoot::<crate::platform::SourceSnapshotRoot, ReadOnly>::open(&source.root)
                     .map_err(|error| PassError::Plan {
                         reason: format!(
                             "cannot open the source root {}: {error}",
-                            root_path.display()
+                            source.root.display()
                         ),
                     })?;
-            source_roots.insert(member.source.clone(), root);
+            source_roots.insert(member.source.clone(), (root, source.revision.clone()));
         }
     }
     let mut composed: Vec<ComposedGroup> = Vec::new();
@@ -514,22 +515,17 @@ impl ToJournalError for crate::lifecycle::initial_sync::SyncPassError {
 /// Read one source file through the typed source authority (no-follow).
 fn read_source_file(
     authority: &AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+    revision: &crate::source::RevisionId,
     source_path: &str,
 ) -> Result<Vec<u8>, String> {
-    use std::io::Read;
     let relative = crate::platform::RelativePath::parse(source_path)
         .map_err(|error| format!("source path {source_path:?} is invalid: {error}"))?;
-    let target = authority
-        .resolve_read(&relative, crate::platform::ObjectClass::RegularFile)
-        .map_err(|error| format!("cannot resolve the source file {source_path}: {error}"))?;
-    let mut handle = target
-        .try_clone_file()
-        .map_err(|error| format!("cannot open the source file {source_path}: {error}"))?;
-    let mut bytes = Vec::new();
-    handle
-        .read_to_end(&mut bytes)
-        .map_err(|error| format!("cannot read the source file {source_path}: {error}"))?;
-    Ok(bytes)
+    crate::source::read_revision_file(
+        authority.display_path().as_path(),
+        revision.as_str(),
+        &relative.display(),
+    )
+    .map_err(|error| format!("cannot read the pinned source file {source_path}: {error}"))
 }
 
 /// Read one optional repository file through the typed destination authority
@@ -594,7 +590,10 @@ fn compose_group(
     snapshot: &RepositorySnapshot,
     source_roots: &std::collections::HashMap<
         String,
-        AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+        (
+            AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+            crate::source::RevisionId,
+        ),
     >,
     target: &str,
     members: &[&crate::lifecycle::sync_plan::PlanItem],
@@ -660,12 +659,15 @@ fn compose_group(
 fn authoritative_bytes(
     source_roots: &std::collections::HashMap<
         String,
-        AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+        (
+            AuthorityRoot<crate::platform::SourceSnapshotRoot, ReadOnly>,
+            crate::source::RevisionId,
+        ),
     >,
     item: &crate::lifecycle::sync_plan::PlanItem,
 ) -> Result<Vec<u8>, String> {
-    let root = source_roots
+    let (root, revision) = source_roots
         .get(&item.source)
         .ok_or_else(|| format!("source {} has no opened authority root", item.source))?;
-    read_source_file(root, &item.source_path)
+    read_source_file(root, revision, &item.source_path)
 }

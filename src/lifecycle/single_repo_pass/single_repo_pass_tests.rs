@@ -5,6 +5,7 @@
 
 #![allow(dead_code, unused_imports)]
 
+use crate::lifecycle::fleet_catalog::MaterializedSource;
 use crate::lifecycle::journal::{Journal, JournalConfig};
 use crate::lifecycle::run_record::RunRecord;
 use crate::lifecycle::single_repo_pass::{PassOutcome, run_single_repository_pass};
@@ -66,6 +67,32 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
     (fixture, root)
+}
+
+fn materialized_source(root: &Path) -> MaterializedSource {
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(root)
+            .output()
+            .expect("source git");
+        assert!(output.status.success(), "source git {args:?}: {output:?}");
+        output.stdout
+    };
+    git(&["init", "--quiet", "-b", "main"]);
+    git(&["config", "user.name", "Source"]);
+    git(&["config", "user.email", "source@example.test"]);
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "source"]);
+    let revision = String::from_utf8(git(&["rev-parse", "HEAD"]))
+        .expect("source revision is UTF-8")
+        .trim()
+        .to_owned();
+    MaterializedSource {
+        root: root.to_path_buf(),
+        revision: crate::source::RevisionId::new(revision).expect("source revision"),
+    }
 }
 
 fn identity(inode: u64) -> FileIdentity {
@@ -155,6 +182,7 @@ fn an_absent_target_is_created_and_delivered_as_a_lawful_creation() {
         .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
         .expect("source fixture");
     fs::write(source_fixture.path().join("created.txt"), "created-v1\n").expect("source file");
+    let source = materialized_source(source_fixture.path());
     let plan = crate::lifecycle::sync_plan::SyncPlan::new(
         "dest-a",
         vec![crate::lifecycle::sync_plan::PlanItem {
@@ -171,7 +199,12 @@ fn an_absent_target_is_created_and_delivered_as_a_lawful_creation() {
         }],
     );
     let mut sources = std::collections::HashMap::new();
-    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    sources.insert("source-a".to_owned(), source);
+    fs::write(
+        source_fixture.path().join("created.txt"),
+        "worktree-drift\n",
+    )
+    .expect("mutate source after planning");
     // The snapshot freezes the absent target as the lawful creation case.
     let snapshot = snapshot_with_targets(
         &root,
@@ -503,6 +536,7 @@ fn a_verifier_cannot_replace_authoritative_managed_bytes() {
         .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
         .expect("source fixture");
     fs::write(source_fixture.path().join("managed.txt"), "v2\n").expect("source file");
+    let source = materialized_source(source_fixture.path());
     let plan = crate::lifecycle::sync_plan::SyncPlan::new(
         "dest-a",
         vec![crate::lifecycle::sync_plan::PlanItem {
@@ -519,7 +553,7 @@ fn a_verifier_cannot_replace_authoritative_managed_bytes() {
         }],
     );
     let mut sources = std::collections::HashMap::new();
-    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    sources.insert("source-a".to_owned(), source);
     let snapshot = snapshot_for(&root);
     let checks = vec![
         crate::repository::VerificationCommand::new([
@@ -580,6 +614,7 @@ fn a_verifier_cannot_change_managed_file_mode() {
         .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
         .expect("source fixture");
     fs::write(source_fixture.path().join("managed.txt"), "v2\n").expect("source file");
+    let source = materialized_source(source_fixture.path());
     let plan = crate::lifecycle::sync_plan::SyncPlan::new(
         "dest-a",
         vec![crate::lifecycle::sync_plan::PlanItem {
@@ -596,7 +631,7 @@ fn a_verifier_cannot_change_managed_file_mode() {
         }],
     );
     let mut sources = std::collections::HashMap::new();
-    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    sources.insert("source-a".to_owned(), source);
     let snapshot = snapshot_for(&root);
     let checks = vec![
         crate::repository::VerificationCommand::new(["/bin/chmod", "0755", "managed.txt"])
@@ -655,6 +690,7 @@ fn a_failing_verifier_does_not_retain_managed_mutations() {
         .tempdir_in(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
         .expect("source fixture");
     fs::write(source_fixture.path().join("managed.txt"), "v2\n").expect("source file");
+    let source = materialized_source(source_fixture.path());
     let plan = crate::lifecycle::sync_plan::SyncPlan::new(
         "dest-a",
         vec![crate::lifecycle::sync_plan::PlanItem {
@@ -671,7 +707,7 @@ fn a_failing_verifier_does_not_retain_managed_mutations() {
         }],
     );
     let mut sources = std::collections::HashMap::new();
-    sources.insert("source-a".to_owned(), source_fixture.path().to_path_buf());
+    sources.insert("source-a".to_owned(), source);
     let snapshot = snapshot_for(&root);
     let checks = vec![
         crate::repository::VerificationCommand::new([

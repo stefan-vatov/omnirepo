@@ -17,6 +17,7 @@ mod fleet_runner_tests;
 
 use crate::configuration::MachineConfiguration;
 use crate::lifecycle::fleet_app::{FleetComposition, FleetResponse, run_fleet_pass};
+use crate::lifecycle::fleet_catalog::MaterializedSource;
 use crate::lifecycle::fleet_fanout::RepoResult;
 use crate::lifecycle::fleet_snapshot::build_frozen_snapshot;
 use crate::lifecycle::journal::JournalHandle;
@@ -39,7 +40,7 @@ pub fn run_fleet_initial_passes(
     run_id: &str,
     config: &MachineConfiguration,
     plans: &[crate::lifecycle::fleet_planning::RepositoryPlan],
-    source_roots: &HashMap<String, std::path::PathBuf>,
+    materialized_sources: &HashMap<String, MaterializedSource>,
     composition: &FleetComposition,
     limit: usize,
 ) -> Result<FleetResponse, String> {
@@ -64,7 +65,7 @@ pub fn run_fleet_initial_passes(
             )
         })
         .collect::<HashMap<String, String>>();
-    let sources = source_roots.clone();
+    let sources = materialized_sources.clone();
     let plans = plans
         .iter()
         .map(|plan| {

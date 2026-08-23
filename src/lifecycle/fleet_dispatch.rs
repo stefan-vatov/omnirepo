@@ -18,7 +18,7 @@ use crate::lifecycle::adapters::resolve_adapters;
 use crate::lifecycle::exit_status::ExitClass;
 use crate::lifecycle::fleet_binding::bind_declarations;
 use crate::lifecycle::fleet_catalog::{
-    build_runtime_catalog, build_sync_runtime_catalog, materialized_source_roots,
+    MaterializedSource, build_runtime_catalog, build_sync_runtime_catalog, materialized_sources,
 };
 use crate::lifecycle::fleet_composition::compose_configured_fleet;
 use crate::lifecycle::fleet_declarations::read_pinned_declarations;
@@ -93,7 +93,7 @@ pub fn dispatch_fleet(
 pub struct FleetPlanning {
     pub catalog: crate::source::SourceCatalog,
     pub plans: Vec<crate::lifecycle::fleet_planning::RepositoryPlan>,
-    pub source_roots: std::collections::HashMap<String, std::path::PathBuf>,
+    pub sources: std::collections::HashMap<String, MaterializedSource>,
 }
 
 /// Build the planning prefix for a configured machine authority.
@@ -119,21 +119,22 @@ fn plan_with_catalog(
     config: &crate::configuration::MachineConfiguration,
     catalog: crate::source::SourceCatalog,
 ) -> Result<FleetPlanning, DispatchError> {
-    let source_roots =
-        materialized_source_roots(config, &catalog).map_err(|error| DispatchError::Pipeline {
+    let sources =
+        materialized_sources(config, &catalog).map_err(|error| DispatchError::Pipeline {
             reason: error.to_string(),
         })?;
     let mut declarations = Vec::new();
     for state in catalog.entries() {
-        if let CatalogState::Complete { source, revision } = state {
-            let source_root = source_roots.get(source.as_str());
-            if let Some(source_root) = source_root {
-                let pinned_revision = RevisionId::new(revision.as_str()).map_err(|error| {
-                    DispatchError::Pipeline {
-                        reason: error.to_string(),
-                    }
-                })?;
-                let parsed = read_pinned_declarations(source, &pinned_revision, source_root)
+        if let CatalogState::Complete { source, .. } = state {
+            let materialized = sources.get(source.as_str());
+            if let Some(materialized) = materialized {
+                let pinned_revision =
+                    RevisionId::new(materialized.revision.as_str()).map_err(|error| {
+                        DispatchError::Pipeline {
+                            reason: error.to_string(),
+                        }
+                    })?;
+                let parsed = read_pinned_declarations(source, &pinned_revision, &materialized.root)
                     .map_err(|error| DispatchError::Pipeline { reason: error })?;
                 declarations.extend(parsed);
             }
@@ -151,7 +152,7 @@ fn plan_with_catalog(
     Ok(FleetPlanning {
         catalog,
         plans,
-        source_roots,
+        sources,
     })
 }
 
@@ -167,7 +168,7 @@ fn run_configured(
     let FleetPlanning {
         catalog,
         plans,
-        source_roots,
+        sources,
     } = plan_configured_sync(config)?;
     // 6. The composed fleet with the frozen concurrency limit.
     let composed = compose_configured_fleet(config, &catalog, &plans, None).map_err(|error| {
@@ -181,7 +182,7 @@ fn run_configured(
         run_id,
         config,
         &plans,
-        &source_roots,
+        &sources,
         &composed.composition,
         composed.limit,
     )
