@@ -34,7 +34,14 @@ fn the_manifest_carries_the_exact_identity_fields() {
     assert_eq!(manifest.identity.toolchain, "rustc 1.86.0");
     assert_eq!(manifest.artifacts.len(), 1);
     assert_eq!(manifest.gates.len(), 1);
-    assert!(!manifest.identity.manifest_sha256.is_empty());
+    assert_eq!(manifest.identity.manifest_sha256.len(), 64);
+    assert!(
+        manifest
+            .identity
+            .manifest_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    );
 }
 
 #[test]

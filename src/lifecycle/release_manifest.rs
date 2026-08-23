@@ -12,6 +12,7 @@
 #[cfg(test)]
 mod release_manifest_tests;
 
+use crate::lifecycle::release_build::sha256_hex;
 use std::{error::Error, fmt};
 
 /// One candidate artifact.
@@ -123,13 +124,8 @@ pub fn exact_identity(manifest: &CandidateManifest) -> String {
 }
 
 pub(crate) fn content_hash(manifest: &CandidateManifest) -> String {
-    let mut state = 0xcbf2_9ce4_8422_2325_u64;
-    let mut absorb = |bytes: &[u8]| {
-        for byte in bytes {
-            state ^= u64::from(*byte);
-            state = state.wrapping_mul(0x0000_0100_0000_01b3);
-        }
-    };
+    let mut content = Vec::new();
+    let mut absorb = |bytes: &[u8]| content.extend_from_slice(bytes);
     absorb(manifest.identity.version.as_bytes());
     absorb(manifest.identity.source_commit.as_bytes());
     absorb(manifest.identity.toolchain.as_bytes());
@@ -141,5 +137,5 @@ pub(crate) fn content_hash(manifest: &CandidateManifest) -> String {
         absorb(gate.name.as_bytes());
         absorb(&[u8::from(gate.passed)]);
     }
-    format!("{state:016x}")
+    sha256_hex(&content)
 }

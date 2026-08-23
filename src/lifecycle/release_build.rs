@@ -173,13 +173,13 @@ pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     ];
     // A compact SHA-256 for the artifact checksum (the artifact is
     // bounded and local; the FNV fallback is not used).
-    let length = bytes.len() as u64;
+    let bit_length = (bytes.len() as u64) * 8;
     let mut padded = bytes.to_vec();
     padded.push(0x80);
     while padded.len() % 64 != 56 {
         padded.push(0);
     }
-    padded.extend_from_slice(&length.to_be_bytes());
+    padded.extend_from_slice(&bit_length.to_be_bytes());
     for chunk in padded.chunks(64) {
         let mut w = [0_u32; 64];
         for (index, word) in chunk.chunks(4).enumerate() {

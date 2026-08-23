@@ -8,6 +8,7 @@
 
 use crate::lifecycle::release_build::{
     PackageArtifact, PackageError, build_locked_package, build_locked_package_with_command,
+    sha256_hex,
 };
 use std::{
     fs,
@@ -154,6 +155,18 @@ fn cargo_package_cannot_bypass_its_deadline() {
 
     assert!(matches!(error, PackageError::Cargo { .. }), "{error}");
     assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[test]
+fn checksums_match_standard_sha256_vectors() {
+    assert_eq!(
+        sha256_hex(b""),
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(
+        sha256_hex(b"abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
 }
 
 #[test]
