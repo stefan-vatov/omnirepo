@@ -39,6 +39,14 @@ struct ChangedReport {
 
 fn git(_fixture: &LifecycleFixture, root: &std::path::Path, arguments: &[&str]) {
     let output = std::process::Command::new("git")
+        // Fixture commits must not depend on the invoking developer's
+        // signing configuration.  With `commit.gpgsign` set globally these
+        // commits reach gpg-agent, which fails under a parallel test run
+        // ("gpg: signing failed: Cannot allocate memory") and fails a case
+        // that has nothing to do with signing.  Production Git delivery
+        // keeps the user's policy (canon/architecture/fleet-lifecycle.md);
+        // a throwaway fixture repository has no such contract.
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
         .args(arguments)
         .current_dir(root)
         .output()
