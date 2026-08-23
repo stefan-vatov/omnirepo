@@ -15,7 +15,9 @@ use super::state::{
 };
 use std::{
     error::Error,
+    ffi::c_int,
     fmt,
+    io::Read,
     path::Path,
     process::{Command, Stdio},
     time::{Duration, Instant},
@@ -25,6 +27,12 @@ use std::{
 pub const MAX_CAPTURE_BYTES: usize = 16 * 1024 * 1024;
 /// Total time budget for one capture command.
 pub const CAPTURE_TIMEOUT: Duration = Duration::from_secs(30);
+
+const SIGKILL: c_int = 9;
+
+unsafe extern "C" {
+    fn killpg(process_group: c_int, signal: c_int) -> c_int;
+}
 
 /// Hardening applied to every captured git invocation.
 fn hardened_git(root: &Path, arguments: &[&str]) -> Command {
@@ -84,26 +92,40 @@ impl Error for CaptureError {}
 
 fn run_bounded(root: &Path, arguments: &[&str]) -> Result<Vec<u8>, CaptureError> {
     let label = arguments.join(" ");
-    let mut child = hardened_git(root, arguments)
+    run_bounded_process(hardened_git(root, arguments), label, CAPTURE_TIMEOUT)
+}
+
+pub(super) fn run_bounded_process(
+    mut command: Command,
+    label: String,
+    timeout: Duration,
+) -> Result<Vec<u8>, CaptureError> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        command.process_group(0);
+    }
+    let mut child = command
         .spawn()
         .map_err(|error| CaptureError::Spawn(error.to_string()))?;
-    let deadline = Instant::now() + CAPTURE_TIMEOUT;
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    use std::io::Read;
+    let stdout = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let stderr = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let mut readers = Vec::new();
+    if let Some(pipe) = child.stdout.take() {
+        readers.push(spawn_capture_reader(pipe, std::sync::Arc::clone(&stdout)));
+    }
+    if let Some(pipe) = child.stderr.take() {
+        readers.push(spawn_capture_reader(pipe, std::sync::Arc::clone(&stderr)));
+    }
+    let deadline = Instant::now() + timeout;
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
-                if let Some(mut handle) = child.stdout.take() {
-                    handle
-                        .read_to_end(&mut stdout)
-                        .map_err(|error| CaptureError::Spawn(error.to_string()))?;
-                }
-                if let Some(mut handle) = child.stderr.take() {
-                    handle
-                        .read_to_end(&mut stderr)
-                        .map_err(|error| CaptureError::Spawn(error.to_string()))?;
-                }
+                terminate_capture_process_group(child.id());
+                join_capture_readers(readers);
+                let stdout = stdout.lock().expect("capture stdout");
+                let stderr = stderr.lock().expect("capture stderr");
                 if stdout.len() > MAX_CAPTURE_BYTES || stderr.len() > MAX_CAPTURE_BYTES {
                     return Err(CaptureError::OutputTooLarge {
                         command: label.clone(),
@@ -115,36 +137,75 @@ fn run_bounded(root: &Path, arguments: &[&str]) -> Result<Vec<u8>, CaptureError>
                         stderr: String::from_utf8_lossy(&stderr).trim().to_owned(),
                     });
                 }
-                return Ok(stdout);
+                return Ok(stdout.clone());
             }
             Ok(None) => {
                 if Instant::now() >= deadline {
-                    let _ = child.kill();
-                    let _ = child.wait();
+                    terminate_capture(&mut child);
+                    join_capture_readers(readers);
                     return Err(CaptureError::Timeout { command: label });
                 }
-                // Drain available output while waiting, bounded.
-                if let Some(handle) = child.stdout.as_mut() {
-                    let mut buffer = [0_u8; 8192];
-                    loop {
-                        match handle.read(&mut buffer) {
-                            Ok(0) | Err(_) => break,
-                            Ok(read) => {
-                                stdout.extend_from_slice(&buffer[..read]);
-                                if stdout.len() > MAX_CAPTURE_BYTES {
-                                    let _ = child.kill();
-                                    return Err(CaptureError::OutputTooLarge { command: label });
-                                }
-                            }
-                        }
-                    }
+                if stdout.lock().expect("capture stdout").len() > MAX_CAPTURE_BYTES
+                    || stderr.lock().expect("capture stderr").len() > MAX_CAPTURE_BYTES
+                {
+                    terminate_capture(&mut child);
+                    join_capture_readers(readers);
+                    return Err(CaptureError::OutputTooLarge { command: label });
                 }
                 std::thread::sleep(Duration::from_millis(5));
             }
             Err(error) => {
+                terminate_capture(&mut child);
+                join_capture_readers(readers);
                 return Err(CaptureError::Spawn(error.to_string()));
             }
         }
+    }
+}
+
+fn spawn_capture_reader<R: Read + Send + 'static>(
+    mut pipe: R,
+    sink: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        let mut buffer = [0_u8; 8192];
+        loop {
+            let read = match pipe.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(read) => read,
+                Err(_) => break,
+            };
+            let mut captured = sink.lock().expect("capture output");
+            let room = MAX_CAPTURE_BYTES
+                .saturating_add(1)
+                .saturating_sub(captured.len());
+            if room > 0 {
+                let take = read.min(room);
+                captured.extend_from_slice(&buffer[..take]);
+            }
+        }
+    })
+}
+
+fn terminate_capture(child: &mut std::process::Child) {
+    terminate_capture_process_group(child.id());
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+#[cfg(unix)]
+fn terminate_capture_process_group(process_group: u32) {
+    unsafe {
+        let _ = killpg(process_group as c_int, SIGKILL);
+    }
+}
+
+#[cfg(not(unix))]
+fn terminate_capture_process_group(_process_group: u32) {}
+
+fn join_capture_readers(readers: Vec<std::thread::JoinHandle<()>>) {
+    for reader in readers {
+        let _ = reader.join();
     }
 }
 

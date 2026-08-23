@@ -2,11 +2,16 @@
 
 #![allow(dead_code, unused_imports)]
 
-use super::capture::{CaptureError, capture_state};
+use super::capture::{CaptureError, capture_state, run_bounded_process};
 use super::state::{
     GitRepositoryState, HeadState, IndexState, TargetChange, UpstreamState, WorktreeState,
 };
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::Path,
+    process::{Command, Stdio},
+    time::{Duration, Instant},
+};
 
 fn fixture_repo() -> (tempfile::TempDir, std::path::PathBuf) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -61,6 +66,42 @@ fn non_git_directory_is_a_lawful_state() {
     assert_eq!(
         capture_state(fixture.path()).expect("capture"),
         GitRepositoryState::NonGit
+    );
+}
+
+#[test]
+fn silent_stdout_cannot_block_the_capture_deadline() {
+    if std::env::var_os("OMNIREPO_CAPTURE_HELPER").is_some() {
+        std::thread::sleep(Duration::from_secs(60));
+        return;
+    }
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base).expect("base");
+    let fixture = tempfile::Builder::new()
+        .prefix("capture-timeout-")
+        .tempdir_in(&base)
+        .expect("fixture");
+    let executable = std::env::current_exe().expect("test binary");
+    let mut command = Command::new(executable);
+    command
+        .args([
+            "--exact",
+            "repository::capture_tests::silent_stdout_cannot_block_the_capture_deadline",
+        ])
+        .env("OMNIREPO_CAPTURE_HELPER", "1")
+        .current_dir(fixture.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let started = Instant::now();
+    let error = run_bounded_process(command, "fixture".to_owned(), Duration::from_millis(50))
+        .expect_err("silent command must time out");
+
+    assert!(matches!(error, CaptureError::Timeout { .. }), "{error}");
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "a blocking pipe read must not bypass the deadline"
     );
 }
 
