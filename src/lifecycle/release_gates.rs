@@ -77,8 +77,26 @@ pub fn run_normative_gates(gates: &[(String, Vec<String>)]) -> Vec<GateRun> {
                 .args(&argv[1..])
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped());
-            let child = crate::lifecycle::check_runner::spawn_retry(&mut command).expect("gate");
-            let output = child.wait_with_output().expect("gate output");
+            let child = match crate::lifecycle::check_runner::spawn_retry(&mut command) {
+                Ok(child) => child,
+                Err(error) => {
+                    return GateRun {
+                        name: name.clone(),
+                        passed: false,
+                        evidence: format!("cannot start gate: {error}"),
+                    };
+                }
+            };
+            let output = match child.wait_with_output() {
+                Ok(output) => output,
+                Err(error) => {
+                    return GateRun {
+                        name: name.clone(),
+                        passed: false,
+                        evidence: format!("cannot collect gate output: {error}"),
+                    };
+                }
+            };
             let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
             let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
             GateRun {

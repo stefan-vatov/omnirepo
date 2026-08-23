@@ -50,6 +50,34 @@ fn the_gate_orchestrator_runs_every_gate_and_collects_the_results() {
 }
 
 #[test]
+fn a_gate_spawn_failure_is_collected_without_skipping_later_gates() {
+    let fixture = fixture_base();
+    let pass = fixture.path().join("gate-pass");
+    fs::write(&pass, "#!/bin/sh\nexit 0\n").expect("pass");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = fs::metadata(&pass).expect("meta").permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&pass, permissions).expect("mode");
+    }
+    let gates = vec![
+        (
+            "missing".to_owned(),
+            vec![fixture.path().join("absent").display().to_string()],
+        ),
+        ("pass".to_owned(), vec![pass.display().to_string()]),
+    ];
+
+    let runs = run_normative_gates(&gates);
+
+    assert_eq!(runs.len(), 2, "every gate has a terminal result");
+    assert!(!runs[0].passed);
+    assert!(runs[0].evidence.contains("cannot start gate"));
+    assert!(runs[1].passed, "a failed peer cannot stop a later gate");
+}
+
+#[test]
 fn provenance_verifies_the_manifest_against_the_checkout() {
     let fixture = fixture_base();
     let checkout = fixture.path().join("checkout");
