@@ -8,6 +8,7 @@ mod item_resolution;
 mod publish;
 mod snapshot;
 
+pub(crate) use acquisition::{AcquireConfig, acquire};
 pub(crate) use declarations::{DeclarationsError, SourceDeclaration, parse_declarations};
 pub(crate) use snapshot::{RevisionId, SourceId};
 

@@ -56,14 +56,14 @@ fn setup_source(fixture: &tempfile::TempDir) -> std::path::PathBuf {
             .expect("git");
         assert!(output.status.success(), "git {args:?}: {:?}", output);
     };
-    git(&["add", "."]);
-    git(&["commit", "--quiet", "--message", "source"]);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
         "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n",
     )
     .expect("declarations");
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "source"]);
     source
 }
 
@@ -405,8 +405,6 @@ fn setup_partial_source(
             .expect("git");
         assert!(output.status.success(), "git {args:?}: {:?}", output);
     };
-    git(&["add", "."]);
-    git(&["commit", "--quiet", "--message", "source"]);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
@@ -415,6 +413,8 @@ fn setup_partial_source(
         ),
     )
     .expect("declarations");
+    git(&["add", "."]);
+    git(&["commit", "--quiet", "--message", "source"]);
     source
 }
 

@@ -103,6 +103,50 @@ fn local_sources_record_complete_in_declared_order_after_the_pin() {
 }
 
 #[test]
+fn local_sources_must_be_clean_and_on_main() {
+    let fixture = fixture_base();
+    let dirty = fixture.path().join("dirty");
+    let branch = fixture.path().join("branch");
+    git_repo(&dirty);
+    git_repo(&branch);
+    fs::write(dirty.join("managed.txt"), "dirty\n").expect("dirty source");
+    let output = Command::new("git")
+        .args(["switch", "--quiet", "--create", "feature"])
+        .current_dir(&branch)
+        .output()
+        .expect("git switch");
+    assert!(output.status.success(), "git switch: {output:?}");
+    let config = machine(
+        Vec::new(),
+        vec![
+            SourceReference::new(
+                source_id("dirty"),
+                SourceLocation::local(
+                    AbsolutePath::parse(dirty.to_str().expect("utf8")).expect("path"),
+                ),
+            ),
+            SourceReference::new(
+                source_id("branch"),
+                SourceLocation::local(
+                    AbsolutePath::parse(branch.to_str().expect("utf8")).expect("path"),
+                ),
+            ),
+        ],
+    );
+
+    let catalog = build_runtime_catalog(&config).expect("catalog");
+
+    assert!(matches!(
+        &catalog.entries()[0],
+        CatalogState::Unavailable { reason, .. } if reason.contains("not clean")
+    ));
+    assert!(matches!(
+        &catalog.entries()[1],
+        CatalogState::Unavailable { reason, .. } if reason.contains("must be on main")
+    ));
+}
+
+#[test]
 fn remote_sources_record_unavailable_with_a_typed_reason() {
     let cache = AbsolutePath::parse("/tmp/omnirepo-cache").expect("cache");
     let config = machine_with_cache(

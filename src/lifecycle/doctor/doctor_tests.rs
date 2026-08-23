@@ -55,7 +55,6 @@ fn partial_source(fixture: &Path, source_id: &str, item_id: &str, section: &str)
     git_repo(&source);
     fs::create_dir_all(source.join("partials")).expect("partials");
     fs::write(source.join("partials/rules.md"), "rules\n").expect("partial");
-    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
@@ -64,8 +63,7 @@ fn partial_source(fixture: &Path, source_id: &str, item_id: &str, section: &str)
         ),
     )
     .expect("declarations");
-    // The declaration file itself stays untracked: the local source is
-    // pinned at HEAD and read from the worktree snapshot root.
+    commit_all(&source);
     source.display().to_string()
 }
 
@@ -138,13 +136,13 @@ fn an_unsupported_destination_format_is_a_problem() {
     let source = fixture.path().join("source-a");
     git_repo(&source);
     fs::write(source.join("partial.txt"), "x\n").expect("partial");
-    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
         "omnirepo-declarations-v1\nsource=source-a path=partial.txt id=item-1 mode=section destination=Dockerfile section=rules\n",
     )
     .expect("declarations");
+    commit_all(&source);
     machine_config(
         &home,
         &destination,
@@ -173,13 +171,13 @@ fn a_whole_vs_section_conflict_is_a_problem_naming_both_items() {
     fs::create_dir_all(source.join("partials")).expect("partials");
     fs::write(source.join("partials/rules.md"), "rules\n").expect("partial");
     fs::write(source.join("whole.md"), "whole\n").expect("whole");
-    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
         "omnirepo-declarations-v1\nsource=source-a path=partials/rules.md id=item-sec mode=section destination=AGENTS.md section=rules\nsource=source-a path=whole.md id=item-whole mode=sync destination=AGENTS.md\n",
     )
     .expect("declarations");
+    commit_all(&source);
     machine_config(
         &home,
         &destination,

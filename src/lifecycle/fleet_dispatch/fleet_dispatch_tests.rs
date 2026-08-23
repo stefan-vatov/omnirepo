@@ -101,13 +101,13 @@ fn a_configured_fleet_runs_end_to_end_and_finalizes_success() {
             .expect("git");
         assert!(output.status.success(), "git {args:?}: {:?}", output);
     };
-    git(&source, &["add", "."]);
-    git(&source, &["commit", "--quiet", "--message", "source"]);
     fs::write(
         source.join(".omnirepo/source.yaml"),
         "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n",
     )
     .expect("declarations");
+    git(&source, &["add", "."]);
+    git(&source, &["commit", "--quiet", "--message", "source"]);
     let destination = fixture.path().join("destination-a");
     git_repo(&destination);
     fs::write(destination.join("managed.txt"), "v0\n").expect("destination file");
@@ -152,13 +152,13 @@ fn an_unavailable_higher_priority_source_marks_the_repository_affected() {
             .expect("git");
         assert!(output.status.success(), "git {args:?}: {:?}", output);
     };
-    git(&source, &["add", "."]);
-    git(&source, &["commit", "--quiet", "--message", "source"]);
     fs::write(
         source.join(".omnirepo/source.yaml"),
         "omnirepo-declarations-v1\nsource=source-b path=managed.txt id=item-1 mode=sync destination=managed.txt\n",
     )
     .expect("declarations");
+    git(&source, &["add", "."]);
+    git(&source, &["commit", "--quiet", "--message", "source"]);
     // A valid destination that would otherwise sync successfully.
     let destination = fixture.path().join("destination-a");
     git_repo(&destination);

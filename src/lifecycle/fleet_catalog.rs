@@ -15,8 +15,8 @@ mod fleet_catalog_tests;
 
 use crate::configuration::{MachineConfiguration, SourceLocation};
 use crate::platform::{AuthorityRoot, ReadOnly, SourceSnapshotRoot};
-use crate::source::{CatalogState, RevisionId, SourceCatalog, SourceId};
-use std::{error::Error, fmt, path::Path, process::Command};
+use crate::source::{AcquireConfig, CatalogState, SourceCatalog, SourceId, acquire};
+use std::{error::Error, fmt, path::Path};
 
 /// Catalog build failures (defensive; availability is per source).
 #[derive(Debug)]
@@ -54,7 +54,7 @@ pub fn build_runtime_catalog(
             .map_err(|_| CatalogBuildError::SourceUnavailable)?;
         let state = match source.location() {
             SourceLocation::Local(path) => {
-                match local_source_state(&source_id, Path::new(path.as_str())) {
+                match local_source_state(&source_id, source, Path::new(path.as_str())) {
                     Ok(state) => state,
                     Err(reason) => CatalogState::Unavailable {
                         source: source_id.clone(),
@@ -76,32 +76,18 @@ pub fn build_runtime_catalog(
 
 /// One local source: the typed read-only root must open (no-follow) and
 /// the revision must pin (the canonical HEAD of the clean worktree).
-fn local_source_state(source: &SourceId, path: &std::path::Path) -> Result<CatalogState, String> {
+fn local_source_state(
+    source: &SourceId,
+    reference: &crate::configuration::SourceReference,
+    path: &Path,
+) -> Result<CatalogState, String> {
     let root = AuthorityRoot::<SourceSnapshotRoot, ReadOnly>::open(path)
         .map_err(|error| error.to_string())?;
     let _ = root;
-    let revision = pin_revision(path).map_err(|error| error.to_string())?;
+    let snapshot =
+        acquire(reference, &AcquireConfig::new(path)).map_err(|error| error.to_string())?;
     Ok(CatalogState::Complete {
         source: source.clone(),
-        revision,
+        revision: snapshot.revision().clone(),
     })
-}
-
-/// Pin the canonical revision: the current HEAD of the source worktree.
-fn pin_revision(path: &std::path::Path) -> Result<RevisionId, String> {
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(path)
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .output()
-        .map_err(|error| error.to_string())?;
-    if !output.status.success() {
-        return Err("the source worktree cannot pin its HEAD".to_owned());
-    }
-    let oid = String::from_utf8(output.stdout)
-        .map_err(|error| error.to_string())?
-        .trim()
-        .to_owned();
-    RevisionId::new(oid).map_err(|error| error.to_string())
 }
