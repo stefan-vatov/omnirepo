@@ -92,6 +92,7 @@ fn fixture() -> (LifecycleFixture, PathBuf, PathBuf) {
         &root,
         &["config", "user.email", "coverage@example.test"],
     );
+    git(&fixture, &root, &["config", "diff.mnemonicPrefix", "true"]);
     std::fs::write(root.join("Cargo.toml"), "[package]\nname = \"fixture\"\n")
         .expect("write manifest");
     git(&fixture, &root, &["add", "."]);
@@ -426,6 +427,8 @@ fn cli_reports_changed_coverage_and_writes_diagnostics() {
     let diff = std::process::Command::new("git")
         .args([
             "diff",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
             "--no-ext-diff",
             "--no-color",
             "--unified=0",

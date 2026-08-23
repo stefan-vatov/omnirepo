@@ -113,6 +113,8 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     let diff_args = if options.head.is_some() {
         vec![
             "diff",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
             "--no-ext-diff",
             "--no-color",
             "--unified=0",
@@ -123,6 +125,8 @@ pub fn evaluate(options: &Options) -> Result<Report, Error> {
     } else {
         vec![
             "diff",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
             "--no-ext-diff",
             "--no-color",
             "--unified=0",
