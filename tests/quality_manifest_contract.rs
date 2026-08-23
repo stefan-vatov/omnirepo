@@ -129,11 +129,7 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
             "--locked",
         ],
     ),
-    (
-        "pre-commit",
-        "system",
-        &["pre-commit", "run", "--all-files"],
-    ),
+    ("prek", "system", &["prek", "run", "--all-files"]),
     (
         "beads-validate",
         "rust-1.95.0",

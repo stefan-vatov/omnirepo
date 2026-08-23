@@ -30,7 +30,7 @@ Every change must pass:
 - `cargo test --workspace --all-targets --all-features --locked`
 - `cargo test --workspace --doc --all-features --locked`
 - `cargo build --workspace --all-targets --all-features --locked`
-- the repository's configured pre-commit hooks
+- `prek run --all-files`
 
 All Cargo validation commands that resolve dependencies must use `--locked`,
 so validation fails rather than updating the committed lockfile.

@@ -25,7 +25,7 @@ Each gate has these fields:
 | 3 | `tests` | stable | `cargo test --workspace --all-targets --all-features --locked` | `quality.tests` | `canon/standards.md` |
 | 4 | `doctests` | stable | `cargo test --workspace --doc --all-features --locked` | `quality.doctests` | `canon/standards.md` |
 | 5 | `build` | stable | `cargo build --workspace --all-targets --all-features --locked` | `quality.build` | `canon/standards.md` |
-| 6 | `pre-commit` | system | `pre-commit run --all-files` | `quality.pre-commit` | `canon/standards.md` |
+| 6 | `prek` | system | `prek run --all-files` | `quality.prek` | `canon/standards.md` |
 | 7 | `beads-validate` | stable | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions` | `quality.beads-validate` | `tools/omnirepo-dev/src/beads_validator.rs` |
 | 8 | `beads-validator-tests` | stable | `cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract` | `quality.beads-validator-tests` | `tools/omnirepo-dev/tests/beads_validator_contract.rs` |
 | 9 | `beads-plan` | stable | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json` | `quality.beads-plan` | `tools/omnirepo-dev/src/planner.rs` |
@@ -73,7 +73,7 @@ report.
 The Cargo aliases `fmt-check`, `lint`, `test-all`, `test-docs`, and `build-all`
 are developer shortcuts. They map to the canonical gates in the `aliases`
 array. They are not additional gates and must not receive new failure
-identities. The pre-commit gate may invoke hooks that also run Beads checks;
+identities. The prek gate may invoke hooks that also run Beads checks;
 the direct Beads entries remain explicit workflow gates so their failures have
 stable identities. This is a nested invocation, not a second command
 authority.

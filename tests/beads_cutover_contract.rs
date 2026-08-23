@@ -89,6 +89,11 @@ fn pre_commit_hook_mappings_are_not_exact_duplicates_within_a_repository() {
     let repositories = mapping_value(root, "repos")
         .and_then(Value::as_sequence)
         .expect(".pre-commit-config.yaml must define a repos sequence");
+    assert_eq!(
+        mapping_value(root, "minimum_prek_version").and_then(Value::as_str),
+        Some("0.4.14"),
+        "the hook configuration must reject older prek versions"
+    );
 
     for (repository_index, repository) in repositories.iter().enumerate() {
         let repository_map = repository
@@ -193,5 +198,9 @@ fn workflow_consumers_select_manifest_owned_profiles() {
     assert!(stable.contains("--profile msrv --json"));
     assert!(hooks.contains("--profile stable --json"));
     assert!(coverage.contains("--profile coverage --json"));
+    assert!(stable.contains("'prek==0.4.14'"));
+    assert!(hooks.contains("'prek==0.4.14'"));
+    assert!(!stable.contains("'pre-commit=="));
+    assert!(!hooks.contains("'pre-commit=="));
     assert!(!hooks.contains("validate_beads_decisions:"));
 }

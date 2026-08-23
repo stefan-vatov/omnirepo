@@ -15,7 +15,7 @@ const REQUIRED_GATES: &[&str] = &[
     "tests",
     "doctests",
     "build",
-    "pre-commit",
+    "prek",
     "beads-validate",
     "beads-validator-tests",
     "beads-plan",
@@ -304,9 +304,9 @@ fn manifest_is_green_and_contains_every_required_gate() {
 }
 
 #[test]
-fn omitted_beads_precommit_or_coverage_gate_is_rejected() {
+fn omitted_beads_prek_or_coverage_gate_is_rejected() {
     let mut manifest = read_manifest();
-    for omitted in ["beads-plan-tests", "pre-commit", "coverage"] {
+    for omitted in ["beads-plan-tests", "prek", "coverage"] {
         manifest.gates.retain(|gate| gate.id != omitted);
         let failures = manifest_contract(&manifest);
         assert_red(&format!("gates[{omitted}]"), &failures);
