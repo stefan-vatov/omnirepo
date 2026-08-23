@@ -81,13 +81,15 @@ pub fn run_check(
     for (key, value) in &spec.env {
         command.env(key, value);
     }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        command.process_group(0);
+    }
     let mut child = spawn_retry(&mut command).map_err(|error| CheckError::Spawn {
         reason: error.to_string(),
     })?;
-    // The program runs in its own process group so a timeout can kill the
-    // whole tree.  On Linux the program is launched with :
-    // the wrapper waits in our group while the program leads a new session
-    // (its own pgid), which /proc exposes.
     let stdout = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let stderr = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let mut readers = Vec::new();
@@ -97,9 +99,6 @@ pub fn run_check(
     if let Some(pipe) = child.stderr.take() {
         readers.push(spawn_reader(pipe, std::sync::Arc::clone(&stderr)));
     }
-    // The direct child is terminated at the deadline; the captured output
-    // is bounded by the reader budget and the readers end when their
-    // pipes close (descendants have their own bounded lifetimes).
     let deadline = Instant::now() + budget;
     let status = loop {
         match child.try_wait() {
@@ -107,6 +106,7 @@ pub fn run_check(
             Ok(None) => {
                 if Instant::now() >= deadline {
                     terminate(&mut child);
+                    join_readers(readers);
                     return Ok(CheckResult {
                         position: spec.position,
                         outcome: CheckOutcome::TimedOut { budget },
@@ -117,12 +117,16 @@ pub fn run_check(
             }
             Err(error) => {
                 terminate(&mut child);
+                join_readers(readers);
                 return Err(CheckError::Spawn {
                     reason: error.to_string(),
                 });
             }
         }
     };
+    // A command can exit after starting background workers. Clear any
+    // remaining members before joining pipe readers or advancing the stage.
+    terminate_process_group(child.id());
     join_readers(readers);
     let combined = format!(
         "{}\n{}",
@@ -167,8 +171,29 @@ fn spawn_reader<R: Read + Send + 'static>(
 }
 
 fn terminate(child: &mut std::process::Child) {
+    terminate_process_group(child.id());
     let _ = child.kill();
     let _ = child.wait();
+}
+
+#[cfg(unix)]
+fn terminate_process_group(process_group: u32) {
+    // SAFETY: the child was placed in a new process group whose ID equals its
+    // PID. `killpg` does not dereference memory; it targets that numeric group.
+    unsafe {
+        let _ = killpg(process_group as i32, SIGKILL);
+    }
+}
+
+#[cfg(not(unix))]
+fn terminate_process_group(_process_group: u32) {}
+
+#[cfg(unix)]
+const SIGKILL: i32 = 9;
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn killpg(process_group: i32, signal: i32) -> i32;
 }
 
 /// Spawn with a bounded retry on ETXTBSY: a script that was just

@@ -60,7 +60,7 @@ fn timeout_terminates_and_no_descendant_survives() {
         .expect("fixture");
     let marker = fixture.path().join("descendant-marker");
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_owned());
-    let script = format!("(sleep 30; touch {}) & wait", marker.display());
+    let script = format!("(sleep 1; touch {}) & wait", marker.display());
     let started = std::time::Instant::now();
     let result = run_check(
         fixture.path(),
@@ -73,8 +73,9 @@ fn timeout_terminates_and_no_descendant_survives() {
         started.elapsed() < Duration::from_secs(10),
         "terminated promptly"
     );
-    // The descendant is reaped with the group: the marker never appears.
-    std::thread::sleep(Duration::from_millis(200));
+    // Wait past the descendant's write deadline. It must have been terminated
+    // with the complete process tree, so the marker can never appear.
+    std::thread::sleep(Duration::from_millis(1200));
     assert!(!marker.exists(), "descendant survived the termination");
 }
 
