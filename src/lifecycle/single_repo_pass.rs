@@ -23,8 +23,9 @@ use crate::lifecycle::journal::{JournalError, JournalHandle};
 use crate::lifecycle::verify_and_gate::VerificationVerdict;
 use crate::platform::{AuthorityRoot, GitWorkingDirectoryRoot, ReadOnly};
 use crate::repository::{
-    GitRepositoryState, HeadState, IsolatedIndex, PlannedOperation, RepositorySnapshot,
-    TargetChange, VerificationCommand, build_authorized_delta, capture_state, prepare_index,
+    GitRepositoryState, HeadState, IsolatedIndex, POLICY_FILE_NAME, PlannedOperation,
+    RepositorySnapshot, TargetChange, VerificationCommand, build_authorized_delta, capture_state,
+    prepare_index,
 };
 use std::{error::Error, fmt, path::Path};
 
@@ -232,10 +233,22 @@ pub fn run_single_repository_pass(
     let index: IsolatedIndex = prepare_index(working, &delta).map_err(|error| PassError::Plan {
         reason: error.to_string(),
     })?;
+    let expected_policy = (!checks.is_empty())
+        .then(|| read_repository_file(&observe_root, POLICY_FILE_NAME))
+        .transpose()
+        .map_err(|reason| PassError::Plan { reason })?;
     let expected_modes = composed
         .iter()
         .map(|group| {
-            read_managed_file(&observe_root, &group.target)
+            read_repository_file(&observe_root, &group.target)
+                .and_then(|observed| {
+                    observed.ok_or_else(|| {
+                        format!(
+                            "managed file {} disappeared before verification",
+                            group.target
+                        )
+                    })
+                })
                 .map(|(_, mode)| mode)
                 .map_err(|reason| PassError::Plan { reason })
         })
@@ -290,9 +303,9 @@ pub fn run_single_repository_pass(
     let mut changed_metadata = false;
     for (group, expected_mode) in composed.iter().zip(expected_modes) {
         let (bytes_changed, metadata_changed) =
-            match read_managed_file(&observe_root, &group.target) {
-                Ok((bytes, mode)) => (bytes != group.replacement, mode != expected_mode),
-                Err(_) => (true, true),
+            match read_repository_file(&observe_root, &group.target) {
+                Ok(Some((bytes, mode))) => (bytes != group.replacement, mode != expected_mode),
+                Ok(None) | Err(_) => (true, true),
             };
         if !bytes_changed && !metadata_changed {
             continue;
@@ -327,6 +340,47 @@ pub fn run_single_repository_pass(
             changed.join(" and "),
             verifier_changes.join(", ")
         ));
+    }
+    if let Some(expected_policy) = &expected_policy {
+        let observed_policy = read_repository_file(&observe_root, POLICY_FILE_NAME);
+        let policy_changed = match (expected_policy, &observed_policy) {
+            (Some(expected), Ok(Some(observed))) => expected != observed,
+            (None, Ok(None)) => false,
+            (Some(_), Ok(None) | Err(_)) | (None, Ok(Some(_)) | Err(_)) => true,
+        };
+        if policy_changed {
+            let restoration = match expected_policy {
+                Some((bytes, mode)) => {
+                    crate::lifecycle::replace::replace_bytes_atomically_with_mode(
+                        working,
+                        POLICY_FILE_NAME,
+                        &format!("verification-policy-restore-{run_id}"),
+                        bytes,
+                        *mode,
+                    )
+                    .map_err(|error| error.to_string())
+                }
+                None => (|| -> Result<(), String> {
+                    let authority = crate::platform::open_mutation_root::<
+                        crate::platform::DestinationRepositoryRoot,
+                    >(working)
+                    .map_err(|error| error.to_string())?;
+                    let relative = crate::platform::RelativePath::parse(POLICY_FILE_NAME)
+                        .map_err(|error| error.to_string())?;
+                    authority
+                        .resolve_mutation(&relative, crate::platform::MutationIntent::Remove)
+                        .and_then(|target| target.remove())
+                        .map_err(|error| error.to_string())
+                })(),
+            };
+            let disposition = match restoration {
+                Ok(()) => "restored".to_owned(),
+                Err(error) => format!("restoration failed: {error}"),
+            };
+            verification_failures.push(format!(
+                "verification changed repository policy {POLICY_FILE_NAME} ({disposition}); no Git delivery"
+            ));
+        }
     }
     if !verification_failures.is_empty() {
         return Ok(PassOutcome::Failed {
@@ -478,27 +532,34 @@ fn read_source_file(
     Ok(bytes)
 }
 
-/// Read one managed destination file through the typed destination
-/// authority (no-follow).
-fn read_managed_file(
+/// Read one optional repository file through the typed destination authority
+/// (no-follow). Only true absence is `None`.
+fn read_repository_file(
     authority: &AuthorityRoot<crate::platform::DestinationRepositoryRoot, ReadOnly>,
     target_path: &str,
-) -> Result<(Vec<u8>, u32), String> {
+) -> Result<Option<(Vec<u8>, u32)>, String> {
     use std::io::Read;
     let relative = crate::platform::RelativePath::parse(target_path)
-        .map_err(|error| format!("managed path {target_path:?} is invalid: {error}"))?;
-    let target = authority
-        .resolve_read(&relative, crate::platform::ObjectClass::RegularFile)
-        .map_err(|error| format!("cannot resolve the managed file {target_path}: {error}"))?;
+        .map_err(|error| format!("repository path {target_path:?} is invalid: {error}"))?;
+    let target = match authority.resolve_read(&relative, crate::platform::ObjectClass::RegularFile)
+    {
+        Ok(target) => target,
+        Err(crate::platform::PathError::NotFound { .. }) => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "cannot resolve the repository file {target_path}: {error}"
+            ));
+        }
+    };
     let mut handle = target
         .try_clone_file()
-        .map_err(|error| format!("cannot open the managed file {target_path}: {error}"))?;
+        .map_err(|error| format!("cannot open the repository file {target_path}: {error}"))?;
     #[cfg(unix)]
     let mode = {
         use std::os::unix::fs::PermissionsExt;
         handle
             .metadata()
-            .map_err(|error| format!("cannot inspect the managed file {target_path}: {error}"))?
+            .map_err(|error| format!("cannot inspect the repository file {target_path}: {error}"))?
             .permissions()
             .mode()
             & 0o7777
@@ -508,8 +569,8 @@ fn read_managed_file(
     let mut bytes = Vec::new();
     handle
         .read_to_end(&mut bytes)
-        .map_err(|error| format!("cannot read the managed file {target_path}: {error}"))?;
-    Ok((bytes, mode))
+        .map_err(|error| format!("cannot read the repository file {target_path}: {error}"))?;
+    Ok(Some((bytes, mode)))
 }
 
 /// One composed destination-file group.

@@ -707,3 +707,127 @@ fn a_failing_verifier_does_not_retain_managed_mutations() {
     );
     journal.shutdown().expect("shutdown");
 }
+
+#[test]
+fn a_verifier_cannot_rewrite_repository_policy() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    let policy = b"version: 1\ncommands: []\n";
+    fs::write(root.join(".omnirepo.yaml"), policy).expect("policy");
+    let commit = Command::new("git")
+        .args(["add", ".omnirepo.yaml"])
+        .current_dir(&root)
+        .status()
+        .expect("git add policy");
+    assert!(commit.success(), "git add policy: {commit:?}");
+    let commit = Command::new("git")
+        .args([
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--quiet",
+            "--message",
+            "policy",
+        ])
+        .current_dir(&root)
+        .status()
+        .expect("git commit policy");
+    assert!(commit.success(), "git commit policy: {commit:?}");
+    let snapshot = snapshot_for(&root);
+    let checks = vec![
+        crate::repository::VerificationCommand::new([
+            "/bin/sh",
+            "-c",
+            "printf 'version: 1\\nall: true\\n' > .omnirepo.yaml",
+        ])
+        .expect("command"),
+    ];
+
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot,
+        &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
+        "sync managed",
+    )
+    .expect("pass");
+
+    let reason = match outcome {
+        PassOutcome::Failed { reason } => reason,
+        other => panic!("expected verifier policy mutation to fail the pass: {other:?}"),
+    };
+    assert!(reason.contains("repository policy"), "{reason}");
+    assert_eq!(
+        fs::read(root.join(".omnirepo.yaml")).expect("policy"),
+        policy,
+        "the frozen repository policy bytes remain visible"
+    );
+    let objects = Command::new("git")
+        .args([
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("git objects");
+    let objects = String::from_utf8(objects.stdout).expect("stdout");
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 2, "base and policy only; mutation prevents Git");
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
+fn a_verifier_cannot_create_repository_policy() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    let snapshot = snapshot_for(&root);
+    let checks = vec![
+        crate::repository::VerificationCommand::new([
+            "/bin/sh",
+            "-c",
+            "printf 'version: 1\\nall: true\\n' > .omnirepo.yaml",
+        ])
+        .expect("command"),
+    ];
+
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot,
+        &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
+        "sync managed",
+    )
+    .expect("pass");
+
+    let reason = match outcome {
+        PassOutcome::Failed { reason } => reason,
+        other => panic!("expected verifier policy creation to fail the pass: {other:?}"),
+    };
+    assert!(reason.contains("repository policy"), "{reason}");
+    assert!(
+        !root.join(".omnirepo.yaml").exists(),
+        "the verifier-created policy is removed"
+    );
+    let objects = Command::new("git")
+        .args([
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objecttype)",
+        ])
+        .current_dir(&root)
+        .output()
+        .expect("git objects");
+    let objects = String::from_utf8(objects.stdout).expect("stdout");
+    let commits = objects.lines().filter(|line| *line == "commit").count();
+    assert_eq!(commits, 1, "base only; policy creation prevents Git");
+    journal.shutdown().expect("shutdown");
+}

@@ -245,6 +245,12 @@ impl MutationTarget {
         backend::create_exclusive(self)
     }
 
+    /// Remove the resolved regular-file target after revalidating its root,
+    /// ancestors, leaf identity, and removal intent.
+    pub fn remove(self) -> Result<(), PathError> {
+        backend::remove(self)
+    }
+
     pub(crate) fn create_exclusive_with_mode(self, mode: u32) -> Result<std::fs::File, PathError> {
         backend::create_exclusive_with_mode(self, mode)
     }

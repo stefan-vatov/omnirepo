@@ -17,7 +17,7 @@ pub(crate) use operation_commit::{
     CommitError, RecordedCommit, create_commit, index_matches_parent,
 };
 pub(crate) use policy::{RepositoryPolicy, VerificationCommand};
-pub(crate) use policy_loader::{PolicyPresence, load_policy};
+pub(crate) use policy_loader::{POLICY_FILE_NAME, PolicyPresence, load_policy};
 
 #[cfg(test)]
 pub(crate) use policy_loader::PolicyLoadError;

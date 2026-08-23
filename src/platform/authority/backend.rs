@@ -131,6 +131,7 @@ struct RawStatx {
 
 unsafe extern "C" {
     fn openat(dirfd: c_int, pathname: *const c_char, flags: c_int, ...) -> c_int;
+    fn unlinkat(dirfd: c_int, pathname: *const c_char, flags: c_int) -> c_int;
     #[cfg(target_os = "macos")]
     fn fstatfs(fd: c_int, buffer: *mut StatFs) -> c_int;
     fn dup(fd: c_int) -> c_int;
@@ -421,6 +422,39 @@ pub(crate) fn create_exclusive_with_mode(
     // same metadata device, so a second post-create device check cannot
     // observe a new state.
     Ok(handle)
+}
+
+pub(crate) fn remove(target: MutationTarget) -> Result<(), PathError> {
+    if target.intent != MutationIntent::Remove {
+        return Err(PathError::Io {
+            operation: "remove mutation target".to_owned(),
+            path: target.relative.display(),
+            kind: "mutation intent is not Remove".to_owned(),
+            code: None,
+        });
+    }
+    let parent = revalidate_mutation(&target)?;
+    let name = CString::new(target.name).map_err(|_| PathError::Io {
+        operation: "remove mutation target".to_owned(),
+        path: target.relative.display(),
+        kind: "NUL is not a path component".to_owned(),
+        code: None,
+    })?;
+    let result = unsafe { unlinkat(parent.as_raw_fd(), name.as_ptr(), 0) };
+    if result != 0 {
+        return Err(map_io(
+            "remove mutation target",
+            &target.relative.display(),
+            io::Error::last_os_error(),
+        ));
+    }
+    parent.sync_all().map_err(|error| {
+        map_io(
+            "sync mutation parent after removal",
+            &target.relative.display(),
+            error,
+        )
+    })
 }
 
 pub(crate) fn sync_file(file: &std::fs::File, path: &str) -> Result<(), PathError> {
