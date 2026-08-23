@@ -82,15 +82,31 @@ fn killed_owner_lock_is_reclaimed() {
     fs::create_dir_all(&cache).expect("cache");
     let mut child = spawn_holder(&cache);
     std::thread::sleep(Duration::from_millis(400));
-    // SIGKILL the holder: its lock becomes stale.
+    // SIGKILL the holder: the kernel releases its lock.
     let _ = child.kill();
     let _ = child.wait();
     let lock = SourceLock::acquire_with_wait(&cache, "upstream", Duration::from_secs(5))
         .expect("stale lock reclaimed");
     let lock_path = cache.join(".upstream.lock");
-    let owner = fs::read_to_string(&lock_path).expect("lock content");
-    assert_eq!(owner.trim(), std::process::id().to_string());
+    assert!(lock_path.is_file(), "stable lock inode");
     drop(lock);
-    // The lock file is removed on release.
-    assert!(!lock_path.exists(), "lock released");
+    SourceLock::acquire_with_wait(&cache, "upstream", Duration::from_millis(100))
+        .expect("released lock can be acquired");
+}
+
+#[test]
+fn stale_pid_file_does_not_impersonate_a_live_lock_owner() {
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base).expect("base");
+    let fixture = tempfile::Builder::new()
+        .prefix("source-lock-pid-reuse-")
+        .tempdir_in(&base)
+        .expect("fixture");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("cache");
+    fs::write(cache.join(".upstream.lock"), std::process::id().to_string())
+        .expect("write residue with a reused PID");
+
+    SourceLock::acquire_with_wait(&cache, "upstream", Duration::from_millis(100))
+        .expect("residue without a kernel lock has no owner");
 }

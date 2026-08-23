@@ -19,8 +19,10 @@ mod acquisition_concurrency_tests;
 
 use std::{
     error::Error,
+    ffi::c_int,
     fmt,
     io::Read,
+    os::fd::AsRawFd,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::atomic::{AtomicU64, Ordering},
@@ -37,6 +39,13 @@ pub const DEFAULT_MAX_RETRIES: u8 = 2;
 pub const DEFAULT_BACKOFF: Duration = Duration::from_millis(250);
 
 static SNAPSHOT_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+const LOCK_EX: c_int = 2;
+const LOCK_NB: c_int = 4;
+
+unsafe extern "C" {
+    fn flock(fd: c_int, operation: c_int) -> c_int;
+}
 
 /// Acquisition controls.
 #[derive(Clone, Debug)]
@@ -760,12 +769,11 @@ fn redact_credentials(text: &str) -> String {
     output
 }
 
-/// Bounded per-source acquisition lock: exclusive-create a lock file and
-/// retry with a short backoff until the peer releases it or the budget is
-/// exhausted.  Dropping the guard removes the lock.
+/// Bounded per-source acquisition lock. The kernel owns lock lifetime, so a
+/// dead process releases its lock without PID-file reclamation.
 #[derive(Debug)]
 pub(crate) struct SourceLock {
-    path: PathBuf,
+    _file: std::fs::File,
 }
 
 impl SourceLock {
@@ -773,35 +781,33 @@ impl SourceLock {
         Self::acquire_with_wait(cache_root, source_id, Duration::from_secs(30))
     }
 
-    /// Acquire with a bounded wait.  A lock left by a dead owner (its PID no
-    /// longer answers a liveness probe) is stale and is reclaimed without
-    /// waiting: stale recovery never steals live work, because only dead
-    /// owners are reclaimed.
+    /// Acquire with a bounded wait. A dead owner releases the kernel lock
+    /// automatically; a lock-file inode never carries ownership by itself.
     pub(crate) fn acquire_with_wait(
         cache_root: &Path,
         source_id: &str,
         wait: Duration,
     ) -> Result<Self, AcquireError> {
         let path = cache_root.join(format!(".{source_id}.lock"));
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&path)
+            .map_err(|error| AcquireError::Io {
+                path: path.clone(),
+                reason: error.to_string(),
+            })?;
         let deadline = Instant::now() + wait;
         loop {
-            match std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&path)
-            {
-                Ok(mut file) => {
-                    let pid = std::process::id().to_string();
-                    let _ = std::io::Write::write_all(&mut file, pid.as_bytes());
-                    return Ok(Self { path });
-                }
-                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                    if lock_owner_is_dead(&path) {
-                        // The previous owner died; its lock is stale.  Remove
-                        // it and retry immediately.
-                        let _ = std::fs::remove_file(&path);
-                        continue;
-                    }
+            let result = unsafe { flock(file.as_raw_fd(), LOCK_EX | LOCK_NB) };
+            if result == 0 {
+                return Ok(Self { _file: file });
+            }
+            let error = std::io::Error::last_os_error();
+            match error.kind() {
+                std::io::ErrorKind::WouldBlock => {
                     if Instant::now() >= deadline {
                         return Err(AcquireError::Cache {
                             reason: format!(
@@ -812,7 +818,8 @@ impl SourceLock {
                     }
                     std::thread::sleep(Duration::from_millis(20));
                 }
-                Err(error) => {
+                std::io::ErrorKind::Interrupted => {}
+                _ => {
                     return Err(AcquireError::Io {
                         path: path.clone(),
                         reason: error.to_string(),
@@ -820,33 +827,5 @@ impl SourceLock {
                 }
             }
         }
-    }
-}
-
-/// True when the lock file names a PID that no longer answers a liveness
-/// probe (the owner is dead and the lock is stale).  An unparsable owner is
-/// never reclaimed: treat it as live and wait, so we never steal live work.
-fn lock_owner_is_dead(path: &Path) -> bool {
-    let content = match std::fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(_) => return false,
-    };
-    let pid: u32 = match content.trim().parse() {
-        Ok(pid) => pid,
-        Err(_) => return false,
-    };
-    match std::process::Command::new("kill")
-        .arg("-0")
-        .arg(pid.to_string())
-        .status()
-    {
-        Ok(status) => !status.success(),
-        Err(_) => false,
-    }
-}
-
-impl Drop for SourceLock {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
     }
 }
