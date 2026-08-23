@@ -65,6 +65,7 @@ fn response_is_complete_and_deterministic() {
                 (
                     "dest-b",
                     Some(&Policy::Explicit {
+                        all: false,
                         include: vec!["ghost".to_owned()],
                         exclude: vec![],
                     }),

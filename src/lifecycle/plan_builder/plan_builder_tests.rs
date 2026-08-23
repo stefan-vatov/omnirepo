@@ -207,6 +207,7 @@ fn explicit_policy_filters_the_plan() {
         &catalog,
         &[item("a", "t1", "primary", 1), item("b", "t2", "primary", 2)],
         &Policy::Explicit {
+            all: false,
             include: vec!["a".to_owned()],
             exclude: vec![],
         },

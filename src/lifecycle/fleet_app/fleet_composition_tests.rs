@@ -72,6 +72,7 @@ fn source_and_policy_failures_are_scoped_correctly() {
             (
                 "dest-b",
                 Some(&Policy::Explicit {
+                    all: false,
                     include: vec!["ghost".to_owned()],
                     exclude: vec![],
                 }),

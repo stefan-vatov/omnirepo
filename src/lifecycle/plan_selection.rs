@@ -15,6 +15,7 @@ use std::{error::Error, fmt};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Policy {
     Explicit {
+        all: bool,
         include: Vec<String>,
         exclude: Vec<String>,
     },
@@ -32,7 +33,6 @@ pub enum SelectionDecision {
 #[derive(Debug)]
 pub enum SelectionError {
     UnknownSelector { selector: String },
-    ConflictingSelector { id: String },
 }
 
 impl fmt::Display for SelectionError {
@@ -40,9 +40,6 @@ impl fmt::Display for SelectionError {
         match self {
             Self::UnknownSelector { selector } => {
                 write!(formatter, "selector {selector:?} matches no declared item")
-            }
-            Self::ConflictingSelector { id } => {
-                write!(formatter, "item {id} is both included and excluded")
             }
         }
     }
@@ -58,10 +55,10 @@ pub struct Selection {
 
 /// Apply the decision table to every item of the plan.
 ///
-/// Explicit: included and not excluded → Selected; included and excluded →
-/// typed conflict; excluded → Rejected; not mentioned → Rejected (explicit
-/// scope).  Absent: every declared winner → Selected (canonical default);
-/// every declared loser stays Rejected with its plan reason.
+/// Explicit: all or included, and not excluded → Selected; excluded →
+/// Rejected; not mentioned → Rejected (explicit scope).  Absent: every
+/// declared winner → Selected (canonical default); every declared loser stays
+/// Rejected with its plan reason.
 pub fn select_items(items: &[PlanItem], policy: &Policy) -> Result<Vec<Selection>, SelectionError> {
     match policy {
         Policy::Absent => Ok(items
@@ -78,7 +75,11 @@ pub fn select_items(items: &[PlanItem], policy: &Policy) -> Result<Vec<Selection
                 },
             })
             .collect()),
-        Policy::Explicit { include, exclude } => {
+        Policy::Explicit {
+            all,
+            include,
+            exclude,
+        } => {
             // Unknown selectors fail rather than infer.
             for selector in include.iter().chain(exclude.iter()) {
                 if !items.iter().any(|item| &item.id == selector) {
@@ -91,24 +92,23 @@ pub fn select_items(items: &[PlanItem], policy: &Policy) -> Result<Vec<Selection
             for item in items {
                 let included = include.iter().any(|id| id == &item.id);
                 let excluded = exclude.iter().any(|id| id == &item.id);
-                if included && excluded {
-                    return Err(SelectionError::ConflictingSelector {
-                        id: item.id.clone(),
-                    });
-                }
                 // Declared precedence is unbreachable: a collision loser
                 // stays rejected even when explicitly included.
                 let decision = if let PlanDecision::Rejected { reason } = &item.decision {
                     SelectionDecision::Rejected {
                         reason: format!("declared loser: {reason}"),
                     }
-                } else if included {
-                    SelectionDecision::Selected {
-                        reason: "explicit include".to_owned(),
-                    }
                 } else if excluded {
                     SelectionDecision::Rejected {
                         reason: "explicit exclude".to_owned(),
+                    }
+                } else if *all {
+                    SelectionDecision::Selected {
+                        reason: "explicit all".to_owned(),
+                    }
+                } else if included {
+                    SelectionDecision::Selected {
+                        reason: "explicit include".to_owned(),
                     }
                 } else {
                     SelectionDecision::Rejected {

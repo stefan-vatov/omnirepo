@@ -11,7 +11,8 @@ use crate::configuration::{
     RepositoryId, SchemaVersion,
 };
 use crate::lifecycle::fleet_policy::load_repository_policies;
-use crate::lifecycle::plan_selection::Policy;
+use crate::lifecycle::plan_selection::{Policy, SelectionDecision, select_items};
+use crate::lifecycle::sync_plan::{PlanDecision, PlanItem};
 use std::{fs, path::Path, process::Command};
 
 fn fixture_base() -> tempfile::TempDir {
@@ -77,11 +78,49 @@ fn explicit_policy_converts_to_the_plan_policy_exactly() {
     assert_eq!(
         loads[0].policy,
         Some(Policy::Explicit {
+            all: false,
             include: vec!["item-1".to_owned(), "item-2".to_owned()],
             exclude: vec!["item-2".to_owned()],
         }),
         "exclusion wins is decided downstream by the selection table"
     );
+}
+
+#[test]
+fn all_selects_every_declared_item_except_explicit_exclusions() {
+    let fixture = fixture_base();
+    destination(fixture.path(), "repo-a");
+    write_policy(
+        fixture.path(),
+        "repo-a",
+        "version: 1\nall: true\nexclude:\n  - item-2\n",
+    );
+    let config = machine(vec![destination(fixture.path(), "repo-a")]);
+    let loads = load_repository_policies(&config);
+    let policy = loads[0].policy.as_ref().expect("policy");
+    let items = ["item-1", "item-2"].map(|id| PlanItem {
+        id: id.to_owned(),
+        target: id.to_owned(),
+        source: "primary".to_owned(),
+        source_path: String::new(),
+        source_order: 1,
+        kind: crate::source::ItemKind::WholeFile,
+        section: None,
+        decision: PlanDecision::Selected {
+            reason: "declared winner".to_owned(),
+        },
+    });
+
+    let selections = select_items(&items, policy).expect("selections");
+
+    assert!(matches!(
+        selections[0].decision,
+        SelectionDecision::Selected { .. }
+    ));
+    assert!(matches!(
+        selections[1].decision,
+        SelectionDecision::Rejected { .. }
+    ));
 }
 
 #[test]
@@ -100,6 +139,7 @@ fn omitted_selectors_select_nothing_and_never_infer() {
     assert_eq!(
         loads[0].policy,
         Some(Policy::Explicit {
+            all: false,
             include: Vec::new(),
             exclude: Vec::new(),
         }),
@@ -145,6 +185,7 @@ fn a_policy_failure_fails_only_that_destination() {
     assert_eq!(
         loads[1].policy,
         Some(Policy::Explicit {
+            all: true,
             include: Vec::new(),
             exclude: Vec::new(),
         })

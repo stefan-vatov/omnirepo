@@ -77,6 +77,7 @@ pub fn load_repository_policies(config: &MachineConfiguration) -> Vec<Repository
 fn convert(policy: &crate::repository::RepositoryPolicy) -> Policy {
     let selection = policy.selection();
     Policy::Explicit {
+        all: selection.all(),
         include: selection
             .allow()
             .iter()

@@ -92,9 +92,6 @@ pub fn selection_failure_reason(error: &SelectionError) -> String {
         SelectionError::UnknownSelector { selector } => {
             format!("selector {selector:?} matches no declared item")
         }
-        SelectionError::ConflictingSelector { id } => {
-            format!("item {id} is both included and excluded")
-        }
     }
 }
 

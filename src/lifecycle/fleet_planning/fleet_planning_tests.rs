@@ -168,6 +168,7 @@ fn explicit_policy_selection_governs_the_plan() {
     let policies = vec![RepositoryPolicyLoad {
         repository: "repo-a".to_owned(),
         policy: Some(Policy::Explicit {
+            all: false,
             include: vec!["item-1".to_owned()],
             exclude: Vec::new(),
         }),

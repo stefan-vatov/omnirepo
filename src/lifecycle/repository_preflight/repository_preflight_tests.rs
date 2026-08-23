@@ -29,6 +29,7 @@ fn every_declared_repository_receives_ready_or_failed() {
         (
             "dest-b",
             Some(&Policy::Explicit {
+                all: false,
                 include: vec!["ghost".to_owned()],
                 exclude: vec![],
             }),
@@ -47,6 +48,7 @@ fn true_absence_infers_and_present_invalid_fails_only_that_repository() {
         (
             "dest-b",
             Some(&Policy::Explicit {
+                all: false,
                 include: vec!["ghost".to_owned()],
                 exclude: vec![],
             }),
@@ -66,6 +68,7 @@ fn all_failures_aggregate_deterministically() {
         (
             "dest-a",
             Some(&Policy::Explicit {
+                all: false,
                 include: vec!["ghost-a".to_owned()],
                 exclude: vec![],
             }),
@@ -75,6 +78,7 @@ fn all_failures_aggregate_deterministically() {
         (
             "dest-c",
             Some(&Policy::Explicit {
+                all: false,
                 include: vec!["ghost-c".to_owned()],
                 exclude: vec![],
             }),
@@ -89,11 +93,12 @@ fn all_failures_aggregate_deterministically() {
 }
 
 #[test]
-fn conflicting_policies_fail_only_the_owning_repository() {
+fn exclusion_wins_without_failing_the_owning_repository() {
     let outcomes = preflight_repositories(&[
         (
             "dest-a",
             Some(&Policy::Explicit {
+                all: false,
                 include: vec!["a".to_owned()],
                 exclude: vec!["a".to_owned()],
             }),
@@ -101,6 +106,6 @@ fn conflicting_policies_fail_only_the_owning_repository() {
         ),
         ("dest-b", None, &[selected("b")]),
     ]);
-    assert!(matches!(outcomes[0], RepoPreflight::Failed { .. }));
+    assert!(matches!(outcomes[0], RepoPreflight::ReadyPlan { .. }));
     assert!(matches!(outcomes[1], RepoPreflight::ReadyPlan { .. }));
 }

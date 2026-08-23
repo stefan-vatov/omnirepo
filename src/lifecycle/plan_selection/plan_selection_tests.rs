@@ -38,6 +38,7 @@ fn explicit_include_and_exclude_follow_the_decision_table() {
     let selections = select_items(
         &items,
         &Policy::Explicit {
+            all: false,
             include: vec!["a".to_owned(), "b".to_owned()],
             exclude: vec!["c".to_owned()],
         },
@@ -71,6 +72,7 @@ fn unknown_selectors_fail_rather_than_infer() {
     let error = select_items(
         &items,
         &Policy::Explicit {
+            all: false,
             include: vec!["ghost".to_owned()],
             exclude: vec![],
         },
@@ -83,6 +85,7 @@ fn unknown_selectors_fail_rather_than_infer() {
     let error = select_items(
         &items,
         &Policy::Explicit {
+            all: false,
             include: vec![],
             exclude: vec!["ghost".to_owned()],
         },
@@ -95,19 +98,21 @@ fn unknown_selectors_fail_rather_than_infer() {
 }
 
 #[test]
-fn conflicting_include_and_exclude_fail_typed() {
+fn exclusion_wins_when_an_item_is_also_included() {
     let items = vec![selected_item("a")];
-    let error = select_items(
+    let selections = select_items(
         &items,
         &Policy::Explicit {
+            all: false,
             include: vec!["a".to_owned()],
             exclude: vec!["a".to_owned()],
         },
     )
-    .expect_err("conflict");
+    .expect("selection");
     assert!(
-        matches!(error, SelectionError::ConflictingSelector { .. }),
-        "{error}"
+        matches!(selections[0].decision, SelectionDecision::Rejected { ref reason } if reason == "explicit exclude"),
+        "{:?}",
+        selections[0]
     );
 }
 
@@ -146,6 +151,7 @@ fn zero_item_plans_are_represented() {
     let selections = select_items(
         &[],
         &Policy::Explicit {
+            all: false,
             include: vec![],
             exclude: vec![],
         },
@@ -165,6 +171,7 @@ fn an_explicit_include_never_resurrects_a_declared_loser() {
     let selections = select_items(
         &[selected_item("winner"), loser],
         &Policy::Explicit {
+            all: false,
             include: vec!["winner".to_owned(), "loser".to_owned()],
             exclude: vec![],
         },
