@@ -9,10 +9,15 @@
 #![allow(dead_code)]
 
 use crate::lifecycle::release_build::sha256_hex;
+use crate::lifecycle::{
+    check_runner::{CheckOutcome, run_check},
+    command_spec::{CommandSpec, DEFAULT_COMMAND_TIMEOUT},
+};
+use crate::platform::RelativePath;
 
 #[cfg(test)]
 mod release_platform_tests;
-use std::{error::Error, fmt, path::Path, process::Command};
+use std::{error::Error, fmt, path::Path, process::Command, time::Duration};
 
 /// One platform binary bundle.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -121,22 +126,40 @@ pub fn build_platform_bundle(
 
 /// Verify the bundle: the binary's help and version exit zero.
 pub fn verify_bundle(bundle: &PlatformBundle) -> Result<Verification, BundleError> {
-    let help = Command::new(&bundle.binary_path)
-        .arg("--help")
-        .output()
-        .map_err(|error| BundleError::Verify {
-            reason: error.to_string(),
-        })?;
-    let version = Command::new(&bundle.binary_path)
-        .arg("--version")
-        .output()
-        .map_err(|error| BundleError::Verify {
-            reason: error.to_string(),
-        })?;
+    let help_ok = verify_binary(&bundle.binary_path, &["--help"], DEFAULT_COMMAND_TIMEOUT)?;
+    let version_ok = verify_binary(&bundle.binary_path, &["--version"], DEFAULT_COMMAND_TIMEOUT)?;
     Ok(Verification {
-        help_ok: help.status.success(),
-        version_ok: version.status.success(),
+        help_ok,
+        version_ok,
     })
+}
+
+fn verify_binary(binary: &Path, args: &[&str], budget: Duration) -> Result<bool, BundleError> {
+    let executable = binary.to_str().ok_or_else(|| BundleError::Verify {
+        reason: "the bundle binary path is not UTF-8".to_owned(),
+    })?;
+    let mut argv = Vec::with_capacity(args.len() + 1);
+    argv.push(executable.to_owned());
+    argv.extend(args.iter().map(|argument| (*argument).to_owned()));
+    let root = binary.parent().ok_or_else(|| BundleError::Verify {
+        reason: "the bundle binary has no parent directory".to_owned(),
+    })?;
+    let spec = CommandSpec {
+        repository: "release-bundle".to_owned(),
+        plan_identity: "platform-verification".to_owned(),
+        position: 0,
+        argv,
+        cwd: RelativePath::root(),
+        env: Vec::new(),
+        timeout: budget,
+        stdin: None,
+        capture_output: true,
+        shell: None,
+    };
+    let result = run_check(root, &spec, budget).map_err(|error| BundleError::Verify {
+        reason: error.to_string(),
+    })?;
+    Ok(matches!(result.outcome, CheckOutcome::Passed))
 }
 
 fn binary_path_for(checkout: &Path, target: &str) -> Result<std::path::PathBuf, BundleError> {

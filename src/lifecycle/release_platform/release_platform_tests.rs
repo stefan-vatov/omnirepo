@@ -7,9 +7,20 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::lifecycle::release_platform::{
-    BundleError, PlatformBundle, build_platform_bundle_for, verify_bundle,
+    BundleError, PlatformBundle, build_platform_bundle_for, verify_binary, verify_bundle,
 };
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    path::Path,
+    process::Command,
+    time::{Duration, Instant},
+};
+
+#[test]
+#[ignore]
+fn hanging_bundle_helper() {
+    std::thread::sleep(Duration::from_secs(60));
+}
 
 fn fixture_base() -> tempfile::TempDir {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -103,6 +114,27 @@ fn an_unavailable_cross_target_fails_typed() {
         matches!(error, BundleError::TargetUnavailable { .. }),
         "{error}"
     );
+}
+
+#[test]
+fn bundle_verification_cannot_bypass_its_deadline() {
+    let executable = std::env::current_exe().expect("test executable");
+    let started = Instant::now();
+
+    let passed = verify_binary(
+        &executable,
+        &[
+            "--ignored",
+            "--exact",
+            "lifecycle::release_platform::release_platform_tests::hanging_bundle_helper",
+            "--nocapture",
+        ],
+        Duration::from_millis(50),
+    )
+    .expect("bounded verification result");
+
+    assert!(!passed, "a timed-out bundle cannot verify");
+    assert!(started.elapsed() < Duration::from_secs(1));
 }
 
 #[test]
