@@ -101,31 +101,16 @@ pub fn run_single_repository_pass(
                 .to_owned(),
         });
     }
-    // Group the selected plan items by destination target, in plan order:
-    // all operations targeting one destination file form one atomic group
-    // (canon/architecture/fleet-lifecycle.md).  Rejected items never
-    // execute.  A group that cannot compose (absent target, unknown
-    // destination format, ambiguous topology, unreadable source) becomes
-    // a failed item: one group's failure never prevents independent
-    // groups in the same repository from being attempted.  An absent
-    // target is a lawful creation case (canon/architecture/managed-content.md):
-    // the sync pass creates it with mode 0644 and safe contained parents.
-    let mut groups: Vec<(&str, Vec<&crate::lifecycle::sync_plan::PlanItem>)> = Vec::new();
-    for plan_item in plan.items.iter() {
-        if !matches!(
-            plan_item.decision,
-            crate::lifecycle::sync_plan::PlanDecision::Selected { .. }
-        ) {
-            continue;
-        }
-        match groups
-            .iter_mut()
-            .find(|(target, _)| *target == plan_item.target)
-        {
-            Some((_, members)) => members.push(plan_item),
-            None => groups.push((plan_item.target.as_str(), vec![plan_item])),
-        }
-    }
+    // The plan owns the atomic per-file operation groups
+    // (canon/architecture/fleet-lifecycle.md): all operations targeting
+    // one destination file form one group, in plan order.  A group that
+    // cannot compose (absent target, unknown destination format,
+    // ambiguous topology, unreadable source) becomes a failed item: one
+    // group's failure never prevents independent groups in the same
+    // repository from being attempted.  An absent target is a lawful
+    // creation case (canon/architecture/managed-content.md): the sync
+    // pass creates it with mode 0644 and safe contained parents.
+    let groups = plan.selected_target_groups();
     // One authority root per configured source, opened once for the pass.
     let mut source_roots = std::collections::HashMap::new();
     for (_, members) in &groups {

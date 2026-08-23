@@ -34,6 +34,14 @@ fn rejected(id: &str, target: &str, source: &str, order: usize) -> PlanItem {
     }
 }
 
+fn selected_section(id: &str, target: &str, source: &str, order: usize, section: &str) -> PlanItem {
+    PlanItem {
+        kind: crate::source::ItemKind::Section,
+        section: Some(crate::configuration::SectionId::new(section).expect("section id")),
+        ..selected(id, target, source, order)
+    }
+}
+
 #[test]
 fn every_item_carries_a_stable_reason() {
     let plan = SyncPlan::new(
@@ -158,4 +166,80 @@ fn a_plan_with_only_rejected_losers_is_empty_work() {
         validate_plan(&losers_only),
         Err(PlanError::Empty { .. })
     ));
+}
+
+#[test]
+fn target_groups_gather_every_section_of_one_file_in_plan_order() {
+    // All operations targeting one destination file form one atomic
+    // group (canon/architecture/fleet-lifecycle.md).  Groups keep the
+    // first-claim plan order; members keep the plan order.
+    let plan = SyncPlan::new(
+        "dest-a",
+        vec![
+            selected_section("a", "t1", "primary", 1, "alpha"),
+            selected("b", "t2", "primary", 2),
+            selected_section("c", "t1", "secondary", 3, "beta"),
+        ],
+    );
+    let groups = plan.selected_target_groups();
+    assert_eq!(groups.len(), 2, "one group per distinct destination file");
+    assert_eq!(groups[0].0, "t1", "first-claim order");
+    assert_eq!(
+        groups[0]
+            .1
+            .iter()
+            .map(|item| item.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["a", "c"],
+        "both sections of one file share one group, in plan order"
+    );
+    assert_eq!(groups[1].0, "t2");
+    assert_eq!(groups[1].1.len(), 1);
+}
+
+#[test]
+fn target_groups_exclude_rejected_losers() {
+    // A rejected loser carries its reason but never executes, so it
+    // joins no group and forms none of its own.
+    let plan = SyncPlan::new(
+        "dest-a",
+        vec![
+            selected("a", "t1", "primary", 1),
+            rejected("b", "t1", "legacy", 2),
+            rejected("c", "t2", "legacy", 3),
+        ],
+    );
+    let groups = plan.selected_target_groups();
+    assert_eq!(groups.len(), 1, "a rejected-only target forms no group");
+    assert_eq!(groups[0].0, "t1");
+    assert_eq!(
+        groups[0].1.len(),
+        1,
+        "the rejected loser is not a group member"
+    );
+}
+
+#[test]
+fn file_identity_is_exact_target_text() {
+    // Exact text outranks semantic cleverness: paths that differ only by
+    // case or by a redundant component are distinct files today, and the
+    // grouping predicate is the one place that rule lives.
+    let plan = SyncPlan::new(
+        "dest-a",
+        vec![
+            selected("a", "App.yaml", "primary", 1),
+            selected("b", "app.yaml", "primary", 2),
+            selected("c", "./app.yaml", "primary", 3),
+        ],
+    );
+    assert_eq!(
+        plan.selected_target_groups().len(),
+        3,
+        "no normalization and no case folding"
+    );
+    assert!(
+        !plan.items[0].targets_same_file(&plan.items[1]),
+        "the predicate agrees with the grouping"
+    );
+    assert!(plan.items[0].targets_same_file(&plan.items[0].clone()));
 }

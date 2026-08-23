@@ -39,6 +39,23 @@ pub struct PlanItem {
     pub decision: PlanDecision,
 }
 
+impl PlanItem {
+    /// Whether two items claim the same destination file.
+    ///
+    /// This predicate is the single definition of "one file" for the
+    /// atomic per-file operation group of
+    /// canon/architecture/fleet-lifecycle.md ("Repository transaction
+    /// residue").  Plan validation, the frozen snapshot, and the sync
+    /// pass all decide file identity through it, so a change to what one
+    /// file means (path normalization, case rules) lands here alone.
+    /// Exact target text is the current rule: no normalization and no
+    /// semantic matching (Principle 4, exact text outranks semantic
+    /// cleverness).
+    pub fn targets_same_file(&self, other: &Self) -> bool {
+        self.target == other.target
+    }
+}
+
 /// The immutable per-repository synchronization plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SyncPlan {
@@ -57,6 +74,32 @@ impl SyncPlan {
             destination: destination.into(),
             items,
         }
+    }
+
+    /// The selected items grouped into their atomic per-file operation
+    /// groups: all operations targeting one destination file form one
+    /// group (canon/architecture/fleet-lifecycle.md).
+    ///
+    /// Groups appear in first-claim plan order and members in plan order,
+    /// so the deterministic order of the plan carries into execution.
+    /// Rejected items carry their reason but never execute, so they join
+    /// no group.  File identity is decided by
+    /// [`PlanItem::targets_same_file`].
+    pub fn selected_target_groups(&self) -> Vec<(&str, Vec<&PlanItem>)> {
+        let mut groups: Vec<(&str, Vec<&PlanItem>)> = Vec::new();
+        for item in &self.items {
+            if !matches!(item.decision, PlanDecision::Selected { .. }) {
+                continue;
+            }
+            match groups
+                .iter_mut()
+                .find(|(_, members)| members[0].targets_same_file(item))
+            {
+                Some((_, members)) => members.push(item),
+                None => groups.push((item.target.as_str(), vec![item])),
+            }
+        }
+        groups
     }
 
     /// Deterministic serialization: schema, destination, then every item
@@ -143,7 +186,7 @@ pub fn validate_plan(plan: &SyncPlan) -> Result<(), PlanError> {
     }
     for (index, item) in selected.iter().enumerate() {
         for other in &selected[..index] {
-            if item.target != other.target {
+            if !item.targets_same_file(other) {
                 continue;
             }
             match (&item.section, &other.section) {
