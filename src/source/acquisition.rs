@@ -284,6 +284,83 @@ pub(crate) fn remote_snapshot_path(cache_root: &Path, source_id: &str, revision:
     cache_root.join("snapshots").join(source_id).join(revision)
 }
 
+/// Read one regular file from the exact pinned Git tree without consulting
+/// mutable worktree bytes or invoking source-controlled conversion behavior.
+pub(crate) fn read_revision_file(
+    root: &Path,
+    revision: &str,
+    relative_path: &str,
+) -> Result<Vec<u8>, AcquireError> {
+    if !matches!(revision.len(), 40 | 64) || !revision.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(AcquireError::Cache {
+            reason: "pinned revision is not a full Git object ID".to_owned(),
+        });
+    }
+    let listing = run_snapshot_git(
+        root,
+        &[
+            "ls-tree",
+            "-z",
+            "--full-tree",
+            revision,
+            "--",
+            relative_path,
+        ],
+    )?;
+    let mut records = listing
+        .split(|byte| *byte == 0)
+        .filter(|record| !record.is_empty());
+    let record = records.next().ok_or_else(|| AcquireError::Cache {
+        reason: format!("pinned file {relative_path} does not exist at revision {revision}"),
+    })?;
+    if records.next().is_some() {
+        return Err(AcquireError::Cache {
+            reason: format!("pinned file {relative_path} resolved to more than one tree entry"),
+        });
+    }
+    let separator = record
+        .iter()
+        .position(|byte| *byte == b'\t')
+        .ok_or_else(|| AcquireError::Cache {
+            reason: format!("pinned file {relative_path} has malformed Git tree metadata"),
+        })?;
+    if &record[separator + 1..] != relative_path.as_bytes() {
+        return Err(AcquireError::Cache {
+            reason: format!("pinned file {relative_path} resolved to a different tree path"),
+        });
+    }
+    let metadata = std::str::from_utf8(&record[..separator]).map_err(|_| AcquireError::Cache {
+        reason: format!("pinned file {relative_path} has non-UTF-8 Git tree metadata"),
+    })?;
+    let mut fields = metadata.split_ascii_whitespace();
+    let mode = fields.next().unwrap_or_default();
+    let kind = fields.next().unwrap_or_default();
+    let object = fields.next().unwrap_or_default();
+    if fields.next().is_some() || kind != "blob" || !matches!(mode, "100644" | "100755") {
+        return Err(AcquireError::Cache {
+            reason: format!("pinned file {relative_path} is not a regular file"),
+        });
+    }
+    run_snapshot_git(root, &["cat-file", "blob", object])
+}
+
+fn run_snapshot_git(root: &Path, arguments: &[&str]) -> Result<Vec<u8>, AcquireError> {
+    let output = sanitized_command(root)
+        .args(arguments)
+        .output()
+        .map_err(|error| AcquireError::Io {
+            path: root.to_path_buf(),
+            reason: error.to_string(),
+        })?;
+    if !output.status.success() {
+        return Err(AcquireError::Cache {
+            reason: classify_failure(&output.stderr),
+        });
+    }
+    Ok(output.stdout)
+}
+
 fn materialize_remote_snapshot(
     staging: &Path,
     source_id: &str,
