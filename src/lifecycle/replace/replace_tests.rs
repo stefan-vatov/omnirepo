@@ -265,6 +265,34 @@ fn a_preserved_mode_is_exact_despite_the_umask() {
 }
 
 #[test]
+fn a_read_only_target_fails_before_replacement_regardless_of_process_privilege() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_fixture, root) = fixture_root();
+    let target = root.join("target.txt");
+    fs::write(&target, b"old").expect("write old");
+    fs::set_permissions(&target, fs::Permissions::from_mode(0o444)).expect("target mode");
+
+    let error = replace_bytes_atomically(&root, "target.txt", "op-1", b"new")
+        .expect_err("read-only target must fail");
+
+    assert!(matches!(error, ReplaceError::Metadata { .. }), "{error:?}");
+    assert_eq!(fs::read(&target).expect("old content"), b"old");
+    assert_eq!(
+        fs::metadata(&target)
+            .expect("metadata")
+            .permissions()
+            .mode()
+            & 0o777,
+        0o444
+    );
+    assert_eq!(
+        fs::read_dir(&root).expect("root").count(),
+        1,
+        "no temporary is created"
+    );
+}
+
+#[test]
 fn an_absent_target_is_created_with_safe_contained_parents() {
     use std::os::unix::fs::PermissionsExt;
     let (_fixture, root) = fixture_root();

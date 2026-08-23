@@ -264,7 +264,13 @@ pub fn replace_bytes_atomically(
             #[cfg(unix)]
             let mode = {
                 use std::os::unix::fs::PermissionsExt;
-                DecidedMode::Preserve(metadata.permissions().mode() & 0o7777)
+                let mode = metadata.permissions().mode() & 0o7777;
+                if mode & 0o222 == 0 {
+                    return Err(ReplaceError::Metadata {
+                        reason: format!("managed target {target} is read-only"),
+                    });
+                }
+                DecidedMode::Preserve(mode)
             };
             #[cfg(not(unix))]
             let mode = DecidedMode::Create;
