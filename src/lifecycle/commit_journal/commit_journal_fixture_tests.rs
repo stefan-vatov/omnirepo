@@ -51,7 +51,7 @@ fn authority(inode: u64) -> AuthorityIdentity {
     )
     .expect("authority identity")
 }
-fn witnesses() -> FrozenWitnesses {
+fn witnesses(base_head: &str) -> FrozenWitnesses {
     FrozenWitnesses::new(
         "authority-1",
         "source-1",
@@ -59,11 +59,11 @@ fn witnesses() -> FrozenWitnesses {
         "configuration-1",
         "plan-1",
         vec![witness("check-a")],
-        Some(revision("base-1")),
+        Some(revision(base_head)),
     )
     .expect("witnesses")
 }
-fn facts() -> RepositoryFacts {
+fn facts(base_head: &str) -> RepositoryFacts {
     RepositoryFacts::new(
         repository_id("destination-a"),
         root("/workspace/destination-a"),
@@ -71,7 +71,7 @@ fn facts() -> RepositoryFacts {
             GitFacts::new(
                 HeadState::Attached {
                     branch: ref_name("refs/heads/main"),
-                    commit: revision("head-1"),
+                    commit: revision(base_head),
                 },
                 UpstreamState::Configured {
                     remote: "origin".into(),
@@ -86,10 +86,10 @@ fn facts() -> RepositoryFacts {
     )
     .expect("facts")
 }
-fn baseline(path_value: &str, inode: u64) -> RepositorySnapshot {
+fn baseline(path_value: &str, inode: u64, base_head: &str) -> RepositorySnapshot {
     let target =
         ManagedTargetIdentity::whole_file(path(path_value), Some(identity(inode))).expect("target");
-    RepositorySnapshot::new(facts(), witnesses(), vec![target]).expect("snapshot")
+    RepositorySnapshot::new(facts(base_head), witnesses(base_head), vec![target]).expect("snapshot")
 }
 
 fn delta_for(
@@ -99,7 +99,8 @@ fn delta_for(
     inode: u64,
 ) -> crate::repository::AuthorizedDelta {
     base_commit(root, relative, content);
-    let snapshot = baseline(relative, inode);
+    let base = git_text(root, &["rev-parse", "HEAD"]);
+    let snapshot = baseline(relative, inode, &base);
     build_authorized_delta(
         &snapshot,
         vec![PlannedOperation::replaced(

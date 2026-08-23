@@ -93,10 +93,24 @@ fn target_for(_root: &Path) -> ManagedTargetIdentity {
     .expect("target")
 }
 
+fn head(root: &Path) -> String {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .expect("git");
+    assert!(output.status.success(), "git rev-parse HEAD: {output:?}");
+    String::from_utf8(output.stdout)
+        .expect("stdout")
+        .trim()
+        .to_owned()
+}
+
 #[test]
 fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
     let (_fixture, root) = git_repo();
     let (_jfixture, mut journal, run_id) = journal_fixture();
+    let base = head(&root);
     fs::write(root.join("managed.txt"), "v2\n").expect("file");
     let snapshot = RepositorySnapshot::new(
         crate::repository::RepositoryFacts::new(
@@ -114,7 +128,7 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
                 crate::repository::GitFacts::new(
                     crate::repository::HeadState::Attached {
                         branch: crate::repository::RefName::new("refs/heads/main").expect("ref"),
-                        commit: crate::repository::RevisionId::new("base").expect("rev"),
+                        commit: crate::repository::RevisionId::new(&base).expect("rev"),
                     },
                     crate::repository::UpstreamState::Absent,
                     crate::repository::IndexState::Clean,
@@ -124,8 +138,16 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
             ),
         )
         .expect("facts"),
-        crate::repository::FrozenWitnesses::new("a", "s", "c", "cfg", "p", vec![], None)
-            .expect("witnesses"),
+        crate::repository::FrozenWitnesses::new(
+            "a",
+            "s",
+            "c",
+            "cfg",
+            "p",
+            vec![],
+            Some(crate::repository::RevisionId::new(&base).expect("rev")),
+        )
+        .expect("witnesses"),
         vec![target_for(&root)],
     )
     .expect("snapshot");
@@ -139,16 +161,6 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
     )
     .expect("delta");
     let index = crate::repository::prepare_index(&root, &delta).expect("index");
-    let base = Command::new("git")
-        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
-        .args(["rev-parse", "HEAD"])
-        .current_dir(&root)
-        .output()
-        .expect("git");
-    let base = String::from_utf8(base.stdout)
-        .expect("stdout")
-        .trim()
-        .to_owned();
     let git_root = AuthorityRoot::<GitWorkingDirectoryRoot, ReadOnly>::open(&root).expect("root");
     let outcome = coordinate_git_delivery(
         &git_root,
@@ -180,6 +192,7 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
 fn a_non_ready_verdict_prevents_git_contact() {
     let (_fixture, root) = git_repo();
     let (_jfixture, mut journal, run_id) = journal_fixture();
+    let base = head(&root);
     let git_root = AuthorityRoot::<GitWorkingDirectoryRoot, ReadOnly>::open(&root).expect("root");
     // The index is never prepared: delivery is refused before any contact.
     let outcome = coordinate_git_delivery(
@@ -204,8 +217,7 @@ fn a_non_ready_verdict_prevents_git_contact() {
                                 crate::repository::HeadState::Attached {
                                     branch: crate::repository::RefName::new("refs/heads/main")
                                         .expect("ref"),
-                                    commit: crate::repository::RevisionId::new("base")
-                                        .expect("rev"),
+                                    commit: crate::repository::RevisionId::new(&base).expect("rev"),
                                 },
                                 crate::repository::UpstreamState::Absent,
                                 crate::repository::IndexState::Clean,
@@ -222,7 +234,7 @@ fn a_non_ready_verdict_prevents_git_contact() {
                         "cfg",
                         "p",
                         vec![],
-                        None,
+                        Some(crate::repository::RevisionId::new(&base).expect("rev")),
                     )
                     .expect("witnesses"),
                     vec![target_for(&root)],

@@ -92,6 +92,16 @@ fn snapshot_for(root: &Path) -> RepositorySnapshot {
 }
 
 fn snapshot_with_targets(root: &Path, targets: Vec<ManagedTargetIdentity>) -> RepositorySnapshot {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .expect("git");
+    assert!(output.status.success(), "git rev-parse HEAD: {output:?}");
+    let base_head = String::from_utf8(output.stdout)
+        .expect("stdout")
+        .trim()
+        .to_owned();
     RepositorySnapshot::new(
         crate::repository::RepositoryFacts::new(
             crate::repository::RepositoryId::new("dest-a").expect("id"),
@@ -108,7 +118,7 @@ fn snapshot_with_targets(root: &Path, targets: Vec<ManagedTargetIdentity>) -> Re
                 crate::repository::GitFacts::new(
                     crate::repository::HeadState::Attached {
                         branch: crate::repository::RefName::new("refs/heads/main").expect("ref"),
-                        commit: crate::repository::RevisionId::new("base").expect("rev"),
+                        commit: crate::repository::RevisionId::new(&base_head).expect("rev"),
                     },
                     crate::repository::UpstreamState::Absent,
                     crate::repository::IndexState::Clean,
@@ -118,8 +128,16 @@ fn snapshot_with_targets(root: &Path, targets: Vec<ManagedTargetIdentity>) -> Re
             ),
         )
         .expect("facts"),
-        crate::repository::FrozenWitnesses::new("a", "s", "c", "cfg", "p", vec![], None)
-            .expect("witnesses"),
+        crate::repository::FrozenWitnesses::new(
+            "a",
+            "s",
+            "c",
+            "cfg",
+            "p",
+            vec![],
+            Some(crate::repository::RevisionId::new(base_head).expect("rev")),
+        )
+        .expect("witnesses"),
         targets,
     )
     .expect("snapshot")

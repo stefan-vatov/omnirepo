@@ -52,7 +52,7 @@ fn identity(inode: u64) -> FileIdentity {
     .expect("file identity")
 }
 
-fn facts() -> RepositoryFacts {
+fn facts(base_head: &str) -> RepositoryFacts {
     RepositoryFacts::new(
         repository_id("destination-a"),
         RepositoryRoot::new(
@@ -68,7 +68,7 @@ fn facts() -> RepositoryFacts {
             GitFacts::new(
                 HeadState::Attached {
                     branch: ref_name("refs/heads/main"),
-                    commit: revision("head-1"),
+                    commit: revision(base_head),
                 },
                 UpstreamState::Configured {
                     remote: "origin".into(),
@@ -84,7 +84,7 @@ fn facts() -> RepositoryFacts {
     .expect("facts")
 }
 
-fn witnesses() -> FrozenWitnesses {
+fn witnesses(base_head: &str) -> FrozenWitnesses {
     FrozenWitnesses::new(
         "authority-1",
         "source-1",
@@ -92,15 +92,17 @@ fn witnesses() -> FrozenWitnesses {
         "configuration-1",
         "plan-1",
         vec![witness("check-a")],
-        Some(revision("base-1")),
+        Some(revision(base_head)),
     )
     .expect("witnesses")
 }
 
-fn snapshot(managed: &str, inode: u64) -> RepositorySnapshot {
+fn snapshot(root: &Path, managed: &str, inode: u64) -> RepositorySnapshot {
+    let base_head = git_text(root, &["rev-parse", "HEAD"]);
     let target =
         ManagedTargetIdentity::whole_file(path(managed), Some(identity(inode))).expect("target");
-    RepositorySnapshot::new(facts(), witnesses(), vec![target]).expect("snapshot")
+    RepositorySnapshot::new(facts(&base_head), witnesses(&base_head), vec![target])
+        .expect("snapshot")
 }
 
 fn journal_fixture() -> (tempfile::TempDir, Journal, String, std::path::PathBuf) {
@@ -160,7 +162,7 @@ fn the_verified_repair_change_is_delivered_as_one_scoped_commit() {
         "# omnirepo-start\nv2\n# omnirepo-end\n",
     )
     .expect("change");
-    let snapshot = snapshot("managed.md", 11);
+    let snapshot = snapshot(&root, "managed.md", 11);
     let delivery = deliver_repair_changes(
         &root,
         &snapshot,
@@ -196,7 +198,7 @@ fn the_journal_carries_intent_commit_result_and_evidence() {
         "# omnirepo-start\nv2\n# omnirepo-end\n",
     )
     .expect("change");
-    let snapshot = snapshot("managed.md", 11);
+    let snapshot = snapshot(&root, "managed.md", 11);
     deliver_repair_changes(
         &root,
         &snapshot,

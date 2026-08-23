@@ -1,8 +1,8 @@
 //! Isolated Git index preparation for the authorized operation delta.
 //!
 //! The operation stages its authorized changes into a private index file via
-//! `GIT_INDEX_FILE` indirection: the existing index bytes are preserved as
-//! the base, and only the literal authorized paths enter — with exact blob
+//! `GIT_INDEX_FILE` indirection: the frozen base-HEAD tree initializes the
+//! index, and only the literal authorized paths enter — with exact blob
 //! content hashed without filters, and hooks, attributes, fsmonitor, and
 //! repository config unable to widen the staging.  The real index is never
 //! touched, and a failure removes the isolated index and leaves no lock.
@@ -23,7 +23,6 @@ pub struct IsolatedIndex {
 #[derive(Debug)]
 pub enum IndexError {
     Git { command: String, reason: String },
-    Read { path: PathBuf, reason: String },
     UnsafePath { path: String },
     Io { path: PathBuf, reason: String },
 }
@@ -36,9 +35,6 @@ impl fmt::Display for IndexError {
                     formatter,
                     "git index preparation failed ({command}): {reason}"
                 )
-            }
-            Self::Read { path, reason } => {
-                write!(formatter, "cannot read {}: {reason}", path.display())
             }
             Self::UnsafePath { path } => {
                 write!(formatter, "index preparation rejected unsafe path {path:?}")
@@ -65,21 +61,12 @@ pub fn prepare_index(root: &Path, delta: &AuthorizedDelta) -> Result<IsolatedInd
         })?;
     let index_path = temporary.path().join("operation.index");
 
-    // Preserve the existing index bytes as the base of the operation.
-    let existing = git_dir.join("index");
-    match fs::copy(&existing, &index_path) {
-        Ok(_) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            // No existing index: build from HEAD so the operation sees the
-            // committed baseline.
-            run_git(root, &["read-tree", "HEAD"], Some(&index_path))?;
-        }
-        Err(error) => {
-            return Err(IndexError::Read {
-                path: existing,
-                reason: error.to_string(),
-            });
-        }
+    // Build from the frozen committed baseline, never from the user's index.
+    // An absent base-HEAD is the explicit unborn-repository case.
+    if let Some(base_head) = delta.base_head() {
+        run_git(root, &["read-tree", base_head.as_str()], Some(&index_path))?;
+    } else {
+        run_git(root, &["read-tree", "--empty"], Some(&index_path))?;
     }
 
     for change in delta.changes() {

@@ -55,7 +55,7 @@ fn authority(inode: u64) -> AuthorityIdentity {
     .expect("authority identity")
 }
 
-fn witnesses() -> FrozenWitnesses {
+fn witnesses(base_head: &str) -> FrozenWitnesses {
     FrozenWitnesses::new(
         "authority-1",
         "source-1",
@@ -63,12 +63,12 @@ fn witnesses() -> FrozenWitnesses {
         "configuration-1",
         "plan-1",
         vec![witness("check-a")],
-        Some(revision("base-1")),
+        Some(revision(base_head)),
     )
     .expect("witnesses")
 }
 
-fn facts() -> RepositoryFacts {
+fn facts(base_head: &str) -> RepositoryFacts {
     RepositoryFacts::new(
         repository_id("destination-a"),
         root("/workspace/destination-a"),
@@ -76,7 +76,7 @@ fn facts() -> RepositoryFacts {
             GitFacts::new(
                 HeadState::Attached {
                     branch: ref_name("refs/heads/main"),
-                    commit: revision("head-1"),
+                    commit: revision(base_head),
                 },
                 UpstreamState::Configured {
                     remote: "origin".into(),
@@ -92,10 +92,10 @@ fn facts() -> RepositoryFacts {
     .expect("facts")
 }
 
-fn baseline(path_value: &str, inode: u64) -> RepositorySnapshot {
+fn baseline(path_value: &str, inode: u64, base_head: &str) -> RepositorySnapshot {
     let target =
         ManagedTargetIdentity::whole_file(path(path_value), Some(identity(inode))).expect("target");
-    RepositorySnapshot::new(facts(), witnesses(), vec![target]).expect("snapshot")
+    RepositorySnapshot::new(facts(base_head), witnesses(base_head), vec![target]).expect("snapshot")
 }
 
 fn fixture_repo_root() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -156,7 +156,8 @@ fn isolated_index_stages_exactly_the_authorized_delta() {
     };
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
-    let baseline = baseline("managed.txt", 11);
+    let base = git_text(&root, &["rev-parse", "HEAD"]);
+    let baseline = baseline("managed.txt", 11, &base);
 
     // The operation replaces managed.txt in the worktree.
     write(&root, "managed.txt", "v2\n");
@@ -223,7 +224,7 @@ fn git_text_with_env(root: &Path, args: &[&str], index: &Path) -> String {
 }
 
 #[test]
-fn existing_index_bytes_are_preserved_as_the_base() {
+fn unrelated_staged_changes_are_excluded_from_the_isolated_index() {
     let (_fixture, root) = fixture_repo_root();
     write(&root, "managed.txt", "v1\n");
     write(&root, "kept.txt", "kept\n");
@@ -238,10 +239,12 @@ fn existing_index_bytes_are_preserved_as_the_base() {
     };
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
+    let base = git_text(&root, &["rev-parse", "HEAD"]);
     // Stage an unrelated pre-existing change in the REAL index.
     write(&root, "staged-extra.txt", "extra\n");
     git(&["add", "staged-extra.txt"]);
-    let baseline = baseline("managed.txt", 11);
+    let real_before = fs::read(root.join(".git/index")).expect("real index");
+    let baseline = baseline("managed.txt", 11, &base);
     write(&root, "managed.txt", "v2\n");
     let delta = super::manifest::build_authorized_delta(
         &baseline,
@@ -255,11 +258,16 @@ fn existing_index_bytes_are_preserved_as_the_base() {
     let isolated = prepare_index(&root, &delta).expect("prepare");
     let staged = git_text_with_env(&root, &["ls-files", "--stage"], &isolated.index_path);
     assert!(
-        staged.contains("staged-extra.txt"),
-        "existing state preserved: {staged}"
+        !staged.contains("staged-extra.txt"),
+        "unrelated staged state must be excluded: {staged}"
     );
     assert!(staged.contains("kept.txt"), "{staged}");
     assert!(staged.contains("managed.txt"), "{staged}");
+    assert_eq!(
+        fs::read(root.join(".git/index")).expect("real index"),
+        real_before,
+        "the real index must remain byte-identical"
+    );
 }
 
 #[test]
@@ -277,6 +285,7 @@ fn hostile_config_cannot_widen_staging_and_failure_leaves_no_lock() {
     };
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "base"]);
+    let base = git_text(&root, &["rev-parse", "HEAD"]);
     fs::write(
         root.join("evil-fsmonitor.sh"),
         "#!/bin/sh\ntouch /tmp/omnirepo-index-fsmonitor-executed\n",
@@ -297,7 +306,7 @@ fn hostile_config_cannot_widen_staging_and_failure_leaves_no_lock() {
     let _ = fs::remove_file(marker);
     let _ = fs::remove_file(filter_marker);
 
-    let baseline = baseline("managed.txt", 11);
+    let baseline = baseline("managed.txt", 11, &base);
     write(&root, "managed.txt", "v2\n");
     let delta = super::manifest::build_authorized_delta(
         &baseline,
