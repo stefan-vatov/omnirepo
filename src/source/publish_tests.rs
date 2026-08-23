@@ -52,6 +52,33 @@ fn complete_staging_publishes_atomically_with_exact_contents() {
 }
 
 #[test]
+fn staging_hard_link_cannot_make_a_published_snapshot_mutable() {
+    let (fixture, store, source, revision) = fixture();
+    let outside = fixture.path().join("outside.txt");
+    fs::write(&outside, "original\n").expect("write outside file");
+    let staging = fixture.path().join("staging");
+    let nested = staging.join("nested");
+    fs::create_dir_all(&nested).expect("create staging");
+    fs::hard_link(&outside, nested.join("managed.txt")).expect("hard-link staging file");
+
+    let error = publish(&staging, &source, &revision, &store)
+        .expect_err("hard-linked staging file must fail");
+
+    assert!(matches!(error, PublishError::InvalidStaging { .. }));
+    assert!(staging.is_dir(), "rejected staging stays outside the store");
+    assert!(
+        !store.join("upstream").exists(),
+        "invalid staging must not create publication state"
+    );
+    fs::write(&outside, "changed outside\n").expect("mutate outside file");
+    assert_eq!(
+        fs::read_to_string(nested.join("managed.txt")).expect("read staging link"),
+        "changed outside\n",
+        "the rejected alias demonstrates why it cannot become immutable authority"
+    );
+}
+
+#[test]
 fn repeated_publication_of_the_same_revision_reuses() {
     let (fixture, store, source, revision) = fixture();
     let first = write_staging(fixture.path(), "staging-a", "version one\n");

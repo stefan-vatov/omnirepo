@@ -14,7 +14,7 @@
 use super::snapshot::{
     CacheKey, IdentityError, PublishedSnapshot, RevisionId, SnapshotId, SourceIdentity,
 };
-use std::{error::Error, fmt, fs, path::Path, path::PathBuf};
+use std::{error::Error, fmt, fs, os::unix::fs::MetadataExt, path::Path, path::PathBuf};
 
 /// Publication outcome for one identity/revision.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -98,6 +98,7 @@ pub fn publish(
             reason: "staging must be a real directory, never an alias".to_owned(),
         });
     }
+    validate_staging_files(staging)?;
     if !store_root.is_dir() {
         return Err(PublishError::Store {
             path: store_root.to_path_buf(),
@@ -134,6 +135,38 @@ pub fn publish(
             }
         }
     }
+}
+
+fn validate_staging_files(directory: &Path) -> Result<(), PublishError> {
+    let entries = fs::read_dir(directory).map_err(|error| PublishError::InvalidStaging {
+        path: directory.to_path_buf(),
+        reason: error.to_string(),
+    })?;
+    for entry in entries {
+        let entry = entry.map_err(|error| PublishError::InvalidStaging {
+            path: directory.to_path_buf(),
+            reason: error.to_string(),
+        })?;
+        let path = entry.path();
+        let metadata =
+            fs::symlink_metadata(&path).map_err(|error| PublishError::InvalidStaging {
+                path: path.clone(),
+                reason: error.to_string(),
+            })?;
+        if metadata.is_file() && metadata.nlink() != 1 {
+            return Err(PublishError::InvalidStaging {
+                path,
+                reason: format!(
+                    "staging regular file has {} hard links; expected exactly one",
+                    metadata.nlink()
+                ),
+            });
+        }
+        if metadata.is_dir() {
+            validate_staging_files(&path)?;
+        }
+    }
+    Ok(())
 }
 
 fn sync_directory(directory: &Path) -> Result<(), PublishError> {
