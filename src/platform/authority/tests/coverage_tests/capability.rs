@@ -27,8 +27,8 @@ pub(crate) fn classify(path: &Path) -> Classification {
 pub(crate) fn report(path: &Path) -> Classification {
     let classification = classify(path);
     match &classification {
-        Classification::Exercised(FilesystemKind::LinuxExtFamily) => {
-            eprintln!("authority-capability: exercised-supported=linux-ext-family")
+        Classification::Exercised(FilesystemKind::Linux) => {
+            eprintln!("authority-capability: exercised-supported=linux-filesystem")
         }
         Classification::Exercised(FilesystemKind::MacOsApfs) => {
             eprintln!("authority-capability: exercised-supported=macos-apfs")

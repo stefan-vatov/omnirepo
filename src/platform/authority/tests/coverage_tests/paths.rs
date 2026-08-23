@@ -29,11 +29,11 @@ fn identity_accessors_and_display_are_exact() {
             "filesystem-linux",
             FilesystemIdentity {
                 device: 17,
-                kind: FilesystemKind::LinuxExtFamily,
+                kind: FilesystemKind::Linux,
                 mount_id: 29,
             },
             17,
-            FilesystemKind::LinuxExtFamily,
+            FilesystemKind::Linux,
             29,
         ),
         (
@@ -97,7 +97,7 @@ fn identity_accessors_and_display_are_exact() {
 
     let filesystem = FilesystemIdentity {
         device: 17,
-        kind: FilesystemKind::LinuxExtFamily,
+        kind: FilesystemKind::Linux,
         mount_id: 29,
     };
     let object = ObjectIdentity {
@@ -118,7 +118,7 @@ fn identity_accessors_and_display_are_exact() {
     assert_display(
         "authority-display-linux",
         authority,
-        "device=17 inode=23 filesystem=LinuxExtFamily mount=29",
+        "device=17 inode=23 filesystem=Linux mount=29",
     );
 
     let macos_authority = AuthorityIdentity {
@@ -164,7 +164,7 @@ fn path_error_display_values_are_exact() {
     let expected_identity = AuthorityIdentity {
         filesystem: FilesystemIdentity {
             device: 17,
-            kind: FilesystemKind::LinuxExtFamily,
+            kind: FilesystemKind::Linux,
             mount_id: 29,
         },
         object: ObjectIdentity {
@@ -196,7 +196,7 @@ fn path_error_display_values_are_exact() {
                 path: "/var/lib/omnirepo".to_owned(),
                 kind: "network".to_owned(),
             },
-            "unsupported filesystem at \"/var/lib/omnirepo\": network; only local ext-family or APFS is supported",
+            "unsupported filesystem at \"/var/lib/omnirepo\": network; only APFS is supported on macOS",
         ),
         (
             "error-invalid-authority-root",
@@ -283,7 +283,7 @@ fn path_error_display_values_are_exact() {
                 expected: expected_identity,
                 actual: actual_identity,
             },
-            "source adapter target is outside owning root \"/source\": expected device=17 inode=23 filesystem=LinuxExtFamily mount=29, got device=31 inode=37 filesystem=MacOsApfs mount=43",
+            "source adapter target is outside owning root \"/source\": expected device=17 inode=23 filesystem=Linux mount=29, got device=31 inode=37 filesystem=MacOsApfs mount=43",
         ),
         (
             "error-duplicate-authority",
@@ -292,7 +292,7 @@ fn path_error_display_values_are_exact() {
                 existing: "existing".to_owned(),
                 identity: expected_identity,
             },
-            "authority \"source\" duplicates \"existing\" (device=17 inode=23 filesystem=LinuxExtFamily mount=29)",
+            "authority \"source\" duplicates \"existing\" (device=17 inode=23 filesystem=Linux mount=29)",
         ),
         (
             "error-authority-overlap",

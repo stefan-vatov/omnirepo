@@ -26,9 +26,7 @@ fn make_home_and_workspace() -> (TempDir, TempDir) {
     )
 }
 
-/// A home on a supported filesystem class: the platform authority rejects
-/// tmpfs parents, so run-record fixtures must live under the repository
-/// target directory (ext-family).
+/// A home on the same filesystem as the repository target directory.
 fn make_supported_home_and_workspace() -> (TempDir, TempDir) {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
     fs::create_dir_all(&base).expect("create filesystem fixture base");

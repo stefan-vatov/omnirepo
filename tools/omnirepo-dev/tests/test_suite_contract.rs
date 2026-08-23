@@ -273,7 +273,7 @@ fn host_bound_capability_mismatch_is_a_visible_skip() {
             "cases": [{
                 "id": "host-bound",
                 "argv": ["/bin/sh", "-c", "echo should-not-run"],
-                "capabilities": [{"name": "linux-ext-family", "supported": true}]
+                "capabilities": [{"name": "linux-filesystem", "supported": true}]
             }]
         }]
     });

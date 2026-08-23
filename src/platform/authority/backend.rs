@@ -102,23 +102,6 @@ const EPERM: i32 = 1;
 #[cfg(target_os = "linux")]
 const STATX_MNT_ID: u32 = 0x1000;
 
-#[cfg(target_os = "linux")]
-#[repr(C)]
-struct StatFs {
-    f_type: i64,
-    f_bsize: i64,
-    f_blocks: u64,
-    f_bfree: u64,
-    f_bavail: u64,
-    f_files: u64,
-    f_ffree: u64,
-    f_fsid: [i32; 2],
-    f_namelen: i64,
-    f_frsize: i64,
-    f_flags: i64,
-    f_spare: [i64; 4],
-}
-
 #[cfg(target_os = "macos")]
 #[repr(C)]
 struct StatFs {
@@ -148,6 +131,7 @@ struct RawStatx {
 
 unsafe extern "C" {
     fn openat(dirfd: c_int, pathname: *const c_char, flags: c_int, ...) -> c_int;
+    #[cfg(target_os = "macos")]
     fn fstatfs(fd: c_int, buffer: *mut StatFs) -> c_int;
     fn dup(fd: c_int) -> c_int;
     fn fcntl(fd: c_int, command: c_int, ...) -> c_int;
@@ -589,27 +573,20 @@ pub(crate) fn filesystem_identity(
     device: u64,
     path: &str,
 ) -> Result<FilesystemIdentity, PathError> {
-    let mut stat = std::mem::MaybeUninit::<StatFs>::uninit();
-    let result = unsafe { fstatfs(file.as_raw_fd(), stat.as_mut_ptr()) };
-    if result != 0 {
-        return Err(map_io(
-            "read filesystem type",
-            path,
-            io::Error::last_os_error(),
-        ));
-    }
-    let stat = unsafe { stat.assume_init() };
     #[cfg(target_os = "linux")]
-    let kind = if stat.f_type == 0xEF53 {
-        FilesystemKind::LinuxExtFamily
-    } else {
-        return Err(PathError::UnsupportedFilesystem {
-            path: path.to_owned(),
-            kind: format!("Linux filesystem magic 0x{:x}", stat.f_type),
-        });
-    };
+    let kind = FilesystemKind::Linux;
     #[cfg(target_os = "macos")]
     let kind = {
+        let mut stat = std::mem::MaybeUninit::<StatFs>::uninit();
+        let result = unsafe { fstatfs(file.as_raw_fd(), stat.as_mut_ptr()) };
+        if result != 0 {
+            return Err(map_io(
+                "read filesystem type",
+                path,
+                io::Error::last_os_error(),
+            ));
+        }
+        let stat = unsafe { stat.assume_init() };
         let bytes = stat
             .f_fstypename
             .iter()

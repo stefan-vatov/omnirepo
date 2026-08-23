@@ -70,7 +70,7 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
 
 fn identity(inode: u64) -> FileIdentity {
     FileIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
         EntryKind::RegularFile,
         0o100644,
@@ -98,7 +98,7 @@ fn snapshot_with_targets(root: &Path, targets: Vec<ManagedTargetIdentity>) -> Re
             crate::repository::RepositoryRoot::new(
                 root.to_str().expect("path"),
                 crate::repository::AuthorityIdentity::new(
-                    FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+                    FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
                     ObjectIdentity::new(7, 9),
                 )
                 .expect("authority"),

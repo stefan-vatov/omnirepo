@@ -33,7 +33,7 @@ fn witness(value: &str) -> CheckWitness {
 }
 fn identity(inode: u64) -> FileIdentity {
     FileIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
         EntryKind::RegularFile,
         0o100644,
@@ -42,7 +42,7 @@ fn identity(inode: u64) -> FileIdentity {
 }
 fn authority(inode: u64) -> AuthorityIdentity {
     AuthorityIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
     )
     .expect("authority identity")

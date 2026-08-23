@@ -919,12 +919,10 @@ fn nested_fleet_roots_mutate_only_the_declared_nested_root() {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn unsupported_linux_filesystem_fails_before_authority_is_created() {
-    let result = AuthorityRoot::<DestinationRepositoryRoot, ReadOnly>::open("/proc");
-    assert!(matches!(
-        result,
-        Err(PathError::UnsupportedFilesystem { .. })
-    ));
+fn every_linux_filesystem_class_is_accepted_as_an_authority_root() {
+    let root = AuthorityRoot::<DestinationRepositoryRoot, ReadOnly>::open("/proc")
+        .expect("the proc filesystem is accepted on Linux");
+    assert_eq!(root.identity().filesystem().kind(), FilesystemKind::Linux);
 }
 
 #[cfg(target_os = "linux")]

@@ -36,10 +36,7 @@ fn the_owner_selected_os_filesystem_pairs_are_declared_exactly() {
         .iter()
         .map(|job| (job.os, job.filesystem))
         .collect::<std::collections::BTreeSet<_>>();
-    assert!(
-        pairs.contains(&(Os::Linux, Filesystem::ExtFamily)),
-        "{pairs:?}"
-    );
+    assert!(pairs.contains(&(Os::Linux, Filesystem::Linux)), "{pairs:?}");
     assert!(pairs.contains(&(Os::Mac, Filesystem::Apfs)), "{pairs:?}");
     assert_eq!(pairs.len(), 2, "no invented platform is claimed: {pairs:?}");
 }
@@ -59,7 +56,7 @@ fn unsupported_cases_fail_closed_and_are_explicitly_omitted_from_jobs() {
             "the unsupported case must be omitted from jobs: {case:?}"
         );
     }
-    // Windows and network filesystems are the documented unsupported set.
+    // Windows and non-APFS macOS filesystems are the documented unsupported set.
     let unsupported = unsupported_cases();
     assert!(
         unsupported.iter().any(|case| case.os == Os::Windows),
@@ -68,21 +65,21 @@ fn unsupported_cases_fail_closed_and_are_explicitly_omitted_from_jobs() {
     assert!(
         unsupported
             .iter()
-            .any(|case| case.filesystem == Filesystem::Network),
+            .any(|case| case.os == Os::Mac && case.filesystem == Filesystem::Other),
         "{unsupported:?}"
     );
 }
 
 #[test]
 fn claiming_an_unsupported_or_invented_platform_fails_typed() {
-    assert!(capability_supported(Os::Linux, Filesystem::ExtFamily));
-    assert!(!capability_supported(Os::Windows, Filesystem::Network));
-    assert!(!capability_supported(Os::Linux, Filesystem::Network));
+    assert!(capability_supported(Os::Linux, Filesystem::Linux));
+    assert!(!capability_supported(Os::Windows, Filesystem::Other));
+    assert!(!capability_supported(Os::Mac, Filesystem::Other));
     assert!(matches!(
-        claim_platform(Os::Windows, Filesystem::Network),
+        claim_platform(Os::Windows, Filesystem::Other),
         Err(PlatformError::Unsupported { .. })
     ));
-    assert!(claim_platform(Os::Linux, Filesystem::ExtFamily).is_ok());
+    assert!(claim_platform(Os::Linux, Filesystem::Linux).is_ok());
     assert!(claim_platform(Os::Mac, Filesystem::Apfs).is_ok());
 }
 

@@ -2,7 +2,7 @@ use std::{error::Error, fmt};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum FilesystemKind {
-    LinuxExtFamily,
+    Linux,
     MacOsApfs,
 }
 
@@ -166,7 +166,7 @@ impl fmt::Display for PathError {
             }
             Self::UnsupportedFilesystem { path, kind } => write!(
                 formatter,
-                "unsupported filesystem at {path:?}: {kind}; only local ext-family or APFS is supported"
+                "unsupported filesystem at {path:?}: {kind}; only APFS is supported on macOS"
             ),
             Self::InvalidAuthorityRoot { path, reason } => {
                 write!(formatter, "invalid authority root {path:?}: {reason}")

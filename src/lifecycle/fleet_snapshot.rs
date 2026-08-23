@@ -123,7 +123,7 @@ fn domain_filesystem(identity: crate::platform::FilesystemIdentity) -> Filesyste
     #[cfg(target_os = "macos")]
     let kind = FilesystemClass::MacOsApfs;
     #[cfg(not(target_os = "macos"))]
-    let kind = FilesystemClass::LinuxExtFamily;
+    let kind = FilesystemClass::Linux;
     FilesystemIdentity::new(kind, identity.device(), identity.mount_id())
 }
 

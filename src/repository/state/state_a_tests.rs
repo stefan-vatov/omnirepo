@@ -42,7 +42,7 @@ pub(crate) fn witness(value: &str) -> CheckWitness {
 
 pub(crate) fn identity(inode: u64) -> FileIdentity {
     FileIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
         EntryKind::RegularFile,
         0o100644,
@@ -52,7 +52,7 @@ pub(crate) fn identity(inode: u64) -> FileIdentity {
 
 pub(crate) fn authority(inode: u64) -> AuthorityIdentity {
     AuthorityIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
     )
     .expect("valid authority identity")
@@ -459,7 +459,7 @@ fn authority_identity_requires_filesystem_and_root_object_device_match() {
     );
 
     let mismatch = AuthorityIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(8, 17),
     )
     .expect_err("authority device mismatch");

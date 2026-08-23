@@ -105,7 +105,7 @@ fn non_utf8_relative_paths_remain_exact_and_canonical() {
 fn file_identity_rejects_filesystem_and_object_device_mismatch() {
     assert!(
         FileIdentity::new(
-            FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+            FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
             ObjectIdentity::new(8, 42),
             EntryKind::RegularFile,
             0o100644,
@@ -486,7 +486,7 @@ fn case_10_1_06_canonical_encoding_covers_filesystem_kind_state_and_change_tags(
     let other = matrix_file(other_class.clone(), 70, 704, EntryKind::Other, 0);
     let other_after = matrix_file(other_class, 70, 705, EntryKind::Other, 0);
     let regular = matrix_file(
-        FilesystemClass::LinuxExtFamily,
+        FilesystemClass::Linux,
         70,
         706,
         EntryKind::RegularFile,

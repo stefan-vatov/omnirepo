@@ -177,7 +177,7 @@ fn git_filemode_changes_are_observable_on_the_host() {
         // The identity model records the mode in the file identity.
         let identity = crate::repository::FileIdentity::new(
             crate::repository::FilesystemIdentity::new(
-                crate::repository::FilesystemClass::LinuxExtFamily,
+                crate::repository::FilesystemClass::Linux,
                 7,
                 9,
             ),

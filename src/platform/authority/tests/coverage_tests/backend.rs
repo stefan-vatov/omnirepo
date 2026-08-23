@@ -170,6 +170,10 @@ fn filesystem_identity_reports_closed_descriptor_failure() {
     let error =
         crate::platform::authority::backend::filesystem_identity(file.as_file(), 0, "closed")
             .expect_err("closed descriptor must fail filesystem identity");
+    #[cfg(target_os = "linux")]
+    let expected_operation = "read mount identity";
+    #[cfg(target_os = "macos")]
+    let expected_operation = "read filesystem type";
     assert!(matches!(
         error,
         PathError::Io {
@@ -177,7 +181,7 @@ fn filesystem_identity_reports_closed_descriptor_failure() {
             path,
             code: Some(9),
             ..
-        } if operation == "read filesystem type" && path == "closed"
+        } if operation == expected_operation && path == "closed"
     ));
 }
 
@@ -275,8 +279,8 @@ fn validate_target_identity_rejects_forged_filesystem_identity() {
 
     let mut forged_kind = root.identity();
     forged_kind.filesystem.kind = match forged_kind.filesystem.kind {
-        FilesystemKind::LinuxExtFamily => FilesystemKind::MacOsApfs,
-        FilesystemKind::MacOsApfs => FilesystemKind::LinuxExtFamily,
+        FilesystemKind::Linux => FilesystemKind::MacOsApfs,
+        FilesystemKind::MacOsApfs => FilesystemKind::Linux,
     };
     assert!(matches!(
         crate::platform::authority::backend::validate_target_identity(

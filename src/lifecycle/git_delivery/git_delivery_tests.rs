@@ -77,7 +77,7 @@ fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
 
 fn identity(inode: u64) -> FileIdentity {
     FileIdentity::new(
-        FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+        FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
         ObjectIdentity::new(7, inode),
         EntryKind::RegularFile,
         0o100644,
@@ -104,7 +104,7 @@ fn a_verified_pass_commits_the_scoped_delta_and_reconciles() {
             crate::repository::RepositoryRoot::new(
                 root.to_str().expect("path"),
                 crate::repository::AuthorityIdentity::new(
-                    FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+                    FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
                     ObjectIdentity::new(7, 9),
                 )
                 .expect("authority"),
@@ -193,7 +193,7 @@ fn a_non_ready_verdict_prevents_git_contact() {
                         crate::repository::RepositoryRoot::new(
                             root.to_str().expect("path"),
                             crate::repository::AuthorityIdentity::new(
-                                FilesystemIdentity::new(FilesystemClass::LinuxExtFamily, 7, 9),
+                                FilesystemIdentity::new(FilesystemClass::Linux, 7, 9),
                                 ObjectIdentity::new(7, 9),
                             )
                             .expect("authority"),

@@ -3,9 +3,9 @@
 //!
 //! Exercises case/Unicode aliases, separators, links, special files,
 //! permissions/metadata, atomic replacement, and concurrent no-op
-//! semantics on the actual supported host (Linux/ext-family or
-//! macOS/APFS).  Outside-root effects never occur; equal no-op and
-//! failure atomicity hold; unsupported filesystems fail closed.
+//! semantics on the actual supported host (Linux on any filesystem or
+//! macOS/APFS). Outside-root effects never occur; equal no-op and failure
+//! atomicity hold; unsupported platforms fail closed.
 
 #![allow(dead_code, unused_imports)]
 
@@ -27,14 +27,14 @@ fn the_host_is_a_claimed_supported_platform() {
     // The capability gate must claim this host before any acceptance
     // runs; an unclaimed host fails closed here.
     #[cfg(target_os = "linux")]
-    let (os, filesystem) = (Os::Linux, Filesystem::ExtFamily);
+    let (os, filesystem) = (Os::Linux, Filesystem::Linux);
     #[cfg(target_os = "macos")]
     let (os, filesystem) = (Os::Mac, Filesystem::Apfs);
     assert!(capability_supported(os, filesystem));
     claim_platform(os, filesystem).expect("this host is claimed");
-    // The unsupported filesystem fails closed regardless of the host.
+    // An unsupported operating system fails closed regardless of the host.
     assert!(matches!(
-        claim_platform(os, Filesystem::Network),
+        claim_platform(Os::Windows, Filesystem::Other),
         Err(crate::lifecycle::platform_matrix::PlatformError::Unsupported { .. })
     ));
 }

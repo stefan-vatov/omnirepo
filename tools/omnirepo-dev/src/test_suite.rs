@@ -301,7 +301,7 @@ impl CaseOutcome {
 /// declaration.
 fn host_support(name: &str) -> Option<bool> {
     match name {
-        "linux-ext-family" => Some(cfg!(target_os = "linux")),
+        "linux-filesystem" => Some(cfg!(target_os = "linux")),
         "macos-apfs" => Some(cfg!(target_os = "macos")),
         _ => None,
     }

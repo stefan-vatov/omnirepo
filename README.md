@@ -150,8 +150,8 @@ Build from source with the pinned toolchain:
 cargo build --release --locked
 ```
 
-The binary is `target/release/omnirepo`. The first constitutional
-release supports Linux and macOS on ordinary local filesystems.
+The binary is `target/release/omnirepo`. Omnirepo supports every Linux
+filesystem and supports macOS on APFS.
 
 ## Testing and coverage
 

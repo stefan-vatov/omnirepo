@@ -157,7 +157,7 @@ impl UnsupportedFilesystemName {
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum FilesystemClass {
-    LinuxExtFamily,
+    Linux,
     MacOsApfs,
     Other(UnsupportedFilesystemName),
 }

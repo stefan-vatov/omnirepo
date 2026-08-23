@@ -1,22 +1,12 @@
 {
   "capability_skips": [
     {
-      "filesystem": "Network",
+      "filesystem": "Other",
       "os": "Windows",
       "policy": "fail-closed"
     },
     {
-      "filesystem": "ExtFamily",
-      "os": "Windows",
-      "policy": "fail-closed"
-    },
-    {
-      "filesystem": "Network",
-      "os": "Linux",
-      "policy": "fail-closed"
-    },
-    {
-      "filesystem": "Network",
+      "filesystem": "Other",
       "os": "Mac",
       "policy": "fail-closed"
     }
@@ -24,8 +14,8 @@
   "schema": "omnirepo.platform-evidence.v1",
   "supported": [
     {
-      "cache": "Linux-ExtFamily-Rust186",
-      "filesystem": "ExtFamily",
+      "cache": "Linux-Linux-Rust186",
+      "filesystem": "Linux",
       "jobs": [
         "quality",
         "msrv"

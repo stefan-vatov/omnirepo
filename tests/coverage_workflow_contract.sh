@@ -222,8 +222,8 @@ assert_authority_platform_contract() {
         fail_contract "authority platform job does not cover Linux"
     grep -F -- 'macos-latest' "$workflow" >/dev/null || \
         fail_contract "authority platform job does not cover macOS"
-    grep -F -- 'linux-ext-family' "$workflow" >/dev/null || \
-        fail_contract "Linux authority job does not assert ext-family classification"
+    grep -F -- 'linux-filesystem' "$workflow" >/dev/null || \
+        fail_contract "Linux authority job does not assert generic filesystem support"
     grep -F -- 'macos-apfs' "$workflow" >/dev/null || \
         fail_contract "macOS authority job does not assert APFS classification"
     grep -F -- 'authority_capability.sh' "$workflow" >/dev/null || \

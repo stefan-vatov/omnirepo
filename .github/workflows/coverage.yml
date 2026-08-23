@@ -39,7 +39,7 @@ jobs:
         run: bash tests/coverage_workflow_contract.sh
 
       - name: Verify Linux authority filesystem capability
-        run: bash tests/authority_capability.sh linux-ext-family
+        run: bash tests/authority_capability.sh linux-filesystem
 
       - name: Install Rust 1.95
         uses: dtolnay/rust-toolchain@1.95.0
@@ -78,7 +78,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            expected: linux-ext-family
+            expected: linux-filesystem
           - os: macos-latest
             expected: macos-apfs
     runs-on: ${{ matrix.os }}

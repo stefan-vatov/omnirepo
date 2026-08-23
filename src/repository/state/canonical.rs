@@ -117,7 +117,7 @@ fn text_bytes(value: &str) -> Vec<u8> {
 
 fn encode_filesystem_class(class: &FilesystemClass) -> Vec<u8> {
     match class {
-        FilesystemClass::LinuxExtFamily => record(RECORD_FILESYSTEM_CLASS, vec![(1, vec![0])]),
+        FilesystemClass::Linux => record(RECORD_FILESYSTEM_CLASS, vec![(1, vec![0])]),
         FilesystemClass::MacOsApfs => record(RECORD_FILESYSTEM_CLASS, vec![(1, vec![1])]),
         FilesystemClass::Other(name) => record(
             RECORD_FILESYSTEM_CLASS,

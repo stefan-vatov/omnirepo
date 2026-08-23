@@ -9,9 +9,13 @@ related:
 
 ## Supported platforms
 
-The first constitutional release supports Linux on ordinary local ext-family
-filesystems and macOS on ordinary local APFS filesystems. Windows and network
-filesystems are unsupported and fail before synchronization effects.
+Omnirepo supports Linux on all filesystems and macOS on APFS. Windows and
+non-APFS macOS filesystems are unsupported and fail before synchronization
+effects. Linux filesystem types are not allowlisted: local, network, virtual,
+and userspace filesystems enter the same lifecycle. Each operation still fails
+with a typed error when its target does not provide a required operating-system
+capability, such as writable regular files, atomic same-directory rename,
+durable synchronization, metadata preservation, or stable object identity.
 
 ## Path representation
 

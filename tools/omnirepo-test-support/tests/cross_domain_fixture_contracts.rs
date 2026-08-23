@@ -563,7 +563,7 @@ fn partial_sources_require_one_valid_pair_and_fail_closed_for_absent_or_invalid_
 fn path_identity_uses_filesystem_and_object_identity_not_lexical_text() {
     let context = FixtureContext::new("path-identity", "identity-comparison", 74_212);
     let filesystem =
-        FilesystemIdentityFixture::new(&context, FilesystemKindFixture::LinuxExt, 7, 11).unwrap();
+        FilesystemIdentityFixture::new(&context, FilesystemKindFixture::Linux, 7, 11).unwrap();
     let root = AuthorityIdentityFixture::new(
         &context,
         "/fixture/root",
@@ -910,9 +910,8 @@ fn constructor_failures_preserve_caller_identity_and_reject_unsafe_authority_ali
     assert_eq!(unsupported.seed, 74_400);
     assert!(unsupported.reason.contains("unsupported filesystem"));
 
-    let filesystem =
-        FilesystemIdentityFixture::new(&context, FilesystemKindFixture::LinuxExt, 7, 11)
-            .expect("supported filesystem");
+    let filesystem = FilesystemIdentityFixture::new(&context, FilesystemKindFixture::Linux, 7, 11)
+        .expect("supported filesystem");
     let parent = AuthorityIdentityFixture::new(
         &context,
         "/fixture/../escape",

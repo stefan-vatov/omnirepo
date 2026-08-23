@@ -1497,7 +1497,7 @@ fn derive_marker_topology(bytes: &[u8], expected_id: &str) -> MarkerTopologyFixt
 /// Platform-aware identity values represented without touching a filesystem.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FilesystemKindFixture {
-    LinuxExt,
+    Linux,
     MacOsApfs,
     Unsupported,
 }
@@ -1695,7 +1695,7 @@ impl PathIdentityFixture {
         let filesystem = FilesystemIdentityFixture::new(
             context,
             if context.seed % 2 == 0 {
-                FilesystemKindFixture::LinuxExt
+                FilesystemKindFixture::Linux
             } else {
                 FilesystemKindFixture::MacOsApfs
             },

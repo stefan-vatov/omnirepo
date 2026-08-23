@@ -1,13 +1,11 @@
-//! The owner-selected supported-platform matrix.
+//! The supported-platform matrix.
 //!
-//! The .35 owner decision (APPROVED 2026-08-13): the first constitutional
-//! release supports Linux and macOS on ordinary local filesystems
-//! (ext-family on Linux, APFS on macOS).  Windows and network
-//! filesystems are unsupported and fail closed before effects.  This
-//! module translates the decision into explicit OS/filesystem/toolchain
-//! jobs with capability detection, unsupported-case behavior, cache
-//! isolation, and the repository-owned quality command.  No invented
-//! platform is ever claimed.
+//! Linux is supported on every filesystem. macOS is supported on APFS.
+//! Windows and non-APFS macOS filesystems are unsupported and fail closed
+//! before effects. This module translates that policy into explicit
+//! OS/filesystem/toolchain jobs with capability detection, unsupported-case
+//! behavior, cache isolation, and the repository-owned quality command. No
+//! invented platform is ever claimed.
 
 #![allow(dead_code)]
 
@@ -27,9 +25,9 @@ pub enum Os {
 /// The supported filesystem families.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Filesystem {
-    ExtFamily,
+    Linux,
     Apfs,
-    Network,
+    Other,
 }
 
 /// The pinned toolchain.
@@ -103,7 +101,7 @@ impl Error for PlatformError {}
 pub fn capability_supported(os: Os, filesystem: Filesystem) -> bool {
     matches!(
         (os, filesystem),
-        (Os::Linux, Filesystem::ExtFamily) | (Os::Mac, Filesystem::Apfs)
+        (Os::Linux, Filesystem::Linux) | (Os::Mac, Filesystem::Apfs)
     )
 }
 
@@ -121,7 +119,7 @@ pub fn supported_platform_matrix() -> Vec<PlatformJob> {
     vec![
         PlatformJob {
             os: Os::Linux,
-            filesystem: Filesystem::ExtFamily,
+            filesystem: Filesystem::Linux,
             toolchain: Toolchain::Rust186,
             required,
         },
@@ -140,23 +138,13 @@ pub fn unsupported_cases() -> Vec<UnsupportedCase> {
     vec![
         UnsupportedCase {
             os: Os::Windows,
-            filesystem: Filesystem::Network,
-            policy: "windows and network filesystems are unsupported and fail closed before effects",
-        },
-        UnsupportedCase {
-            os: Os::Windows,
-            filesystem: Filesystem::ExtFamily,
-            policy: "windows is unsupported in the first constitutional release",
-        },
-        UnsupportedCase {
-            os: Os::Linux,
-            filesystem: Filesystem::Network,
-            policy: "network filesystems are unsupported and fail closed before effects",
+            filesystem: Filesystem::Other,
+            policy: "windows is unsupported and fails closed before effects",
         },
         UnsupportedCase {
             os: Os::Mac,
-            filesystem: Filesystem::Network,
-            policy: "network filesystems are unsupported and fail closed before effects",
+            filesystem: Filesystem::Other,
+            policy: "macOS filesystems other than APFS are unsupported and fail closed before effects",
         },
     ]
 }

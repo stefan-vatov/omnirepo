@@ -105,15 +105,15 @@
           "argv": [
             "bash",
             "tests/authority_capability.sh",
-            "linux-ext-family"
+            "linux-filesystem"
           ],
           "capabilities": [
             {
-              "name": "linux-ext-family",
+              "name": "linux-filesystem",
               "supported": true
             }
           ],
-          "id": "linux-ext-family",
+          "id": "linux-filesystem",
           "tags": [
             "platform",
             "capability"
