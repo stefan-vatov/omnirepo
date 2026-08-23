@@ -1041,6 +1041,29 @@ fn resolve_working_directory(repo_root: &Path, case: &CaseSpec) -> Result<PathBu
     Ok(resolved)
 }
 
+/// The variables a case inherits from the runner.
+///
+/// A case runs with a cleared environment, so this is everything cargo
+/// needs to reuse the workspace build instead of recreating it.
+/// `RUSTFLAGS` and `RUSTDOCFLAGS` are part of cargo's fingerprint: a case
+/// that runs without the flags the workspace was built with rebuilds all
+/// of it and pays for that rebuild inside its own bound, which makes a
+/// warm-up build step useless and the bound a measure of compilation
+/// rather than of the case.
+/// The variables a case inherits, for contract assertions.
+pub fn forwarded_environment() -> &'static [&'static str] {
+    &FORWARDED_ENVIRONMENT
+}
+
+const FORWARDED_ENVIRONMENT: [&str; 6] = [
+    "PATH",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+    "RUSTFLAGS",
+    "RUSTDOCFLAGS",
+];
+
 /// Exclusive lease on the workspace cargo build directory.
 ///
 /// Every repository case runs in the workspace and drives cargo, directly
@@ -1304,7 +1327,14 @@ fn execute_process(
         .env("OMNIREPO_TEST_ROOT", &case.case_root)
         .env("OMNIREPO_TEST_HOME", &home)
         .env("OMNIREPO_TEST_ARTIFACTS", &artifacts);
-    for key in ["PATH", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
+    // The case environment is cleared, so only what cargo needs to reuse
+    // the workspace build is carried in.  `RUSTFLAGS` belongs in that set:
+    // it is part of cargo's fingerprint, so a case that runs without the
+    // flags the workspace was built with rebuilds all of it, and pays for
+    // that rebuild inside its own bound.  A build step that warms the
+    // workspace under `-D warnings` is only useful to a case that keeps
+    // the same value.
+    for key in FORWARDED_ENVIRONMENT {
         if let Some(value) = std::env::var_os(key) {
             command.env(key, value);
         }

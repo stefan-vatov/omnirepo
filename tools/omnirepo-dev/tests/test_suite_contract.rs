@@ -563,3 +563,26 @@ fn concurrent_jobs_never_overlap_the_shared_build_directory() {
     );
     cleanup(&fixture);
 }
+
+#[test]
+fn a_case_inherits_the_flags_the_workspace_was_built_with() {
+    // A case runs with a cleared environment.  `RUSTFLAGS` is part of
+    // cargo's fingerprint, so a case that does not inherit it rebuilds a
+    // workspace that was warmed under different flags, and charges that
+    // rebuild to its own bound: the macOS suite timed out that way with
+    // its cases still compiling.
+    assert!(
+        omnirepo_dev::test_suite::forwarded_environment().contains(&"RUSTFLAGS"),
+        "a case must inherit RUSTFLAGS or it cannot reuse the workspace build"
+    );
+    assert!(
+        omnirepo_dev::test_suite::forwarded_environment().contains(&"RUSTDOCFLAGS"),
+        "doc flags share the same fingerprint hazard"
+    );
+    for required in ["PATH", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
+        assert!(
+            omnirepo_dev::test_suite::forwarded_environment().contains(&required),
+            "{required} must reach the case for cargo to run at all"
+        );
+    }
+}
