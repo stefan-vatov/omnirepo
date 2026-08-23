@@ -373,6 +373,40 @@ fn a_failing_declared_check_prevents_git_delivery() {
 }
 
 #[test]
+fn every_declared_check_runs_after_an_earlier_failure() {
+    let (_fixture, root) = git_repo();
+    let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();
+    fs::write(root.join("managed.txt"), "v2\n").expect("file");
+    let checks = vec![
+        crate::repository::VerificationCommand::new(["/usr/bin/false"]).expect("command"),
+        crate::repository::VerificationCommand::new([
+            "/bin/sh",
+            "-c",
+            "printf checked > second-check-ran",
+        ])
+        .expect("command"),
+    ];
+    let outcome = run_single_repository_pass(
+        &root,
+        &journal.handle,
+        &run_id,
+        "dest-a",
+        &snapshot_for(&root),
+        &checks,
+        &crate::lifecycle::sync_plan::SyncPlan::new("dest-a", Vec::new()),
+        &std::collections::HashMap::new(),
+        "sync managed",
+    )
+    .expect("pass");
+    assert!(matches!(outcome, PassOutcome::Failed { .. }));
+    assert_eq!(
+        fs::read_to_string(root.join("second-check-ran")).expect("second check ran"),
+        "checked"
+    );
+    journal.shutdown().expect("shutdown");
+}
+
+#[test]
 fn a_passing_declared_check_allows_git_delivery() {
     let (_fixture, root) = git_repo();
     let (_jfixture, mut journal, run_id, _record_path) = journal_fixture();

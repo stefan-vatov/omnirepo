@@ -253,24 +253,29 @@ pub fn run_single_repository_pass(
             .map_err(|error| PassError::Plan {
                 reason: error.to_string(),
             })?;
+        let mut failures = Vec::new();
         for spec in &specs {
-            let result =
-                run_check(working, spec, spec.timeout).map_err(|error| PassError::Plan {
-                    reason: format!(
-                        "verification at position {} failed to run: {error}",
-                        spec.position
-                    ),
-                })?;
-            if !matches!(result.outcome, CheckOutcome::Passed) {
-                return Ok(PassOutcome::Failed {
-                    reason: format!(
+            match run_check(working, spec, spec.timeout) {
+                Ok(result) if !matches!(result.outcome, CheckOutcome::Passed) => {
+                    failures.push(format!(
                         "check {} ({}) {}; no Git delivery",
                         spec.position + 1,
                         spec.argv.join(" "),
                         verification_failure(&result.outcome)
-                    ),
-                });
+                    ));
+                }
+                Err(error) => failures.push(format!(
+                    "check {} ({}) failed to run: {error}; no Git delivery",
+                    spec.position + 1,
+                    spec.argv.join(" ")
+                )),
+                Ok(_) => {}
             }
+        }
+        if !failures.is_empty() {
+            return Ok(PassOutcome::Failed {
+                reason: failures.join("; "),
+            });
         }
     }
     // Concurrent-modification guard: re-capture the current state; any
