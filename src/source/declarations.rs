@@ -2,10 +2,11 @@
 //!
 //! Owner-selected declaration files inside each immutable pinned snapshot
 //! are read through the typed read-only source authority root (no-follow
-//! relative resolution).  Every record carries its source identity, pinned
-//! revision, declaration path, and ordered field pairs; declaration order
-//! and provenance are preserved.  Parse errors identify the exact source
-//! and entry.  No destination access or content extraction happens here.
+//! relative resolution).  Every record inherits the snapshot's pinned
+//! revision and carries its source identity, declaration path, and ordered
+//! field pairs; declaration order and provenance are preserved.  Parse errors
+//! identify the exact source and entry.  No destination access or content
+//! extraction happens here.
 
 #![allow(dead_code)]
 
@@ -135,7 +136,6 @@ fn parse_record(
 ) -> Result<SourceDeclaration, String> {
     let mut fields = Vec::new();
     let mut declared_source: Option<String> = None;
-    let mut declared_revision: Option<String> = None;
     let mut declared_path: Option<String> = None;
     for token in line.split_whitespace() {
         let Some((key, value)) = token.split_once('=') else {
@@ -146,24 +146,22 @@ fn parse_record(
         }
         match key {
             "source" => declared_source = Some(value.to_owned()),
-            "revision" => declared_revision = Some(value.to_owned()),
+            "revision" => {
+                return Err(
+                    "revision is inherited from the pinned snapshot and must not be declared"
+                        .to_owned(),
+                );
+            }
             "path" => declared_path = Some(value.to_owned()),
             _ => fields.push((key.to_owned(), value.to_owned())),
         }
     }
     let declared_source = declared_source.ok_or_else(|| "missing source field".to_owned())?;
-    let declared_revision = declared_revision.ok_or_else(|| "missing revision field".to_owned())?;
     let declared_path = declared_path.ok_or_else(|| "missing path field".to_owned())?;
     if declared_source != source.as_str() {
         return Err(format!(
             "declared source {declared_source:?} does not match the pinned source {:?}",
             source.as_str()
-        ));
-    }
-    if declared_revision != revision.as_str() {
-        return Err(format!(
-            "declared revision {declared_revision:?} does not match the pinned revision {:?}",
-            revision.as_str()
         ));
     }
     Ok(SourceDeclaration {

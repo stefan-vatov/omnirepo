@@ -73,7 +73,7 @@ content.
 
   ```text
   omnirepo-declarations-v1
-  source=platform revision=<pinned-sha> path=partials/rust-rules.md id=agents-rust mode=section destination=AGENTS.md section=rust-rules
+  source=platform path=partials/rust-rules.md id=agents-rust mode=section destination=AGENTS.md section=rust-rules
   ```
 
 - On the destination side, `sync` owns the block between the named

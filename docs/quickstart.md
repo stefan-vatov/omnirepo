@@ -46,8 +46,8 @@ destination tags:
 
 ```text
 omnirepo-declarations-v1
-source=upstream revision=<pinned-sha> path=managed.txt id=item-1 mode=sync destination=managed.txt
-source=upstream revision=<pinned-sha> path=partials/rust-rules.md id=agents-rust mode=section destination=AGENTS.md section=rust-rules
+source=upstream path=managed.txt id=item-1 mode=sync destination=managed.txt
+source=upstream path=partials/rust-rules.md id=agents-rust mode=section destination=AGENTS.md section=rust-rules
 ```
 
 `mode=sync` replaces the whole destination file byte-exactly.

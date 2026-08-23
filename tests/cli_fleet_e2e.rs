@@ -58,13 +58,10 @@ fn setup_source(fixture: &tempfile::TempDir) -> std::path::PathBuf {
     };
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "source"]);
-    let head = git_text(&source, &["rev-parse", "HEAD"]);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
-        format!(
-            "omnirepo-declarations-v1\nsource=source-a revision={head} path=managed.txt id=item-1 mode=sync destination=managed.txt\n"
-        ),
+        "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n",
     )
     .expect("declarations");
     source
@@ -410,12 +407,11 @@ fn setup_partial_source(
     };
     git(&["add", "."]);
     git(&["commit", "--quiet", "--message", "source"]);
-    let head = git_text(&source, &["rev-parse", "HEAD"]);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
         format!(
-            "omnirepo-declarations-v1\nsource={source_id} revision={head} path=partials/rules.md id={item_id} mode=section destination=AGENTS.md section={section}\n"
+            "omnirepo-declarations-v1\nsource={source_id} path=partials/rules.md id={item_id} mode=section destination=AGENTS.md section={section}\n"
         ),
     )
     .expect("declarations");

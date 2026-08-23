@@ -22,7 +22,9 @@ and sections they provide in `<source-root>/.omnirepo/source.yaml`. Each
 declaration has an explicit stable lowercase-slug ID, a whole-file or section
 mode, contained source and destination paths, a section ID (required for
 section mode, forbidden for whole-file mode), and optional
-destination-repository applicability tags. Managed bytes remain in
+destination-repository applicability tags. A declaration inherits the exact
+revision pinned for its source snapshot and does not repeat that revision in
+its own content. Managed bytes remain in
 ordinary source files rather than being embedded in YAML; a section's body is
 the exact bytes of its declared source file. When sources
 overlap, their configured order is the sole tiebreaker. Completion order,

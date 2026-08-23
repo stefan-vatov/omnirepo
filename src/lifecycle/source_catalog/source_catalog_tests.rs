@@ -37,9 +37,7 @@ fn declarations_read_through_the_snapshot_authority() {
     let (_fixture, root) = fixture();
     fs::write(
         root.display_path().as_path().join("declarations.txt"),
-        format!(
-            "{DECLARATION_VERSION}\nsource=upstream revision=rev-abc path=apps/a.yaml mode=sync\n"
-        ),
+        format!("{DECLARATION_VERSION}\nsource=upstream path=apps/a.yaml mode=sync\n"),
     )
     .expect("declaration file");
     let declarations = read_source_declarations(

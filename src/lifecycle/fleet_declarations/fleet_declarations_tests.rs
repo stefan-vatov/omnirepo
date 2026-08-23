@@ -43,8 +43,8 @@ fn source_repo(root: &Path) {
     git(&["config", "user.email", "declarations@example.test"]);
 }
 
-fn declaration_line(source: &str, revision: &str, path: &str, fields: &[(&str, &str)]) -> String {
-    let mut line = format!("source={source} revision={revision} path={path}");
+fn declaration_line(source: &str, path: &str, fields: &[(&str, &str)]) -> String {
+    let mut line = format!("source={source} path={path}");
     for (key, value) in fields {
         line.push_str(&format!(" {key}={value}"));
     }
@@ -58,8 +58,8 @@ fn the_canonical_declaration_file_reads_through_the_typed_root_in_order() {
     source_repo(&root);
     let content = format!(
         "omnirepo-declarations-v1\n{}\n{}\n",
-        declaration_line("source-a", "rev-1", "apps/app.yaml", &[("mode", "sync")]),
-        declaration_line("source-a", "rev-1", "apps/app2.yaml", &[("mode", "verify")])
+        declaration_line("source-a", "apps/app.yaml", &[("mode", "sync")]),
+        declaration_line("source-a", "apps/app2.yaml", &[("mode", "verify")])
     );
     fs::create_dir_all(root.join(".omnirepo")).expect("declaration dir");
     fs::write(root.join(".omnirepo/source.yaml"), content).expect("declaration file");

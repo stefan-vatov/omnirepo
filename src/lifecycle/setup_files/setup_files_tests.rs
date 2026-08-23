@@ -19,7 +19,7 @@ fn fixture_base() -> tempfile::TempDir {
         .expect("fixture")
 }
 
-const DECLARATIONS: &str = "omnirepo-declarations-v1\nsource=source-a revision=rev-1 path=managed.txt id=item-1 mode=sync destination=managed.txt\n";
+const DECLARATIONS: &str = "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n";
 const POLICY: &str = "version: 1\nall: true\n";
 
 #[test]
@@ -50,7 +50,7 @@ fn source_declarations_author_create_noop_update_refuse() {
     .expect("no-op");
     assert!(matches!(action, SetupAction::NoOp { .. }));
     // Update when valid but different.
-    let different = "omnirepo-declarations-v1\nsource=source-a revision=rev-1 path=other.txt id=item-2 mode=sync destination=other.txt\n";
+    let different = "omnirepo-declarations-v1\nsource=source-a path=other.txt id=item-2 mode=sync destination=other.txt\n";
     let action = author_canonical_file(
         &root,
         ".omnirepo/source.yaml",

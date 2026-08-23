@@ -67,7 +67,7 @@ fn the_onboarding_state_matrix_holds_for_every_canonical_file_kind() {
 
     // Source declarations and destination policy: the same matrix via
     // the generic author.
-    let declarations = "omnirepo-declarations-v1\nsource=source-a revision=rev-1 path=managed.txt id=item-1 mode=sync destination=managed.txt\n";
+    let declarations = "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n";
     let source_action = author_canonical_file(
         &root,
         ".omnirepo/source.yaml",

@@ -55,12 +55,12 @@ fn partial_source(fixture: &Path, source_id: &str, item_id: &str, section: &str)
     git_repo(&source);
     fs::create_dir_all(source.join("partials")).expect("partials");
     fs::write(source.join("partials/rules.md"), "rules\n").expect("partial");
-    let head = commit_all(&source);
+    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
         format!(
-            "omnirepo-declarations-v1\nsource={source_id} revision={head} path=partials/rules.md id={item_id} mode=section destination=AGENTS.md section={section}\n"
+            "omnirepo-declarations-v1\nsource={source_id} path=partials/rules.md id={item_id} mode=section destination=AGENTS.md section={section}\n"
         ),
     )
     .expect("declarations");
@@ -138,13 +138,11 @@ fn an_unsupported_destination_format_is_a_problem() {
     let source = fixture.path().join("source-a");
     git_repo(&source);
     fs::write(source.join("partial.txt"), "x\n").expect("partial");
-    let head = commit_all(&source);
+    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
-        format!(
-            "omnirepo-declarations-v1\nsource=source-a revision={head} path=partial.txt id=item-1 mode=section destination=Dockerfile section=rules\n"
-        ),
+        "omnirepo-declarations-v1\nsource=source-a path=partial.txt id=item-1 mode=section destination=Dockerfile section=rules\n",
     )
     .expect("declarations");
     machine_config(
@@ -175,13 +173,11 @@ fn a_whole_vs_section_conflict_is_a_problem_naming_both_items() {
     fs::create_dir_all(source.join("partials")).expect("partials");
     fs::write(source.join("partials/rules.md"), "rules\n").expect("partial");
     fs::write(source.join("whole.md"), "whole\n").expect("whole");
-    let head = commit_all(&source);
+    commit_all(&source);
     fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
     fs::write(
         source.join(".omnirepo/source.yaml"),
-        format!(
-            "omnirepo-declarations-v1\nsource=source-a revision={head} path=partials/rules.md id=item-sec mode=section destination=AGENTS.md section=rules\nsource=source-a revision={head} path=whole.md id=item-whole mode=sync destination=AGENTS.md\n"
-        ),
+        "omnirepo-declarations-v1\nsource=source-a path=partials/rules.md id=item-sec mode=section destination=AGENTS.md section=rules\nsource=source-a path=whole.md id=item-whole mode=sync destination=AGENTS.md\n",
     )
     .expect("declarations");
     machine_config(
