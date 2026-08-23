@@ -109,8 +109,16 @@ fn run_gate(name: &str, argv: &[String], budget: Duration) -> GateRun {
     // The bounded ETXTBSY retry (the shared check-runner pattern) makes
     // spawning a just-materialized gate executable robust.
     let mut command = Command::new(&argv[0]);
+    command.args(&argv[1..]);
+    run_bounded_gate_command(name, command, budget)
+}
+
+pub(super) fn run_bounded_gate_command(
+    name: &str,
+    mut command: Command,
+    budget: Duration,
+) -> GateRun {
     command
-        .args(&argv[1..])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

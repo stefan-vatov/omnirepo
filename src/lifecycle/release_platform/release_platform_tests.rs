@@ -7,7 +7,8 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::lifecycle::release_platform::{
-    BundleError, PlatformBundle, build_platform_bundle_for, verify_binary, verify_bundle,
+    BundleError, PlatformBundle, build_platform_bundle_for, build_platform_bundle_with_command,
+    verify_binary, verify_bundle,
 };
 use std::{
     fs,
@@ -134,6 +135,30 @@ fn bundle_verification_cannot_bypass_its_deadline() {
     .expect("bounded verification result");
 
     assert!(!passed, "a timed-out bundle cannot verify");
+    assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[test]
+fn cargo_build_cannot_bypass_its_deadline() {
+    let fixture = fixture_base();
+    let mut command = Command::new(std::env::current_exe().expect("test executable"));
+    command.args([
+        "--ignored",
+        "--exact",
+        "lifecycle::release_platform::release_platform_tests::hanging_bundle_helper",
+        "--nocapture",
+    ]);
+    let started = Instant::now();
+
+    let error = build_platform_bundle_with_command(
+        fixture.path(),
+        "fixture-target",
+        command,
+        Duration::from_millis(50),
+    )
+    .expect_err("a hanging build must time out");
+
+    assert!(matches!(error, BundleError::Cargo { .. }), "{error}");
     assert!(started.elapsed() < Duration::from_secs(1));
 }
 

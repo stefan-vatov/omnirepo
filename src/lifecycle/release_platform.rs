@@ -9,6 +9,7 @@
 #![allow(dead_code)]
 
 use crate::lifecycle::release_build::sha256_hex;
+use crate::lifecycle::release_gates::run_bounded_gate_command;
 use crate::lifecycle::{
     check_runner::{CheckOutcome, run_check},
     command_spec::{CommandSpec, DEFAULT_COMMAND_TIMEOUT},
@@ -78,27 +79,35 @@ pub fn build_platform_bundle_for(
 ) -> Result<PlatformBundle, BundleError> {
     // The clean exact-SHA gate comes from the packaging owner; this
     // builder only compiles the binary for the target.
-    let output = Command::new("cargo")
+    let mut command = Command::new("cargo");
+    command
         .args(["build", "--release", "--locked", "--target", target])
         .current_dir(checkout)
-        .env("CARGO_TERM_COLOR", "never")
-        .output()
-        .map_err(|error| BundleError::TargetUnavailable {
-            target: target.to_owned(),
-            reason: error.to_string(),
-        })?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
-        if stderr.contains("not installed")
-            || stderr.contains("no such target")
-            || stderr.contains("can't find crate")
+        .env("CARGO_TERM_COLOR", "never");
+    build_platform_bundle_with_command(checkout, target, command, DEFAULT_COMMAND_TIMEOUT)
+}
+
+fn build_platform_bundle_with_command(
+    checkout: &Path,
+    target: &str,
+    command: Command,
+    budget: Duration,
+) -> Result<PlatformBundle, BundleError> {
+    let run = run_bounded_gate_command("cargo build", command, budget);
+    if !run.passed {
+        if run.evidence.starts_with("cannot start gate")
+            || run.evidence.contains("not installed")
+            || run.evidence.contains("no such target")
+            || run.evidence.contains("can't find crate")
         {
             return Err(BundleError::TargetUnavailable {
                 target: target.to_owned(),
-                reason: stderr,
+                reason: run.evidence,
             });
         }
-        return Err(BundleError::Cargo { reason: stderr });
+        return Err(BundleError::Cargo {
+            reason: run.evidence,
+        });
     }
     let binary_path = binary_path_for(checkout, target)?;
     let bytes = std::fs::read(&binary_path).map_err(|error| BundleError::Io {
