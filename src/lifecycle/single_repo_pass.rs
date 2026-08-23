@@ -278,6 +278,41 @@ pub fn run_single_repository_pass(
             });
         }
     }
+    // Passing checks are still untrusted effects. Re-read every selected
+    // managed target through the destination authority and restore the
+    // exact authoritative bytes when a check changed them. The pass then
+    // fails without Git, while successful synchronization writes remain.
+    let mut verifier_changes = Vec::new();
+    for group in &composed {
+        let changed = match read_managed_file(&observe_root, &group.target) {
+            Ok(bytes) => bytes != group.replacement,
+            Err(_) => true,
+        };
+        if !changed {
+            continue;
+        }
+        let operation_id = format!("verification-restore-{run_id}");
+        let restoration = crate::lifecycle::replace::replace_bytes_atomically(
+            working,
+            &group.target,
+            &operation_id,
+            &group.replacement,
+        );
+        match restoration {
+            Ok(()) => verifier_changes.push(format!("{} (restored)", group.target)),
+            Err(error) => {
+                verifier_changes.push(format!("{} (restoration failed: {error})", group.target))
+            }
+        }
+    }
+    if !verifier_changes.is_empty() {
+        return Ok(PassOutcome::Failed {
+            reason: format!(
+                "verification changed managed bytes at {}; no Git delivery",
+                verifier_changes.join(", ")
+            ),
+        });
+    }
     // Concurrent-modification guard: re-capture the current state; any
     // change at a managed target that is not the authorized replacement is
     // a concurrent user change and prevents Git.  Unmanaged paths may
@@ -387,6 +422,28 @@ fn read_source_file(
     handle
         .read_to_end(&mut bytes)
         .map_err(|error| format!("cannot read the source file {source_path}: {error}"))?;
+    Ok(bytes)
+}
+
+/// Read one managed destination file through the typed destination
+/// authority (no-follow).
+fn read_managed_file(
+    authority: &AuthorityRoot<crate::platform::DestinationRepositoryRoot, ReadOnly>,
+    target_path: &str,
+) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let relative = crate::platform::RelativePath::parse(target_path)
+        .map_err(|error| format!("managed path {target_path:?} is invalid: {error}"))?;
+    let target = authority
+        .resolve_read(&relative, crate::platform::ObjectClass::RegularFile)
+        .map_err(|error| format!("cannot resolve the managed file {target_path}: {error}"))?;
+    let mut handle = target
+        .try_clone_file()
+        .map_err(|error| format!("cannot open the managed file {target_path}: {error}"))?;
+    let mut bytes = Vec::new();
+    handle
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("cannot read the managed file {target_path}: {error}"))?;
     Ok(bytes)
 }
 
