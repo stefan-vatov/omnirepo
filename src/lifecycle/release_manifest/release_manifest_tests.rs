@@ -6,7 +6,8 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::lifecycle::release_manifest::{
-    ArtifactRef, CandidateManifest, GateResult, ManifestError, exact_identity, manifest_for,
+    ArtifactRef, CandidateManifest, GateResult, ManifestError, content_hash, exact_identity,
+    manifest_for,
 };
 
 #[test]
@@ -99,6 +100,45 @@ fn the_exact_identity_is_deterministic() {
     )
     .expect("manifest");
     assert_ne!(exact_identity(&first), exact_identity(&other));
+}
+
+#[test]
+fn the_manifest_hash_binds_schema_and_field_boundaries() {
+    let commit = "0123456789abcdef0123456789abcdef01234567";
+    let first = manifest_for(
+        "0.9.0",
+        commit,
+        "rustc 1.86.0",
+        vec![ArtifactRef {
+            name: "a".to_owned(),
+            sha256: "bc".to_owned(),
+        }],
+        Vec::new(),
+    )
+    .expect("first manifest");
+    let second = manifest_for(
+        "0.9.0",
+        commit,
+        "rustc 1.86.0",
+        vec![ArtifactRef {
+            name: "ab".to_owned(),
+            sha256: "c".to_owned(),
+        }],
+        Vec::new(),
+    )
+    .expect("second manifest");
+    assert_ne!(
+        first.identity.manifest_sha256, second.identity.manifest_sha256,
+        "field boundaries must change the digest"
+    );
+
+    let mut changed_schema = first.clone();
+    changed_schema.schema = "omnirepo.release-candidate.v2".to_owned();
+    assert_ne!(
+        first.identity.manifest_sha256,
+        content_hash(&changed_schema),
+        "the schema must be part of the digest"
+    );
 }
 
 #[test]

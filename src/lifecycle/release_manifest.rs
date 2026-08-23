@@ -125,14 +125,20 @@ pub fn exact_identity(manifest: &CandidateManifest) -> String {
 
 pub(crate) fn content_hash(manifest: &CandidateManifest) -> String {
     let mut content = Vec::new();
-    let mut absorb = |bytes: &[u8]| content.extend_from_slice(bytes);
+    let mut absorb = |bytes: &[u8]| {
+        content.extend_from_slice(&(bytes.len() as u64).to_be_bytes());
+        content.extend_from_slice(bytes);
+    };
+    absorb(manifest.schema.as_bytes());
     absorb(manifest.identity.version.as_bytes());
     absorb(manifest.identity.source_commit.as_bytes());
     absorb(manifest.identity.toolchain.as_bytes());
+    absorb(&(manifest.artifacts.len() as u64).to_be_bytes());
     for artifact in &manifest.artifacts {
         absorb(artifact.name.as_bytes());
         absorb(artifact.sha256.as_bytes());
     }
+    absorb(&(manifest.gates.len() as u64).to_be_bytes());
     for gate in &manifest.gates {
         absorb(gate.name.as_bytes());
         absorb(&[u8::from(gate.passed)]);
