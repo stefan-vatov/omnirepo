@@ -44,6 +44,17 @@ jobs:
           --manifest scripts/quality-manifest.json --repo-root .
           --profile stable --json
 
+      # The suite runner bounds each case at ten minutes, which is meant to
+      # bound test execution. A change to a widely depended-on crate makes the
+      # first case rebuild the whole workspace inside that bound, and on the
+      # slower runner the build alone can exhaust it. Building first moves
+      # compilation outside the per-case bound and leaves the cases measuring
+      # what they are meant to measure.
+      - name: Build the workspace test binaries
+        run: cargo build --workspace --all-targets --all-features --locked
+        env:
+          RUSTFLAGS: "-D warnings"
+
       - name: Run the repository test suite (CI/local equivalence)
         run: >-
           cargo run --quiet --locked
@@ -111,6 +122,17 @@ jobs:
           --manifest-path tools/omnirepo-dev/Cargo.toml -- quality
           --manifest scripts/quality-manifest.json --repo-root .
           --profile msrv --json
+
+      # The suite runner bounds each case at ten minutes, which is meant to
+      # bound test execution. A change to a widely depended-on crate makes the
+      # first case rebuild the whole workspace inside that bound, and on the
+      # slower runner the build alone can exhaust it. Building first moves
+      # compilation outside the per-case bound and leaves the cases measuring
+      # what they are meant to measure.
+      - name: Build the workspace test binaries
+        run: cargo build --workspace --all-targets --all-features --locked
+        env:
+          RUSTFLAGS: "-D warnings"
 
       - name: Run the repository test suite on macOS
         run: >-
