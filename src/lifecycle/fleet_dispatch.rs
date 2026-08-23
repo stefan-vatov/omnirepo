@@ -17,7 +17,9 @@ use crate::configuration::{Discovery, discover};
 use crate::lifecycle::adapters::resolve_adapters;
 use crate::lifecycle::exit_status::ExitClass;
 use crate::lifecycle::fleet_binding::bind_declarations;
-use crate::lifecycle::fleet_catalog::build_runtime_catalog;
+use crate::lifecycle::fleet_catalog::{
+    build_runtime_catalog, build_sync_runtime_catalog, materialized_source_roots,
+};
 use crate::lifecycle::fleet_composition::compose_configured_fleet;
 use crate::lifecycle::fleet_declarations::read_pinned_declarations;
 use crate::lifecycle::fleet_finalize::finalize_fleet_run;
@@ -91,37 +93,48 @@ pub fn dispatch_fleet(
 pub struct FleetPlanning {
     pub catalog: crate::source::SourceCatalog,
     pub plans: Vec<crate::lifecycle::fleet_planning::RepositoryPlan>,
+    pub source_roots: std::collections::HashMap<String, std::path::PathBuf>,
 }
 
 /// Build the planning prefix for a configured machine authority.
 pub fn plan_configured_fleet(
     config: &crate::configuration::MachineConfiguration,
 ) -> Result<FleetPlanning, DispatchError> {
-    // 1. The source catalog in declared order.
     let catalog = build_runtime_catalog(config).map_err(|error| DispatchError::Pipeline {
         reason: error.to_string(),
     })?;
-    // 2. The pinned declarations for every complete source.
+    plan_with_catalog(config, catalog)
+}
+
+fn plan_configured_sync(
+    config: &crate::configuration::MachineConfiguration,
+) -> Result<FleetPlanning, DispatchError> {
+    let catalog = build_sync_runtime_catalog(config).map_err(|error| DispatchError::Pipeline {
+        reason: error.to_string(),
+    })?;
+    plan_with_catalog(config, catalog)
+}
+
+fn plan_with_catalog(
+    config: &crate::configuration::MachineConfiguration,
+    catalog: crate::source::SourceCatalog,
+) -> Result<FleetPlanning, DispatchError> {
+    let source_roots =
+        materialized_source_roots(config, &catalog).map_err(|error| DispatchError::Pipeline {
+            reason: error.to_string(),
+        })?;
     let mut declarations = Vec::new();
     for state in catalog.entries() {
         if let CatalogState::Complete { source, revision } = state {
-            let source_root = config
-                .sources()
-                .iter()
-                .find(|entry| entry.id().as_str() == source.as_str())
-                .and_then(|entry| match entry.location() {
-                    crate::configuration::SourceLocation::Local(path) => Some(path.as_str()),
-                    crate::configuration::SourceLocation::Remote(_) => None,
-                });
+            let source_root = source_roots.get(source.as_str());
             if let Some(source_root) = source_root {
                 let pinned_revision = RevisionId::new(revision.as_str()).map_err(|error| {
                     DispatchError::Pipeline {
                         reason: error.to_string(),
                     }
                 })?;
-                let parsed =
-                    read_pinned_declarations(source, &pinned_revision, Path::new(source_root))
-                        .map_err(|error| DispatchError::Pipeline { reason: error })?;
+                let parsed = read_pinned_declarations(source, &pinned_revision, source_root)
+                    .map_err(|error| DispatchError::Pipeline { reason: error })?;
                 declarations.extend(parsed);
             }
         }
@@ -135,7 +148,11 @@ pub fn plan_configured_fleet(
         })?;
     // 5. The per-repository plans.
     let plans = build_repository_plans(config, &catalog, &bindings, &policies);
-    Ok(FleetPlanning { catalog, plans })
+    Ok(FleetPlanning {
+        catalog,
+        plans,
+        source_roots,
+    })
 }
 
 /// Run the configured fleet pipeline end to end.
@@ -145,8 +162,13 @@ fn run_configured(
     config: &crate::configuration::MachineConfiguration,
     record_path: &Path,
 ) -> Result<DispatchOutcome, DispatchError> {
-    // 1-5. The effect-free planning prefix.
-    let FleetPlanning { catalog, plans } = plan_configured_fleet(config)?;
+    // Materialize remote sources for this sync, then run the same planning
+    // logic that doctor uses for already materialized snapshots.
+    let FleetPlanning {
+        catalog,
+        plans,
+        source_roots,
+    } = plan_configured_sync(config)?;
     // 6. The composed fleet with the frozen concurrency limit.
     let composed = compose_configured_fleet(config, &catalog, &plans, None).map_err(|error| {
         DispatchError::Pipeline {
@@ -159,6 +181,7 @@ fn run_configured(
         run_id,
         config,
         &plans,
+        &source_roots,
         &composed.composition,
         composed.limit,
     )

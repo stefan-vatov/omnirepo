@@ -23,6 +23,7 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant},
 };
 
@@ -34,6 +35,8 @@ pub const DEFAULT_FETCH_TIMEOUT: Duration = Duration::from_secs(120);
 pub const DEFAULT_MAX_RETRIES: u8 = 2;
 /// Bounded backoff base between retries.
 pub const DEFAULT_BACKOFF: Duration = Duration::from_millis(250);
+
+static SNAPSHOT_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Acquisition controls.
 #[derive(Clone, Debug)]
@@ -217,14 +220,196 @@ pub(crate) fn acquire_remote_locked(
     ensure_staging_repo(&staging, url)?;
     let revision_text = fetch_with_retries(&staging, url, config)?;
     let revision = RevisionId::new(revision_text).map_err(AcquireError::Identity)?;
+    let snapshot_root = materialize_remote_snapshot(
+        &staging,
+        source.id().as_str(),
+        revision.as_str(),
+        cache_root,
+    )?;
     let snapshot_id = SnapshotId::new("remote-snapshot").map_err(AcquireError::Identity)?;
-    let cache = CacheKey::new(staging.display().to_string()).map_err(AcquireError::Identity)?;
+    let cache =
+        CacheKey::new(snapshot_root.display().to_string()).map_err(AcquireError::Identity)?;
     Ok(PublishedSnapshot::new(
         source.clone(),
         revision,
         snapshot_id,
         cache,
     ))
+}
+
+/// Inspect the latest successfully fetched remote snapshot without fetching or
+/// writing. Doctor uses this effect-free path; sync uses [`acquire`].
+pub(crate) fn inspect_cached_remote(
+    reference: &SourceReference,
+    config: &AcquireConfig,
+) -> Result<PublishedSnapshot, AcquireError> {
+    let SourceLocation::Remote(url) = reference.location() else {
+        return Err(AcquireError::Unsupported {
+            reason: "cached remote inspection requires a remote source".to_owned(),
+        });
+    };
+    let source = SourceIdentity::new(
+        SourceId::new(reference.id().as_str()).map_err(AcquireError::Identity)?,
+        url,
+    )
+    .map_err(AcquireError::Identity)?;
+    let staging = config.cache_root.join(source.id().as_str());
+    let configured =
+        git_text(&staging, &["config", "--get", "remote.origin.url"]).map_err(|error| {
+            AcquireError::Cache {
+                reason: format!("cannot validate the cached remote: {error}"),
+            }
+        })?;
+    if configured.trim() != url {
+        return Err(AcquireError::Cache {
+            reason: "cached snapshot belongs to a different remote".to_owned(),
+        });
+    }
+    let revision_text = git_text(&staging, &["rev-parse", "--verify", "FETCH_HEAD^{commit}"])
+        .map_err(|error| AcquireError::Cache {
+            reason: format!("no fetched snapshot is available: {error}"),
+        })?;
+    let revision = RevisionId::new(revision_text.trim()).map_err(AcquireError::Identity)?;
+    let snapshot_root =
+        remote_snapshot_path(&config.cache_root, source.id().as_str(), revision.as_str());
+    validate_materialized_snapshot(&snapshot_root, revision.as_str())?;
+    let snapshot_id = SnapshotId::new("remote-snapshot").map_err(AcquireError::Identity)?;
+    let cache =
+        CacheKey::new(snapshot_root.display().to_string()).map_err(AcquireError::Identity)?;
+    Ok(PublishedSnapshot::new(source, revision, snapshot_id, cache))
+}
+
+/// Deterministic immutable snapshot path for one fetched remote revision.
+pub(crate) fn remote_snapshot_path(cache_root: &Path, source_id: &str, revision: &str) -> PathBuf {
+    cache_root.join("snapshots").join(source_id).join(revision)
+}
+
+fn materialize_remote_snapshot(
+    staging: &Path,
+    source_id: &str,
+    revision: &str,
+    cache_root: &Path,
+) -> Result<PathBuf, AcquireError> {
+    let snapshots = cache_root.join("snapshots");
+    ensure_real_directory(&snapshots)?;
+    let source_snapshots = snapshots.join(source_id);
+    ensure_real_directory(&source_snapshots)?;
+    let target = remote_snapshot_path(cache_root, source_id, revision);
+    match std::fs::symlink_metadata(&target) {
+        Ok(_) => {
+            validate_materialized_snapshot(&target, revision)?;
+            return Ok(target);
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(AcquireError::Io {
+                path: target,
+                reason: error.to_string(),
+            });
+        }
+    }
+
+    let sequence = SNAPSHOT_TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temporary =
+        source_snapshots.join(format!(".{revision}.tmp-{}-{sequence}", std::process::id()));
+    let temporary_text = temporary
+        .to_str()
+        .ok_or_else(|| AcquireError::Containment {
+            reason: "snapshot path must be UTF-8".to_owned(),
+        })?;
+    let materialization = (|| {
+        run_git(
+            staging,
+            &[
+                "clone",
+                "--quiet",
+                "--no-hardlinks",
+                "--no-checkout",
+                "--",
+                ".",
+                temporary_text,
+            ],
+        )?;
+        run_git(&temporary, &["checkout", "--quiet", "--detach", revision])?;
+        validate_materialized_snapshot(&temporary, revision)?;
+        std::fs::rename(&temporary, &target).map_err(|error| AcquireError::Io {
+            path: target.clone(),
+            reason: error.to_string(),
+        })?;
+        let source_directory =
+            std::fs::File::open(&source_snapshots).map_err(|error| AcquireError::Io {
+                path: source_snapshots.clone(),
+                reason: error.to_string(),
+            })?;
+        source_directory
+            .sync_all()
+            .map_err(|error| AcquireError::Io {
+                path: source_snapshots.clone(),
+                reason: error.to_string(),
+            })?;
+        Ok::<(), AcquireError>(())
+    })();
+    if let Err(error) = materialization {
+        let _ = std::fs::remove_dir_all(&temporary);
+        return Err(error);
+    }
+    Ok(target)
+}
+
+fn ensure_real_directory(path: &Path) -> Result<(), AcquireError> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+            Err(AcquireError::Containment {
+                reason: format!("snapshot path is not a real directory: {}", path.display()),
+            })
+        }
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => std::fs::create_dir(path)
+            .map_err(|error| AcquireError::Io {
+                path: path.to_path_buf(),
+                reason: error.to_string(),
+            }),
+        Err(error) => Err(AcquireError::Io {
+            path: path.to_path_buf(),
+            reason: error.to_string(),
+        }),
+    }
+}
+
+fn validate_materialized_snapshot(path: &Path, revision: &str) -> Result<(), AcquireError> {
+    let metadata = std::fs::symlink_metadata(path).map_err(|error| AcquireError::Io {
+        path: path.to_path_buf(),
+        reason: error.to_string(),
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(AcquireError::Containment {
+            reason: format!("snapshot path is not a real directory: {}", path.display()),
+        });
+    }
+    let observed =
+        git_text(path, &["rev-parse", "--verify", "HEAD^{commit}"]).map_err(|error| {
+            AcquireError::Cache {
+                reason: format!("cannot validate snapshot revision: {error}"),
+            }
+        })?;
+    if observed.trim() != revision {
+        return Err(AcquireError::Cache {
+            reason: format!(
+                "snapshot revision changed: expected {revision}, observed {}",
+                observed.trim()
+            ),
+        });
+    }
+    let dirty =
+        git_text(path, &["status", "--porcelain"]).map_err(|error| AcquireError::Cache {
+            reason: format!("cannot validate snapshot bytes: {error}"),
+        })?;
+    if !dirty.is_empty() {
+        return Err(AcquireError::Cache {
+            reason: "materialized snapshot is not immutable and clean".to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// Ensure the staging repository exists, is ours, and points at the exact

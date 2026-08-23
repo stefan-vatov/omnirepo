@@ -217,3 +217,84 @@ fn a_missing_source_authority_fails_the_fleet_typed() {
     let mut journal = journal;
     journal.shutdown().expect("shutdown");
 }
+
+#[test]
+fn a_remote_source_runs_the_complete_fleet_pipeline() {
+    let fixture = fixture_base();
+    let source = fixture.path().join("source-work");
+    git_repo(&source);
+    fs::create_dir_all(source.join(".omnirepo")).expect("declaration dir");
+    fs::write(source.join("managed.txt"), "remote-v1\n").expect("source file");
+    fs::write(
+        source.join(".omnirepo/source.yaml"),
+        "omnirepo-declarations-v1\nsource=source-a path=managed.txt id=item-1 mode=sync destination=managed.txt\n",
+    )
+    .expect("declarations");
+    let git = |root: &Path, args: &[&str]| {
+        let output = Command::new("git")
+            .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+            .args(args)
+            .current_dir(root)
+            .output()
+            .expect("git");
+        assert!(output.status.success(), "git {args:?}: {output:?}");
+    };
+    git(&source, &["add", "."]);
+    git(&source, &["commit", "--quiet", "--message", "source"]);
+    let remote = fixture.path().join("source.git");
+    let output = Command::new("git")
+        .args(["init", "--quiet", "--bare", "-b", "main"])
+        .arg(&remote)
+        .output()
+        .expect("bare remote");
+    assert!(output.status.success(), "bare remote: {output:?}");
+    let remote_url = format!("file://{}", remote.display());
+    git(&source, &["push", "--quiet", &remote_url, "main"]);
+
+    let destination = fixture.path().join("destination-a");
+    git_repo(&destination);
+    fs::write(destination.join("managed.txt"), "v0\n").expect("destination file");
+    git(&destination, &["add", "."]);
+    git(&destination, &["commit", "--quiet", "--message", "base"]);
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("cache");
+    let config = crate::configuration::MachineConfiguration::new(
+        crate::configuration::SchemaVersion::new(1).expect("version"),
+        vec![
+            crate::configuration::DestinationRepository::new(
+                crate::configuration::RepositoryId::parse("destination-a").expect("id"),
+                crate::configuration::AbsolutePath::parse(
+                    destination.to_str().expect("destination utf8"),
+                )
+                .expect("destination path"),
+                Vec::new(),
+            )
+            .expect("destination"),
+        ],
+        vec![crate::configuration::SourceReference::new(
+            crate::configuration::SourceId::parse("source-a").expect("id"),
+            crate::configuration::SourceLocation::Remote(remote_url),
+        )],
+        Some(
+            crate::configuration::AbsolutePath::parse(cache.to_str().expect("cache utf8"))
+                .expect("cache path"),
+        ),
+        crate::configuration::MachineConcurrency::new(2, 4).expect("concurrency"),
+        crate::configuration::RepairControls::default(),
+    )
+    .expect("machine config");
+    let home = fixture.path().join("home");
+    fs::create_dir_all(&home).expect("home");
+    let (journal, run_id, record_path) = journal_fixture(&home);
+
+    let outcome = super::run_configured(&journal.handle, &run_id, &config, &record_path)
+        .expect("configured fleet");
+
+    assert_eq!(outcome.exit_class, ExitClass::Success, "{outcome:?}");
+    assert_eq!(
+        fs::read_to_string(destination.join("managed.txt")).expect("managed destination"),
+        "remote-v1\n"
+    );
+    let mut journal = journal;
+    journal.shutdown().expect("shutdown");
+}

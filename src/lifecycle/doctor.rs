@@ -101,7 +101,7 @@ pub fn diagnose(home: &Path) -> DoctorReport {
             config
         }
     };
-    let FleetPlanning { catalog, plans } = match plan_configured_fleet(&config) {
+    let FleetPlanning { catalog, plans, .. } = match plan_configured_fleet(&config) {
         Ok(planning) => planning,
         Err(error) => {
             report.problem(format!("planning: {error}"));

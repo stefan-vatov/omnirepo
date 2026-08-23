@@ -39,6 +39,7 @@ pub fn run_fleet_initial_passes(
     run_id: &str,
     config: &MachineConfiguration,
     plans: &[crate::lifecycle::fleet_planning::RepositoryPlan],
+    source_roots: &HashMap<String, std::path::PathBuf>,
     composition: &FleetComposition,
     limit: usize,
 ) -> Result<FleetResponse, String> {
@@ -63,17 +64,7 @@ pub fn run_fleet_initial_passes(
             )
         })
         .collect::<HashMap<String, String>>();
-    let sources = config
-        .sources()
-        .iter()
-        .filter_map(|source| match source.location() {
-            crate::configuration::SourceLocation::Local(path) => Some((
-                source.id().as_str().to_owned(),
-                std::path::PathBuf::from(path.as_str()),
-            )),
-            crate::configuration::SourceLocation::Remote(_) => None,
-        })
-        .collect::<HashMap<String, std::path::PathBuf>>();
+    let sources = source_roots.clone();
     let plans = plans
         .iter()
         .map(|plan| {

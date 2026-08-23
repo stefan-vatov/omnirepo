@@ -8,7 +8,7 @@ mod item_resolution;
 mod publish;
 mod snapshot;
 
-pub(crate) use acquisition::{AcquireConfig, acquire};
+pub(crate) use acquisition::{AcquireConfig, acquire, inspect_cached_remote, remote_snapshot_path};
 pub(crate) use declarations::{DeclarationsError, SourceDeclaration, parse_declarations};
 pub(crate) use snapshot::{RevisionId, SourceId};
 

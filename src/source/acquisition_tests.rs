@@ -4,6 +4,7 @@
 
 use super::acquisition::{
     AcquireConfig, AcquireError, acquire, acquire_remote, acquire_remote_locked,
+    inspect_cached_remote,
 };
 use super::publish::{PublishOutcome, publish};
 use super::snapshot::{RevisionId, SourceId, SourceIdentity};
@@ -214,6 +215,29 @@ fn remote_source_materializes_exact_revision_and_reuses_cache() {
     // A second acquire reuses the cache and still pins the exact revision.
     let second = acquire_remote(&identity, &url, &config).expect("second acquire");
     assert_eq!(second.revision(), first.revision());
+}
+
+#[test]
+fn cached_remote_inspection_uses_only_the_matching_materialized_snapshot() {
+    let (fixture, bare, url) = remote_fixture("inspect-remote");
+    let cache = fixture.path().join("cache");
+    fs::create_dir_all(&cache).expect("create cache");
+    let config = AcquireConfig::new(&cache);
+    let reference = source_reference("upstream", SourceLocation::Remote(url));
+    let acquired = acquire(&reference, &config).expect("acquire remote");
+
+    fs::remove_dir_all(bare).expect("remove remote");
+    let inspected = inspect_cached_remote(&reference, &config).expect("inspect cached remote");
+    assert_eq!(inspected.revision(), acquired.revision());
+    assert_eq!(inspected.cache(), acquired.cache());
+
+    let wrong_reference = source_reference(
+        "upstream",
+        SourceLocation::Remote("https://example.test/different.git".to_owned()),
+    );
+    let error = inspect_cached_remote(&wrong_reference, &config)
+        .expect_err("a different remote must not reuse the cached snapshot");
+    assert!(matches!(error, AcquireError::Cache { .. }), "{error:?}");
 }
 
 #[test]

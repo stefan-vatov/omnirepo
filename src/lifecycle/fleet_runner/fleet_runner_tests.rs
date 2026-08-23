@@ -166,12 +166,16 @@ fn every_admitted_repository_reaches_exactly_one_result_in_declared_order() {
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
+    let source_roots =
+        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
+            .expect("source roots");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     let response = run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
+        &source_roots,
         &outcome.composition,
         4,
     )
@@ -232,12 +236,16 @@ fn a_failing_repository_never_stops_its_peers() {
         },
     ];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
+    let source_roots =
+        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
+            .expect("source roots");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     let response = run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
+        &source_roots,
         &outcome.composition,
         4,
     )
@@ -278,12 +286,16 @@ fn an_unchanged_repository_creates_no_commit() {
         checks: Vec::new(),
     }];
     let outcome = compose_configured_fleet(&config, &catalog, &plans, None).expect("compose");
+    let source_roots =
+        crate::lifecycle::fleet_catalog::materialized_source_roots(&config, &catalog)
+            .expect("source roots");
     let (_jfixture, mut journal, run_id) = journal_fixture();
     run_fleet_initial_passes(
         &journal.handle,
         &run_id,
         &config,
         &plans,
+        &source_roots,
         &outcome.composition,
         4,
     )
