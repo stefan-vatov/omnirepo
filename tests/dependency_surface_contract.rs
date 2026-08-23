@@ -82,7 +82,7 @@ fn runtime_dependency_allowlist_is_exact_and_lockfile_is_tracked() {
         .collect::<Vec<_>>();
     assert_eq!(
         names,
-        ["clap"],
+        ["clap", "semver"],
         "case=runtime-dependency-allowlist unexpected_direct_dependencies={names:?}"
     );
 

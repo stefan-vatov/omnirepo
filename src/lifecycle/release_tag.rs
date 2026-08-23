@@ -14,6 +14,8 @@ mod release_tag_tests;
 
 use std::{error::Error, fmt, path::Path, process::Command};
 
+use crate::lifecycle::release_manifest::valid_version;
+
 /// The tag creation outcome.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TagOutcome {
@@ -146,11 +148,7 @@ pub fn validate_canonical_tag(repo: &str, version: &str) -> Result<TagValidation
 }
 
 fn is_canonical_name(tag: &str) -> bool {
-    tag.starts_with('v')
-        && tag[1..].split('.').count() >= 2
-        && tag[1..]
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '+'))
+    tag.strip_prefix('v').is_some_and(valid_version)
 }
 
 fn git_text(root: &Path, args: &[&str]) -> String {

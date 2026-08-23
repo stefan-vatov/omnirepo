@@ -96,26 +96,18 @@ fn the_exact_identity_is_deterministic() {
 
 #[test]
 fn an_invalid_version_fails_typed() {
-    assert!(matches!(
-        manifest_for(
-            "",
-            "0123456789abcdef0123456789abcdef01234567",
-            "rustc 1.86.0",
-            Vec::new(),
-            Vec::new(),
-        ),
-        Err(ManifestError::InvalidVersion { .. })
-    ));
-    assert!(matches!(
-        manifest_for(
-            "not-a-version",
-            "0123456789abcdef0123456789abcdef01234567",
-            "rustc 1.86.0",
-            Vec::new(),
-            Vec::new(),
-        ),
-        Err(ManifestError::InvalidVersion { .. })
-    ));
+    for version in ["", "not-a-version", "1.a.0", "01.2.3", "1.2"] {
+        assert!(matches!(
+            manifest_for(
+                version,
+                "0123456789abcdef0123456789abcdef01234567",
+                "rustc 1.86.0",
+                Vec::new(),
+                Vec::new(),
+            ),
+            Err(ManifestError::InvalidVersion { .. })
+        ));
+    }
 }
 
 #[test]

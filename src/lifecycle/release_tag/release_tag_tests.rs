@@ -112,8 +112,10 @@ fn a_missing_or_non_canonical_tag_fails_typed() {
         Err(TagError::Missing { .. })
     ));
     create_canonical_tag(&root, "0.9.0", &commit).expect("create");
-    assert!(matches!(
-        validate_canonical_tag(&root, "not-a-version"),
-        Err(TagError::NonCanonicalName { .. })
-    ));
+    for version in ["not-a-version", "1.a.0", "01.2.3", "1.2"] {
+        assert!(matches!(
+            validate_canonical_tag(&root, version),
+            Err(TagError::NonCanonicalName { .. })
+        ));
+    }
 }

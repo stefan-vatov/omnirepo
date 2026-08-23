@@ -67,13 +67,8 @@ impl fmt::Display for ManifestError {
 }
 impl Error for ManifestError {}
 
-fn valid_version(version: &str) -> bool {
-    !version.is_empty()
-        && version.split('.').count() >= 2
-        && version.split(['.', '-', '+']).all(|part| !part.is_empty())
-        && version
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '+'))
+pub(super) fn valid_version(version: &str) -> bool {
+    semver::Version::parse(version).is_ok()
 }
 
 fn valid_commit(commit: &str) -> bool {

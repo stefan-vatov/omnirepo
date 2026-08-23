@@ -24,7 +24,7 @@ and are not shipped.
 
 | Package | Publish status | Targets and current paths | Direct dependencies | Product role |
 | --- | --- | --- | --- | --- |
-| `omnirepo` `0.8.3` | publishable (`publish` is not restricted) | binary `omnirepo` at `src/main.rs`; 20 root integration-test targets under `tests/` | runtime: `clap` with `derive`; dev: `assert_cmd`, `cargo_metadata`, `predicates`, `serde` with `derive`, `syn`, `tempfile`, `toml_edit`, `yaml_serde` | The only product crate and the only shipped executable |
+| `omnirepo` `0.8.3` | publishable (`publish` is not restricted) | binary `omnirepo` at `src/main.rs`; 20 root integration-test targets under `tests/` | runtime: `clap` with `derive`, `semver`; dev: `assert_cmd`, `cargo_metadata`, `predicates`, `serde` with `derive`, `syn`, `tempfile`, `toml_edit`, `yaml_serde` | The only product crate and the only shipped executable |
 | `omnirepo-dev` `0.1.0` | `publish = false` | library `tools/omnirepo-dev/src/lib.rs`; thin binary `tools/omnirepo-dev/src/main.rs`; private tests in `tools/omnirepo-dev/tests/` | `serde` with `derive`, `serde_json` | Private Rust replacement for repository Beads tooling |
 | `omnirepo-test-support` `0.0.0` | `publish = false` | library `tools/omnirepo-test-support/src/lib.rs`; private tests in `tools/omnirepo-test-support/tests/` | `tempfile` | Reusable process, network, Git, agent, lifecycle, and recovery fixtures |
 
@@ -37,13 +37,13 @@ members use Rust edition `2024`, MSRV `1.86`, and the shared workspace lints.
 `src/main.rs` is the private composition root. It declares the product modules
 and the CLI entry point; there is no `src/lib.rs`, no `src/bin/main.rs`, and no
 `[lib]` target. `src/platform/authority/mod.rs` is the current private authority
-module. The product has one runtime dependency, `clap`; it has no path
+module. The product runtime dependencies are `clap` and `semver`; it has no path
 dependency to either private workspace crate.
 
 The dependency direction is one way:
 
 ```text
-omnirepo (publishable binary, runtime clap)
+omnirepo (publishable binary, runtime clap + semver)
         └── no dependency on private workspace crates
 
 omnirepo-dev (private developer library + CLI, serde/serde_json)

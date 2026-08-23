@@ -210,6 +210,7 @@ workspace = true
 
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
+semver = "1.0.28"
 
 [dev-dependencies]
 assert_cmd = "2.2.2"

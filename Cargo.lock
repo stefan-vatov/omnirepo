@@ -312,6 +312,7 @@ dependencies = [
  "cargo_metadata",
  "clap",
  "predicates",
+ "semver",
  "serde",
  "syn",
  "tempfile",
