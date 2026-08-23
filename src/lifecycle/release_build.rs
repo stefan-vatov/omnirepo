@@ -12,7 +12,10 @@
 #[cfg(test)]
 mod release_build_tests;
 
-use std::{error::Error, fmt, path::Path, process::Command};
+use crate::lifecycle::{
+    command_spec::DEFAULT_COMMAND_TIMEOUT, release_gates::run_bounded_gate_command,
+};
+use std::{error::Error, fmt, path::Path, process::Command, time::Duration};
 
 /// The packaged artifact.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -66,6 +69,20 @@ pub fn build_locked_package(
     checkout: &Path,
     source_commit: &str,
 ) -> Result<PackageArtifact, PackageError> {
+    let mut command = Command::new("cargo");
+    command
+        .args(["package", "--locked"])
+        .current_dir(checkout)
+        .env("CARGO_TERM_COLOR", "never");
+    build_locked_package_with_command(checkout, source_commit, command, DEFAULT_COMMAND_TIMEOUT)
+}
+
+fn build_locked_package_with_command(
+    checkout: &Path,
+    source_commit: &str,
+    command: Command,
+    budget: Duration,
+) -> Result<PackageArtifact, PackageError> {
     // 1. The checkout must be clean.
     let status = git_text(checkout, &["status", "--porcelain"]);
     if !status.is_empty() {
@@ -80,17 +97,10 @@ pub fn build_locked_package(
         });
     }
     // 3. Package with locked dependencies; the package verifies itself.
-    let output = Command::new("cargo")
-        .args(["package", "--locked"])
-        .current_dir(checkout)
-        .env("CARGO_TERM_COLOR", "never")
-        .output()
-        .map_err(|error| PackageError::Cargo {
-            reason: error.to_string(),
-        })?;
-    if !output.status.success() {
+    let run = run_bounded_gate_command("cargo package", command, budget);
+    if !run.passed {
         return Err(PackageError::Cargo {
-            reason: String::from_utf8_lossy(&output.stderr).into_owned(),
+            reason: run.evidence,
         });
     }
     // 4. Locate the artifact and checksum it.

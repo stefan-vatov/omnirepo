@@ -6,8 +6,21 @@
 
 #![allow(dead_code, unused_imports)]
 
-use crate::lifecycle::release_build::{PackageArtifact, PackageError, build_locked_package};
-use std::{fs, path::Path, process::Command};
+use crate::lifecycle::release_build::{
+    PackageArtifact, PackageError, build_locked_package, build_locked_package_with_command,
+};
+use std::{
+    fs,
+    path::Path,
+    process::Command,
+    time::{Duration, Instant},
+};
+
+#[test]
+#[ignore]
+fn hanging_package_helper() {
+    std::thread::sleep(Duration::from_secs(60));
+}
 
 fn fixture_base() -> tempfile::TempDir {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
@@ -114,6 +127,33 @@ fn a_checkout_at_the_wrong_sha_is_refused() {
         matches!(error, PackageError::CommitMismatch { .. }),
         "{error}"
     );
+}
+
+#[test]
+fn cargo_package_cannot_bypass_its_deadline() {
+    let fixture = fixture_base();
+    let root = fixture.path().join("crate");
+    crate_fixture(&root);
+    git(&root, &["init", "--quiet", "-b", "main"]);
+    git(&root, &["config", "user.name", "Release"]);
+    git(&root, &["config", "user.email", "release@example.test"]);
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "--quiet", "--message", "fixture"]);
+    let head = git_text(&root, &["rev-parse", "HEAD"]);
+    let mut command = Command::new(std::env::current_exe().expect("test executable"));
+    command.args([
+        "--ignored",
+        "--exact",
+        "lifecycle::release_build::release_build_tests::hanging_package_helper",
+        "--nocapture",
+    ]);
+    let started = Instant::now();
+
+    let error = build_locked_package_with_command(&root, &head, command, Duration::from_millis(50))
+        .expect_err("a hanging package build must time out");
+
+    assert!(matches!(error, PackageError::Cargo { .. }), "{error}");
+    assert!(started.elapsed() < Duration::from_secs(1));
 }
 
 #[test]
