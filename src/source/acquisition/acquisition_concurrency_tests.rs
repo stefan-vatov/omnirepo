@@ -7,7 +7,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 /// Fork-helper dispatch: when the environment names a helper mode, run it in
@@ -24,6 +24,7 @@ fn fork_helper() -> bool {
             // parent (the parent always kills within the test).
             std::thread::sleep(Duration::from_secs(60));
         }
+        Some("silent-fetch") => std::thread::sleep(Duration::from_secs(60)),
         _ => panic!("unknown fork helper mode"),
     }
     std::process::exit(0);
@@ -109,4 +110,39 @@ fn stale_pid_file_does_not_impersonate_a_live_lock_owner() {
 
     SourceLock::acquire_with_wait(&cache, "upstream", Duration::from_millis(100))
         .expect("residue without a kernel lock has no owner");
+}
+
+#[test]
+fn silent_stdout_cannot_block_the_fetch_deadline() {
+    if fork_helper() {
+        return;
+    }
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target");
+    fs::create_dir_all(&base).expect("base");
+    let fixture = tempfile::Builder::new()
+        .prefix("source-fetch-timeout-")
+        .tempdir_in(&base)
+        .expect("fixture");
+    let executable = std::env::current_exe().expect("test binary");
+    let mut command = Command::new(executable);
+    command
+        .args([
+            "--exact",
+            "source::acquisition::acquisition_concurrency_tests::silent_stdout_cannot_block_the_fetch_deadline",
+        ])
+        .env("OMNIREPO_FORK_HELPER", "silent-fetch")
+        .env("OMNIREPO_FORK_CACHE", fixture.path())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let started = Instant::now();
+    let error = super::run_bounded_process(command, fixture.path(), Duration::from_millis(50))
+        .expect_err("silent command must time out");
+
+    assert!(format!("{error}").contains("time budget"), "{error}");
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "a blocking pipe read must not bypass the deadline"
+    );
 }

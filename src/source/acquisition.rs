@@ -42,9 +42,11 @@ static SNAPSHOT_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 const LOCK_EX: c_int = 2;
 const LOCK_NB: c_int = 4;
+const SIGKILL: c_int = 9;
 
 unsafe extern "C" {
     fn flock(fd: c_int, operation: c_int) -> c_int;
+    fn killpg(process_group: c_int, signal: c_int) -> c_int;
 }
 
 /// Acquisition controls.
@@ -634,35 +636,49 @@ fn run_bounded(
     arguments: &[&str],
     timeout: Duration,
 ) -> Result<Vec<u8>, AcquireError> {
-    let mut child = sanitized_command(staging)
-        .args(arguments)
-        .spawn()
-        .map_err(|error| AcquireError::Io {
-            path: staging.to_path_buf(),
-            reason: error.to_string(),
-        })?;
+    let mut command = sanitized_command(staging);
+    command.args(arguments);
+    run_bounded_process(command, staging, timeout)
+}
+
+fn run_bounded_process(
+    mut command: Command,
+    staging: &Path,
+    timeout: Duration,
+) -> Result<Vec<u8>, AcquireError> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        command.process_group(0);
+    }
+    let mut child = command.spawn().map_err(|error| AcquireError::Io {
+        path: staging.to_path_buf(),
+        reason: error.to_string(),
+    })?;
+    let stdout = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let stderr = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let mut readers = Vec::new();
+    if let Some(pipe) = child.stdout.take() {
+        readers.push(spawn_acquisition_reader(
+            pipe,
+            std::sync::Arc::clone(&stdout),
+        ));
+    }
+    if let Some(pipe) = child.stderr.take() {
+        readers.push(spawn_acquisition_reader(
+            pipe,
+            std::sync::Arc::clone(&stderr),
+        ));
+    }
     let deadline = Instant::now() + timeout;
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
-                if let Some(mut handle) = child.stdout.take() {
-                    handle
-                        .read_to_end(&mut stdout)
-                        .map_err(|error| AcquireError::Io {
-                            path: staging.to_path_buf(),
-                            reason: error.to_string(),
-                        })?;
-                }
-                if let Some(mut handle) = child.stderr.take() {
-                    handle
-                        .read_to_end(&mut stderr)
-                        .map_err(|error| AcquireError::Io {
-                            path: staging.to_path_buf(),
-                            reason: error.to_string(),
-                        })?;
-                }
+                terminate_acquisition_process_group(child.id());
+                join_acquisition_readers(readers);
+                let stdout = stdout.lock().expect("acquisition stdout");
+                let stderr = stderr.lock().expect("acquisition stderr");
                 if stdout.len() > MAX_ACQUIRE_BYTES || stderr.len() > MAX_ACQUIRE_BYTES {
                     return Err(AcquireError::Network {
                         reason: "acquisition output exceeded the bound".to_owned(),
@@ -673,42 +689,82 @@ fn run_bounded(
                         reason: classify_failure(&stderr),
                     });
                 }
-                return Ok(stdout);
+                return Ok(stdout.clone());
             }
             Ok(None) => {
                 if Instant::now() >= deadline {
-                    let _ = child.kill();
-                    let _ = child.wait();
+                    terminate_acquisition(&mut child);
+                    join_acquisition_readers(readers);
                     return Err(AcquireError::Network {
                         reason: "fetch exceeded its time budget".to_owned(),
                     });
                 }
-                if let Some(handle) = child.stdout.as_mut() {
-                    let mut buffer = [0_u8; 8192];
-                    loop {
-                        match handle.read(&mut buffer) {
-                            Ok(0) | Err(_) => break,
-                            Ok(read) => {
-                                stdout.extend_from_slice(&buffer[..read]);
-                                if stdout.len() > MAX_ACQUIRE_BYTES {
-                                    let _ = child.kill();
-                                    return Err(AcquireError::Network {
-                                        reason: "acquisition output exceeded the bound".to_owned(),
-                                    });
-                                }
-                            }
-                        }
-                    }
+                if stdout.lock().expect("acquisition stdout").len() > MAX_ACQUIRE_BYTES
+                    || stderr.lock().expect("acquisition stderr").len() > MAX_ACQUIRE_BYTES
+                {
+                    terminate_acquisition(&mut child);
+                    join_acquisition_readers(readers);
+                    return Err(AcquireError::Network {
+                        reason: "acquisition output exceeded the bound".to_owned(),
+                    });
                 }
                 std::thread::sleep(Duration::from_millis(5));
             }
             Err(error) => {
+                terminate_acquisition(&mut child);
+                join_acquisition_readers(readers);
                 return Err(AcquireError::Io {
                     path: staging.to_path_buf(),
                     reason: error.to_string(),
                 });
             }
         }
+    }
+}
+
+fn spawn_acquisition_reader<R: Read + Send + 'static>(
+    mut pipe: R,
+    sink: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        let mut buffer = [0_u8; 8192];
+        loop {
+            let read = match pipe.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(read) => read,
+                Err(_) => break,
+            };
+            let mut captured = sink.lock().expect("acquisition capture");
+            let room = MAX_ACQUIRE_BYTES
+                .saturating_add(1)
+                .saturating_sub(captured.len());
+            if room > 0 {
+                let take = read.min(room);
+                captured.extend_from_slice(&buffer[..take]);
+            }
+        }
+    })
+}
+
+fn terminate_acquisition(child: &mut std::process::Child) {
+    terminate_acquisition_process_group(child.id());
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+#[cfg(unix)]
+fn terminate_acquisition_process_group(process_group: u32) {
+    unsafe {
+        let _ = killpg(process_group as c_int, SIGKILL);
+    }
+}
+
+#[cfg(not(unix))]
+fn terminate_acquisition_process_group(_process_group: u32) {}
+
+fn join_acquisition_readers(readers: Vec<std::thread::JoinHandle<()>>) {
+    for reader in readers {
+        let _ = reader.join();
     }
 }
 
