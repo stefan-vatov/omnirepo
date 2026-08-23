@@ -869,10 +869,19 @@ mod tests {
         // place of a previous commit.  It names no commit, so the gate
         // must fail closed naming the missing base rather than handing
         // the sentinel to `git rev-parse`.
+        //
+        // Every case passes the base explicitly.  The `None` path reads
+        // `OMNIREPO_COVERAGE_BASE` from the ambient environment, which CI
+        // sets and a local shell does not, so asserting on it would make
+        // this case pass or fail by where it runs.
         let null = "0".repeat(40);
         assert!(matches!(resolve_base(Some(&null)), Err(Error::MissingBase)));
+        assert!(matches!(
+            resolve_base(Some(&null.repeat(2))),
+            Err(Error::MissingBase),
+        ));
         assert!(matches!(resolve_base(Some("")), Err(Error::MissingBase)));
-        assert!(matches!(resolve_base(None), Err(Error::MissingBase)));
+        assert!(matches!(resolve_base(Some("   ")), Err(Error::MissingBase)));
         // A real revision is still returned verbatim.
         assert_eq!(
             resolve_base(Some("a28690bb40389db2fdeaca07238be7d2c525a83b")).expect("base"),
