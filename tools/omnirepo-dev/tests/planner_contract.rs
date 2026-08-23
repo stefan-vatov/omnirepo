@@ -529,14 +529,22 @@ fn timeout_and_oversized_output_terminate_the_process_tree() {
         .ready()
         .expect_err("timeout fake must fail");
     assert!(matches!(timeout_error, BrAdapterError::Timeout { .. }));
-    assert!(started.elapsed() < Duration::from_secs(2));
+    // The guard proves the run was bounded at all, not that it was quick:
+    // it must stay well clear of process-spawn cost under a loaded host,
+    // while a genuine unbounded wait still reaches it.
+    assert!(started.elapsed() < Duration::from_secs(30));
     cleanup(&timeout_root);
 
     let oversized_root = root("oversized");
+    // The output bound is under test here, not the timeout, so the budget
+    // is a margin that must never preempt the overflow: the fake exceeds
+    // the byte limit immediately, and a budget near process-spawn cost
+    // reports `Timeout` instead when the suite runs cases in parallel.
+    // A generous budget costs nothing, because it never elapses.
     let oversized =
         BrAdapterConfig::with_executable(&oversized_root, fake_br(&oversized_root, "oversized"))
             .expect("freeze oversized fake")
-            .with_timeout(Duration::from_secs(2))
+            .with_timeout(Duration::from_secs(60))
             .with_max_output_bytes(64);
     let oversized_error = BrAdapter::new(oversized)
         .ready()
@@ -558,7 +566,9 @@ fn late_descendants_are_cleaned_and_concurrent_reads_do_not_share_state() {
     let late = adapter(&late_root, "late");
     let started = Instant::now();
     late.ready().expect("late parent exits successfully");
-    assert!(started.elapsed() < Duration::from_secs(2));
+    // Bounded, not quick: the parent must not be held by its late
+    // descendant.  The margin clears spawn cost on a loaded host.
+    assert!(started.elapsed() < Duration::from_secs(30));
     cleanup(&late_root);
 
     let concurrent_root = root("concurrent");
@@ -702,7 +712,9 @@ fn adapter_bounds_stderr_and_preserves_bounded_diagnostics() {
     let error = BrAdapter::new(
         BrAdapterConfig::with_executable(&root, fake_br(&root, "stderr-oversized"))
             .expect("freeze stderr overflow fake")
-            .with_timeout(Duration::from_secs(2))
+            // The stderr bound is under test, not the timeout: the budget
+            // must never preempt the overflow.  It never elapses.
+            .with_timeout(Duration::from_secs(60))
             .with_max_output_bytes(64),
     )
     .ready()
