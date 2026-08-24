@@ -325,16 +325,16 @@ fn validate_manifest(path: &Path, manifest: &Manifest) -> Result<(), RunnerError
                 reason: "timeout_seconds must be greater than zero".to_owned(),
             });
         }
-        if let Some(limit) = gate.output_limit_bytes {
-            if limit < OUTPUT_TRUNCATION_MARKER.len() * 2 {
-                return Err(RunnerError::InvalidGateLimits {
-                    gate_id: gate.id.clone(),
-                    reason: format!(
-                        "output_limit_bytes must be at least {}",
-                        OUTPUT_TRUNCATION_MARKER.len() * 2
-                    ),
-                });
-            }
+        if let Some(limit) = gate.output_limit_bytes
+            && limit < OUTPUT_TRUNCATION_MARKER.len() * 2
+        {
+            return Err(RunnerError::InvalidGateLimits {
+                gate_id: gate.id.clone(),
+                reason: format!(
+                    "output_limit_bytes must be at least {}",
+                    OUTPUT_TRUNCATION_MARKER.len() * 2
+                ),
+            });
         }
     }
 

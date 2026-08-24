@@ -72,7 +72,7 @@ jobs:
         shell: bash
 
   msrv:
-    name: repository quality manifest on Rust 1.86 MSRV
+    name: repository quality manifest on Rust 1.95 MSRV
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -81,8 +81,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7.0.1
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2.9.2
@@ -104,8 +104,8 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7.0.1
 
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
 
       - name: Cache Rust build artifacts (isolated per OS)
         uses: Swatinem/rust-cache@v2.9.2

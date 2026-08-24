@@ -188,7 +188,7 @@ fn provenance_verifies_the_manifest_against_the_checkout() {
     fs::create_dir_all(&checkout).expect("checkout");
     let commit = "0123456789abcdef0123456789abcdef01234567";
     let manifest =
-        manifest_for("0.9.0", commit, "rustc 1.86.0", Vec::new(), Vec::new()).expect("manifest");
+        manifest_for("0.9.0", commit, "rustc 1.95.0", Vec::new(), Vec::new()).expect("manifest");
     let mut head_file = checkout.clone();
     head_file.push("HEAD");
     fs::write(&head_file, commit).expect("head");
@@ -219,7 +219,7 @@ fn provenance_refuses_a_tampered_manifest() {
     // A manifest whose content hash was replaced no longer matches its
     // own identity.
     let mut manifest =
-        manifest_for("0.9.0", commit, "rustc 1.86.0", Vec::new(), Vec::new()).expect("manifest");
+        manifest_for("0.9.0", commit, "rustc 1.95.0", Vec::new(), Vec::new()).expect("manifest");
     manifest.identity.manifest_sha256 = "deadbeef".to_owned();
     let error = verify_candidate_provenance(&manifest, &checkout).expect_err("tampered");
     assert!(
@@ -235,7 +235,7 @@ fn a_missing_checkout_head_fails_typed() {
     let manifest = manifest_for(
         "0.9.0",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         Vec::new(),
         Vec::new(),
     )

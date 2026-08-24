@@ -2347,11 +2347,11 @@ fn redact_credential_values(input: &str) -> (String, bool) {
         if value_end > value_start {
             output.push_str(REDACTED_MARKER);
             redacted = true;
-            if let Some(quote) = quote {
-                if input.as_bytes().get(value_end) == Some(&quote) {
-                    output.push(quote as char);
-                    value_end += 1;
-                }
+            if let Some(quote) = quote
+                && input.as_bytes().get(value_end) == Some(&quote)
+            {
+                output.push(quote as char);
+                value_end += 1;
             }
             cursor = value_end;
         } else {

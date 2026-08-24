@@ -213,16 +213,14 @@ fn run_configured(
     for repository in &repair.repaired {
         for result in &mut final_results {
             if let crate::lifecycle::fleet_collector::MemberResult::Failed {
-                repository: name,
-                ..
+                repository: name, ..
             } = result
+                && name == repository
             {
-                if name == repository {
-                    *result = crate::lifecycle::fleet_collector::MemberResult::Delivered {
-                        repository: repository.clone(),
-                        oid: "repair".to_owned(),
-                    };
-                }
+                *result = crate::lifecycle::fleet_collector::MemberResult::Delivered {
+                    repository: repository.clone(),
+                    oid: "repair".to_owned(),
+                };
             }
         }
     }

@@ -1694,7 +1694,7 @@ impl PathIdentityFixture {
     fn deterministic(context: &FixtureContext) -> Self {
         let filesystem = FilesystemIdentityFixture::new(
             context,
-            if context.seed % 2 == 0 {
+            if context.seed.is_multiple_of(2) {
                 FilesystemKindFixture::Linux
             } else {
                 FilesystemKindFixture::MacOsApfs

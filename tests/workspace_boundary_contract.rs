@@ -126,7 +126,7 @@ fn workspace_has_one_publishable_product_and_private_tool_members() {
         "Rust 2024 workspace resolver must be explicit"
     );
     assert!(root_manifest.contains("edition = \"2024\""));
-    assert!(root_manifest.contains("rust-version = \"1.86\""));
+    assert!(root_manifest.contains("rust-version = \"1.95\""));
     assert!(tool_manifest.contains("name = \"omnirepo-dev\""));
     assert!(tool_manifest.contains("publish = false"));
     assert!(tool_manifest.contains("edition.workspace = true"));
@@ -134,14 +134,14 @@ fn workspace_has_one_publishable_product_and_private_tool_members() {
     assert!(root_package.contains("\"name\":\"omnirepo\""));
     assert!(tool_package.contains("\"name\":\"omnirepo-dev\""));
     assert!(tool_package.contains("\"edition\":\"2024\""));
-    assert!(tool_package.contains("\"rust_version\":\"1.86\""));
+    assert!(tool_package.contains("\"rust_version\":\"1.95\""));
     assert!(support_manifest.contains("name = \"omnirepo-test-support\""));
     assert!(support_manifest.contains("publish = false"));
     assert!(support_manifest.contains("edition.workspace = true"));
     assert!(support_manifest.contains("rust-version.workspace = true"));
     assert!(support_package.contains("\"name\":\"omnirepo-test-support\""));
     assert!(support_package.contains("\"edition\":\"2024\""));
-    assert!(support_package.contains("\"rust_version\":\"1.86\""));
+    assert!(support_package.contains("\"rust_version\":\"1.95\""));
     assert!(
         metadata.contains("tools/omnirepo-dev"),
         "cargo metadata must include the private tool member"

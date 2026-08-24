@@ -558,13 +558,13 @@ impl EventLog {
     /// run/repository transition rules.  On error the log state is unchanged.
     pub fn record(&mut self, event: &JournalEvent) -> Result<(), EventError> {
         let checkpoint = event.checkpoint();
-        if let Some(previous) = self.last_checkpoint {
-            if checkpoint <= previous {
-                return Err(EventError::NonMonotonicCheckpoint {
-                    expected_after: previous,
-                    actual: checkpoint,
-                });
-            }
+        if let Some(previous) = self.last_checkpoint
+            && checkpoint <= previous
+        {
+            return Err(EventError::NonMonotonicCheckpoint {
+                expected_after: previous,
+                actual: checkpoint,
+            });
         }
         match event {
             JournalEvent::RunIntent { stage, .. } => {

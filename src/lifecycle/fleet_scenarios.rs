@@ -189,10 +189,10 @@ fn peak_resident_bytes() -> u64 {
     {
         if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
             for line in status.lines() {
-                if let Some(rest) = line.strip_prefix("VmHWM:") {
-                    if let Ok(kib) = rest.trim().trim_end_matches(" kB").parse::<u64>() {
-                        return kib * 1024;
-                    }
+                if let Some(rest) = line.strip_prefix("VmHWM:")
+                    && let Ok(kib) = rest.trim().trim_end_matches(" kB").parse::<u64>()
+                {
+                    return kib * 1024;
                 }
             }
         }

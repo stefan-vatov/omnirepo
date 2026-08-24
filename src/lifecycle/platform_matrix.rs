@@ -33,7 +33,7 @@ pub enum Filesystem {
 /// The pinned toolchain.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Toolchain {
-    Rust186,
+    Rust195,
 }
 
 /// The required quality gates per platform job.
@@ -108,7 +108,7 @@ pub fn capability_supported(os: Os, filesystem: Filesystem) -> bool {
 /// The explicit supported-platform matrix.
 ///
 /// Every supported platform runs the required tests, docs, locked gates,
-/// and the repository-owned quality command on Rust 1.86.
+/// and the repository-owned quality command on Rust 1.95.
 pub fn supported_platform_matrix() -> Vec<PlatformJob> {
     let required: &[GateKind] = &[
         GateKind::Tests,
@@ -120,13 +120,13 @@ pub fn supported_platform_matrix() -> Vec<PlatformJob> {
         PlatformJob {
             os: Os::Linux,
             filesystem: Filesystem::Linux,
-            toolchain: Toolchain::Rust186,
+            toolchain: Toolchain::Rust195,
             required,
         },
         PlatformJob {
             os: Os::Mac,
             filesystem: Filesystem::Apfs,
-            toolchain: Toolchain::Rust186,
+            toolchain: Toolchain::Rust195,
             required,
         },
     ]
@@ -163,7 +163,7 @@ pub fn platform_evidence() -> String {
     let mut lines = vec![
         "{".to_owned(),
         "  \"schema\": \"omnirepo.platform-evidence.v1\",".to_owned(),
-        "  \"toolchain\": \"1.86\",".to_owned(),
+        "  \"toolchain\": \"1.95\",".to_owned(),
         "  \"supported\": [".to_owned(),
     ];
     let matrix = supported_platform_matrix();

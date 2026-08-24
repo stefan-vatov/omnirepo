@@ -157,13 +157,13 @@ fn diagnose_plan(report: &mut DoctorReport, repository: &str, plan: &SyncPlan) {
                 ));
                 // A selected section whose destination format carries no
                 // delimiter syntax would fail at sync time: surface it now.
-                if item.kind == ItemKind::Section {
-                    if let Err(error) = crate::managed_content::lookup_by_extension(&item.target) {
-                        report.problem(format!(
-                            "repository {repository}: item {} targets {}: {error}",
-                            item.id, item.target
-                        ));
-                    }
+                if item.kind == ItemKind::Section
+                    && let Err(error) = crate::managed_content::lookup_by_extension(&item.target)
+                {
+                    report.problem(format!(
+                        "repository {repository}: item {} targets {}: {error}",
+                        item.id, item.target
+                    ));
                 }
             }
             PlanDecision::Rejected { reason } => {

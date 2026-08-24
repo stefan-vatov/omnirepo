@@ -237,7 +237,7 @@
     {
       "argv": [
         "scripts/cargo-pinned",
-        "1.86.0",
+        "1.95.0",
         "test",
         "--workspace",
         "--all-targets",
@@ -249,13 +249,13 @@
       "id": "msrv-tests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     },
     {
       "argv": [
         "scripts/cargo-pinned",
-        "1.86.0",
+        "1.95.0",
         "test",
         "--workspace",
         "--doc",
@@ -267,7 +267,7 @@
       "id": "msrv-doctests",
       "kind": "gate",
       "owner": "omni-constitutional-convergence-2r9.63",
-      "toolchain": "rust-1.86.0",
+      "toolchain": "rust-1.95.0",
       "working_directory": "."
     }
   ],

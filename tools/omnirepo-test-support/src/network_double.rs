@@ -271,13 +271,13 @@ fn read_request(
     let mut authorization = None;
     let mut duplicate_authorization = false;
     for line in lines {
-        if let Some((name, value)) = line.split_once(':') {
-            if name.eq_ignore_ascii_case("authorization") {
-                if authorization.is_some() {
-                    duplicate_authorization = true;
-                } else {
-                    authorization = Some(value.trim().to_owned());
-                }
+        if let Some((name, value)) = line.split_once(':')
+            && name.eq_ignore_ascii_case("authorization")
+        {
+            if authorization.is_some() {
+                duplicate_authorization = true;
+            } else {
+                authorization = Some(value.trim().to_owned());
             }
         }
     }

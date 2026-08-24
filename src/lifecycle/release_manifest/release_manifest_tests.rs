@@ -15,7 +15,7 @@ fn the_manifest_carries_the_exact_identity_fields() {
     let manifest = manifest_for(
         "0.9.0",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "omnirepo-linux-x86_64".to_owned(),
             sha256: "ab".to_owned(),
@@ -32,7 +32,7 @@ fn the_manifest_carries_the_exact_identity_fields() {
         manifest.identity.source_commit,
         "0123456789abcdef0123456789abcdef01234567"
     );
-    assert_eq!(manifest.identity.toolchain, "rustc 1.86.0");
+    assert_eq!(manifest.identity.toolchain, "rustc 1.95.0");
     assert_eq!(manifest.artifacts.len(), 1);
     assert_eq!(manifest.gates.len(), 1);
     assert_eq!(manifest.identity.manifest_sha256.len(), 64);
@@ -50,7 +50,7 @@ fn the_exact_identity_is_deterministic() {
     let first = manifest_for(
         "0.9.0",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "omnirepo-linux-x86_64".to_owned(),
             sha256: "ab".to_owned(),
@@ -64,7 +64,7 @@ fn the_exact_identity_is_deterministic() {
     let second = manifest_for(
         "0.9.0",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "omnirepo-linux-x86_64".to_owned(),
             sha256: "ab".to_owned(),
@@ -88,7 +88,7 @@ fn the_exact_identity_is_deterministic() {
     let other = manifest_for(
         "0.9.0",
         "fedcba9876543210fedcba9876543210fedcba98",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "omnirepo-linux-x86_64".to_owned(),
             sha256: "ab".to_owned(),
@@ -108,7 +108,7 @@ fn the_manifest_hash_binds_schema_and_field_boundaries() {
     let first = manifest_for(
         "0.9.0",
         commit,
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "a".to_owned(),
             sha256: "bc".to_owned(),
@@ -119,7 +119,7 @@ fn the_manifest_hash_binds_schema_and_field_boundaries() {
     let second = manifest_for(
         "0.9.0",
         commit,
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![ArtifactRef {
             name: "ab".to_owned(),
             sha256: "c".to_owned(),
@@ -148,7 +148,7 @@ fn an_invalid_version_fails_typed() {
             manifest_for(
                 version,
                 "0123456789abcdef0123456789abcdef01234567",
-                "rustc 1.86.0",
+                "rustc 1.95.0",
                 Vec::new(),
                 Vec::new(),
             ),
@@ -162,7 +162,7 @@ fn a_pending_candidate_with_no_artifacts_is_valid() {
     let manifest = manifest_for(
         "0.9.0-rc.1",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         Vec::new(),
         Vec::new(),
     )

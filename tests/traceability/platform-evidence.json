@@ -14,7 +14,7 @@
   "schema": "omnirepo.platform-evidence.v1",
   "supported": [
     {
-      "cache": "Linux-Linux-Rust186",
+      "cache": "Linux-Linux-Rust195",
       "filesystem": "Linux",
       "jobs": [
         "quality",
@@ -23,7 +23,7 @@
       "os": "Linux"
     },
     {
-      "cache": "Mac-Apfs-Rust186",
+      "cache": "Mac-Apfs-Rust195",
       "filesystem": "Apfs",
       "jobs": [
         "macos-quality"
@@ -31,5 +31,5 @@
       "os": "Mac"
     }
   ],
-  "toolchain": "1.86"
+  "toolchain": "1.95"
 }

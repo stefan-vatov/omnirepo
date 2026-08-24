@@ -845,21 +845,21 @@ fn run_validate_decisions(arguments: &[String]) -> CommandOutput {
 
 fn render_text_report(report: &beads_validator::ValidationReport) -> String {
     let mut output = String::new();
-    if let Some(first) = report.findings.first() {
-        if matches!(
+    if let Some(first) = report.findings.first()
+        && matches!(
             first.code,
             beads_validator::FindingCode::TrackedJsonlMissing
                 | beads_validator::FindingCode::TrackedJsonlEmpty
                 | beads_validator::FindingCode::TrackedJsonlUnreadable
                 | beads_validator::FindingCode::TrackedJsonlInvalidUtf8
-        ) {
-            output.push_str("decision workflow invalid: ");
-            output.push_str(&first.message);
-            output.push_str(": ");
-            output.push_str(&report.path);
-            output.push('\n');
-            return output;
-        }
+        )
+    {
+        output.push_str("decision workflow invalid: ");
+        output.push_str(&first.message);
+        output.push_str(": ");
+        output.push_str(&report.path);
+        output.push('\n');
+        return output;
     }
 
     output.push_str("decision workflow invalid: ");

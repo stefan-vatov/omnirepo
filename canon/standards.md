@@ -11,11 +11,9 @@ validation:
 
 ## Toolchain support
 
-The minimum supported Rust version is 1.86; the complete target test suite
-and documentation tests must pass on Rust 1.86 (the MSRV floor profile).
-
-The primary quality gates run on Rust 1.95, the latest pinned toolchain:
-CI and every local machine must run the same pinned version. Toolchain
+The minimum supported and pinned Rust version is 1.95. The complete target
+test suite, documentation tests, and primary quality gates must pass on Rust
+1.95. CI and every local machine must run the same pinned version. Toolchain
 resolution is repo-owned (`scripts/cargo-pinned`): rustup when present, the
 direct rustup toolchain otherwise, and the system `cargo` when it already
 reports the pinned version. A machine whose `cargo` does not resolve to the

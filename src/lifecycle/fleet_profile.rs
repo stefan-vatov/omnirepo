@@ -97,10 +97,10 @@ fn proc_io_counter(read: bool) -> u64 {
         if let Ok(io) = std::fs::read_to_string("/proc/self/io") {
             let marker = if read { "read_bytes:" } else { "write_bytes:" };
             for line in io.lines() {
-                if let Some(rest) = line.strip_prefix(marker) {
-                    if let Ok(value) = rest.trim().parse::<u64>() {
-                        return value;
-                    }
+                if let Some(rest) = line.strip_prefix(marker)
+                    && let Ok(value) = rest.trim().parse::<u64>()
+                {
+                    return value;
                 }
             }
         }
@@ -114,10 +114,10 @@ fn proc_rss_bytes() -> u64 {
     {
         if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
             for line in status.lines() {
-                if let Some(rest) = line.strip_prefix("VmRSS:") {
-                    if let Ok(kib) = rest.trim().trim_end_matches(" kB").parse::<u64>() {
-                        return kib * 1024;
-                    }
+                if let Some(rest) = line.strip_prefix("VmRSS:")
+                    && let Ok(kib) = rest.trim().trim_end_matches(" kB").parse::<u64>()
+                {
+                    return kib * 1024;
                 }
             }
         }

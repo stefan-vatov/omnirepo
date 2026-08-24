@@ -195,10 +195,10 @@ fn manifest_contract(manifest: &Manifest) -> Vec<String> {
             }
         }
         if matches!(gate.id.as_str(), "msrv-tests" | "msrv-doctests")
-            && gate.toolchain != "rust-1.86.0"
+            && gate.toolchain != "rust-1.95.0"
         {
             failures.push(format!(
-                "gates[{index}].toolchain: {} must use rust-1.86.0, got {}",
+                "gates[{index}].toolchain: {} must use rust-1.95.0, got {}",
                 gate.id, gate.toolchain
             ));
         }
@@ -365,7 +365,7 @@ fn ignored_or_unpackaged_cargo_lock_is_rejected() {
 fn owner_package_contract_is_binary_only_and_excludes_private_surfaces() {
     let manifest = fs::read_to_string(root().join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        manifest.contains("rust-version = \"1.86\""),
+        manifest.contains("rust-version = \"1.95\""),
         "path=Cargo.toml:rust-version"
     );
     assert!(

@@ -13,11 +13,11 @@ use crate::lifecycle::platform_matrix::{
 };
 
 #[test]
-fn every_supported_platform_runs_the_required_locked_gates_on_rust_1_86() {
+fn every_supported_platform_runs_the_required_locked_gates_on_rust_1_95() {
     let matrix = supported_platform_matrix();
     assert!(!matrix.is_empty());
     for job in &matrix {
-        assert_eq!(job.toolchain, Toolchain::Rust186);
+        assert_eq!(job.toolchain, Toolchain::Rust195);
         assert!(job.required.contains(&GateKind::Tests), "{job:?}");
         assert!(job.required.contains(&GateKind::Docs), "{job:?}");
         assert!(job.required.contains(&GateKind::Locked), "{job:?}");

@@ -1199,36 +1199,36 @@ fn execute_case(
             .map(|diagnostic| redactor.sanitize(diagnostic).text),
     };
     let result_path = &case.artifact_path;
-    if let Ok(bytes) = serde_json::to_vec(&case_result) {
-        if store.write_bytes(result_path, &bytes).is_err() {
-            result = ProcessResult {
-                outcome: CaseOutcome::HarnessFailure,
-                exit_code: Some(HARNESS_EXIT),
-                signal: None,
-                stdout: Vec::new(),
-                stderr: Vec::new(),
-                diagnostic: Some("case result artifact could not be written".to_owned()),
-                duration_ms: case_result.duration_ms,
-            };
-            let _ = guard
-                .expect("evidence guard exists")
-                .harness_failure("case result artifact could not be written");
-            return CaseResult {
-                id: case.case.id.clone(),
-                suite: case.suite.clone(),
-                kind: case.kind,
-                outcome: result.outcome,
-                success: false,
-                exit_code: result.exit_code,
-                signal: None,
-                duration_ms: result.duration_ms,
-                stdout: stdout_path,
-                stderr: stderr_path,
-                artifact: case.artifact_path.clone(),
-                replay: Some(case.replay.clone()),
-                diagnostic: result.diagnostic,
-            };
-        }
+    if let Ok(bytes) = serde_json::to_vec(&case_result)
+        && store.write_bytes(result_path, &bytes).is_err()
+    {
+        result = ProcessResult {
+            outcome: CaseOutcome::HarnessFailure,
+            exit_code: Some(HARNESS_EXIT),
+            signal: None,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            diagnostic: Some("case result artifact could not be written".to_owned()),
+            duration_ms: case_result.duration_ms,
+        };
+        let _ = guard
+            .expect("evidence guard exists")
+            .harness_failure("case result artifact could not be written");
+        return CaseResult {
+            id: case.case.id.clone(),
+            suite: case.suite.clone(),
+            kind: case.kind,
+            outcome: result.outcome,
+            success: false,
+            exit_code: result.exit_code,
+            signal: None,
+            duration_ms: result.duration_ms,
+            stdout: stdout_path,
+            stderr: stderr_path,
+            artifact: case.artifact_path.clone(),
+            replay: Some(case.replay.clone()),
+            diagnostic: result.diagnostic,
+        };
     }
 
     let guard = guard.expect("evidence guard exists");

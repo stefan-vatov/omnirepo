@@ -77,10 +77,10 @@ struct Line {
 /// Parse the supported subset.  The document must be a block mapping.
 pub(crate) fn parse_yaml_subset(text: &str) -> Result<YValue, YamlError> {
     let lines = prepare_lines(text)?;
-    if let Some(first) = lines.first() {
-        if first.text == "-" || first.text.starts_with("- ") {
-            return Err(error_at(&lines, 0, "top level must be a mapping"));
-        }
+    if let Some(first) = lines.first()
+        && (first.text == "-" || first.text.starts_with("- "))
+    {
+        return Err(error_at(&lines, 0, "top level must be a mapping"));
     }
     let (value, next) = parse_block(&lines, 0, 0)?;
     if next != lines.len() {

@@ -62,7 +62,7 @@ fn git_text(root: &Path, args: &[&str]) -> String {
 }
 
 fn manifest(commit: &str) -> CandidateManifest {
-    manifest_for("0.9.0", commit, "rustc 1.86.0", vec![], vec![]).expect("manifest")
+    manifest_for("0.9.0", commit, "rustc 1.95.0", vec![], vec![]).expect("manifest")
 }
 
 fn passing_gates() -> Vec<GateRun> {

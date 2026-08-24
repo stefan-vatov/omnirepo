@@ -1637,24 +1637,24 @@ fn sanitize_evidence_bundle(
             // externally injected value before rebuilding the valid pair.
             None
         };
-        if matches!(event.event_kind, EventKind::Terminal) {
-            if let Some(raw) = event.diagnostic.as_deref() {
-                total = total
-                    .checked_add(raw.len())
-                    .ok_or(FailureReplayError::Evidence(EvidenceError::InvalidField {
-                        field: "diagnostic",
-                        reason: "diagnostic byte accounting overflow",
-                    }))?;
-                if total > MAX_EVIDENCE_BYTES {
-                    return Err(FailureReplayError::Evidence(EvidenceError::InvalidField {
-                        field: "diagnostic",
-                        reason: "combined persisted diagnostics exceed the one-MiB evidence bound",
-                    }));
-                }
-                combined.push_str(raw);
-                diagnostic_indices.push(index);
-                individual.push(redactor.sanitize(raw).text);
+        if matches!(event.event_kind, EventKind::Terminal)
+            && let Some(raw) = event.diagnostic.as_deref()
+        {
+            total = total
+                .checked_add(raw.len())
+                .ok_or(FailureReplayError::Evidence(EvidenceError::InvalidField {
+                    field: "diagnostic",
+                    reason: "diagnostic byte accounting overflow",
+                }))?;
+            if total > MAX_EVIDENCE_BYTES {
+                return Err(FailureReplayError::Evidence(EvidenceError::InvalidField {
+                    field: "diagnostic",
+                    reason: "combined persisted diagnostics exceed the one-MiB evidence bound",
+                }));
             }
+            combined.push_str(raw);
+            diagnostic_indices.push(index);
+            individual.push(redactor.sanitize(raw).text);
         }
         event_inputs.push(EventInput {
             identity,

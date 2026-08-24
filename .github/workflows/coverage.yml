@@ -86,7 +86,7 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
-      - name: Install Rust 1.86
-        uses: dtolnay/rust-toolchain@1.86.0
+      - name: Install Rust 1.95
+        uses: dtolnay/rust-toolchain@1.95.0
       - name: Verify authority filesystem capability
         run: bash tests/authority_capability.sh "${{ matrix.expected }}"

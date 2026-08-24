@@ -1255,13 +1255,13 @@ impl<'ast> Visit<'ast> for DependencyVisitor<'_> {
             .iter()
             .map(|segment| ident_name(&segment.ident))
             .collect();
-        if let Some(resolved) = resolve_code_path(&segments, &self.module_path, self.aliases) {
-            if let Some(context) = resolved.iter().find(|part| {
+        if let Some(resolved) = resolve_code_path(&segments, &self.module_path, self.aliases)
+            && let Some(context) = resolved.iter().find(|part| {
                 CONTEXTS.contains(&part.as_str())
                     && self.module_path.first().map(String::as_str) != Some(part.as_str())
-            }) {
-                self.dependencies.insert(context.to_owned());
-            }
+            })
+        {
+            self.dependencies.insert(context.to_owned());
         }
         visit::visit_path(self, path);
     }

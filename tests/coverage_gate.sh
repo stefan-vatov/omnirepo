@@ -20,7 +20,7 @@ fake_cargo() {
         printf '%s\n' "$*" >> "$FAKE_CARGO_LOG"
     fi
 
-    if [[ "${1:-}" == "+1.86.0" ]]; then
+    if [[ "${1:-}" == "+1.95.0" ]]; then
         shift
     fi
     if [[ "${1:-}" == "run" ]]; then

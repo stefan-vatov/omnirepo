@@ -192,10 +192,10 @@ fn keyed_strings(value: &Value, key: &str, path: &str, output: &mut Vec<(String,
         for (candidate, item) in mapping {
             let candidate_text = candidate.as_str().unwrap_or("<non-string-key>");
             let child_path = format!("{path}.{candidate_text}");
-            if candidate_text == key {
-                if let Some(string) = item.as_str() {
-                    output.push((child_path.clone(), string.to_owned()));
-                }
+            if candidate_text == key
+                && let Some(string) = item.as_str()
+            {
+                output.push((child_path.clone(), string.to_owned()));
             }
             keyed_strings(item, key, &child_path, output);
         }

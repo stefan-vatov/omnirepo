@@ -200,10 +200,10 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "msrv-tests",
-        "rust-1.86.0",
+        "rust-1.95.0",
         &[
             "scripts/cargo-pinned",
-            "1.86.0",
+            "1.95.0",
             "test",
             "--workspace",
             "--all-targets",
@@ -213,10 +213,10 @@ const EXPECTED_GATES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "msrv-doctests",
-        "rust-1.86.0",
+        "rust-1.95.0",
         &[
             "scripts/cargo-pinned",
-            "1.86.0",
+            "1.95.0",
             "test",
             "--workspace",
             "--doc",

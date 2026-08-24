@@ -17,7 +17,7 @@ fn manifest() -> CandidateManifest {
     manifest_for(
         "0.9.0",
         "0123456789abcdef0123456789abcdef01234567",
-        "rustc 1.86.0",
+        "rustc 1.95.0",
         vec![],
         vec![],
     )

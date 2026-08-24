@@ -1101,14 +1101,14 @@ impl Validator<'_> {
         );
 
         let id = self.required_stable_string(row, "id", &path, "stable row ID");
-        if let Some(id) = id.as_deref() {
-            if !seen.ids.insert(id.to_owned()) {
-                self.push(
-                    "duplicate-row-id",
-                    format!("{path}.id"),
-                    format!("duplicate row ID {id}"),
-                );
-            }
+        if let Some(id) = id.as_deref()
+            && !seen.ids.insert(id.to_owned())
+        {
+            self.push(
+                "duplicate-row-id",
+                format!("{path}.id"),
+                format!("duplicate row ID {id}"),
+            );
         }
         let reference = self.required_string(row, "reference", &path, "required reference");
         if let Some(reference) = reference.as_deref() {
@@ -1258,14 +1258,14 @@ impl Validator<'_> {
             }),
         );
         let fixture = self.required_identity_string(row, "fixture", &path, "fixture identity");
-        if let Some(fixture) = fixture.as_deref() {
-            if !seen.fixtures.insert(fixture.to_owned()) {
-                self.push(
-                    "duplicate-fixture",
-                    format!("{path}.fixture"),
-                    format!("fixture identity {fixture} is used by more than one row"),
-                );
-            }
+        if let Some(fixture) = fixture.as_deref()
+            && !seen.fixtures.insert(fixture.to_owned())
+        {
+            self.push(
+                "duplicate-fixture",
+                format!("{path}.fixture"),
+                format!("fixture identity {fixture} is used by more than one row"),
+            );
         }
         if implementation_status.as_deref() == Some("implemented") {
             self.validate_locator(
@@ -1300,36 +1300,36 @@ impl Validator<'_> {
         self.require_nonempty(row, "expected_observation", &path);
         self.require_nonempty(row, "negative_case", &path);
         let case_id = self.required_stable_string(row, "case_id", &path, "stable case ID");
-        if let Some(case_id) = case_id {
-            if !seen.cases.insert(case_id.clone()) {
-                self.push(
-                    "duplicate-case-id",
-                    format!("{path}.case_id"),
-                    format!("case identity {case_id} is used by more than one row"),
-                );
-            }
+        if let Some(case_id) = case_id
+            && !seen.cases.insert(case_id.clone())
+        {
+            self.push(
+                "duplicate-case-id",
+                format!("{path}.case_id"),
+                format!("case identity {case_id} is used by more than one row"),
+            );
         }
         let evidence_id =
             self.required_stable_string(row, "evidence_id", &path, "stable evidence ID");
-        if let Some(evidence_id) = evidence_id {
-            if !seen.evidence.insert(evidence_id.clone()) {
-                self.push(
-                    "duplicate-evidence-id",
-                    format!("{path}.evidence_id"),
-                    format!("evidence identity {evidence_id} is used by more than one row"),
-                );
-            }
+        if let Some(evidence_id) = evidence_id
+            && !seen.evidence.insert(evidence_id.clone())
+        {
+            self.push(
+                "duplicate-evidence-id",
+                format!("{path}.evidence_id"),
+                format!("evidence identity {evidence_id} is used by more than one row"),
+            );
         }
         let replay_id =
             self.required_stable_string(row, "replay_id", &path, "stable replay identity");
-        if let Some(replay_id) = replay_id {
-            if !seen.replays.insert(replay_id.clone()) {
-                self.push(
-                    "duplicate-replay-id",
-                    format!("{path}.replay_id"),
-                    format!("replay identity {replay_id} is used by more than one row"),
-                );
-            }
+        if let Some(replay_id) = replay_id
+            && !seen.replays.insert(replay_id.clone())
+        {
+            self.push(
+                "duplicate-replay-id",
+                format!("{path}.replay_id"),
+                format!("replay identity {replay_id} is used by more than one row"),
+            );
         }
         let expected_effect = self.require_enum(
             row,
@@ -1406,14 +1406,14 @@ impl Validator<'_> {
         description: &str,
     ) -> Option<String> {
         let value = self.required_string(mapping, key, path, description);
-        if let Some(value) = value.as_deref() {
-            if !is_stable_id(value) {
-                self.push(
+        if let Some(value) = value.as_deref()
+            && !is_stable_id(value)
+        {
+            self.push(
                     "schema-value",
                     format!("{path}.{key}"),
                     "identifier must use lowercase ASCII letters, digits, dots, underscores, or hyphens",
                 );
-            }
         }
         value
     }
@@ -1430,14 +1430,14 @@ impl Validator<'_> {
         description: &str,
     ) -> Option<String> {
         let value = self.required_string(mapping, key, path, description);
-        if let Some(value) = value.as_deref() {
-            if !is_identity(value) {
-                self.push(
-                    "schema-value",
-                    format!("{path}.{key}"),
-                    "identity must use lowercase ASCII namespace and stable characters",
-                );
-            }
+        if let Some(value) = value.as_deref()
+            && !is_identity(value)
+        {
+            self.push(
+                "schema-value",
+                format!("{path}.{key}"),
+                "identity must use lowercase ASCII namespace and stable characters",
+            );
         }
         value
     }
@@ -1623,14 +1623,14 @@ impl Validator<'_> {
                     "planned locator contract must be a stable Bead#case/evidence identity",
                 );
             }
-            if let (Some(actual), Some(expected)) = (contract.as_deref(), expected_contract) {
-                if actual != expected {
-                    self.push(
-                        "locator-contract-mismatch",
-                        format!("{path}.{key}.contract"),
-                        format!("planned locator must bind to {expected:?}"),
-                    );
-                }
+            if let (Some(actual), Some(expected)) = (contract.as_deref(), expected_contract)
+                && actual != expected
+            {
+                self.push(
+                    "locator-contract-mismatch",
+                    format!("{path}.{key}.contract"),
+                    format!("planned locator must bind to {expected:?}"),
+                );
             }
             return;
         }
@@ -2185,15 +2185,14 @@ fn scan_rust_scope(
             continue;
         }
 
-        if let RustToken::Ident(keyword) = &tokens[index] {
-            if keyword == "fn" {
-                if let Some(RustToken::Ident(name)) = tokens.get(index + 1) {
-                    let mut declaration = modules.to_vec();
-                    declaration.push(name.clone());
-                    if declaration == selector {
-                        return Ok(true);
-                    }
-                }
+        if let RustToken::Ident(keyword) = &tokens[index]
+            && keyword == "fn"
+            && let Some(RustToken::Ident(name)) = tokens.get(index + 1)
+        {
+            let mut declaration = modules.to_vec();
+            declaration.push(name.clone());
+            if declaration == selector {
+                return Ok(true);
             }
         }
 

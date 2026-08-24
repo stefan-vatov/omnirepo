@@ -352,17 +352,17 @@ pub fn validate_contents(path: &Path, contents: &str) -> ValidationReport {
                 &mut report,
                 Finding::new(FindingCode::MissingIssueId, Some(line), None),
             );
-        } else if let Some(issue_id) = issue_id.as_ref() {
-            if seen_ids.insert(issue_id.clone(), line).is_some() {
-                push_finding(
-                    &mut report,
-                    Finding::new(
-                        FindingCode::DuplicateIssueId,
-                        Some(line),
-                        Some(issue_id.clone()),
-                    ),
-                );
-            }
+        } else if let Some(issue_id) = issue_id.as_ref()
+            && seen_ids.insert(issue_id.clone(), line).is_some()
+        {
+            push_finding(
+                &mut report,
+                Finding::new(
+                    FindingCode::DuplicateIssueId,
+                    Some(line),
+                    Some(issue_id.clone()),
+                ),
+            );
         }
 
         let status = object

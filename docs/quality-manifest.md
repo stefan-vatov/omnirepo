@@ -20,21 +20,21 @@ Each gate has these fields:
 
 | Order | ID | Toolchain | Exact command | Failure identity | Authority |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `fmt` | stable | `cargo fmt --all -- --check` | `quality.fmt` | `canon/standards.md` |
-| 2 | `clippy` | stable | `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` | `quality.clippy` | `canon/standards.md` |
-| 3 | `tests` | stable | `cargo test --workspace --all-targets --all-features --locked` | `quality.tests` | `canon/standards.md` |
-| 4 | `doctests` | stable | `cargo test --workspace --doc --all-features --locked` | `quality.doctests` | `canon/standards.md` |
-| 5 | `build` | stable | `cargo build --workspace --all-targets --all-features --locked` | `quality.build` | `canon/standards.md` |
+| 1 | `fmt` | Rust 1.95.0 | `cargo fmt --all -- --check` | `quality.fmt` | `canon/standards.md` |
+| 2 | `clippy` | Rust 1.95.0 | `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` | `quality.clippy` | `canon/standards.md` |
+| 3 | `tests` | Rust 1.95.0 | `cargo test --workspace --all-targets --all-features --locked` | `quality.tests` | `canon/standards.md` |
+| 4 | `doctests` | Rust 1.95.0 | `cargo test --workspace --doc --all-features --locked` | `quality.doctests` | `canon/standards.md` |
+| 5 | `build` | Rust 1.95.0 | `cargo build --workspace --all-targets --all-features --locked` | `quality.build` | `canon/standards.md` |
 | 6 | `prek` | system | `prek run --all-files` | `quality.prek` | `canon/standards.md` |
-| 7 | `beads-validate` | stable | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions` | `quality.beads-validate` | `tools/omnirepo-dev/src/beads_validator.rs` |
-| 8 | `beads-validator-tests` | stable | `cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract` | `quality.beads-validator-tests` | `tools/omnirepo-dev/tests/beads_validator_contract.rs` |
-| 9 | `beads-plan` | stable | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json` | `quality.beads-plan` | `tools/omnirepo-dev/src/planner.rs` |
-| 10 | `beads-plan-tests` | stable | `cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test planner_contract` | `quality.beads-plan-tests` | `tools/omnirepo-dev/tests/planner_contract.rs` |
-| 11 | `coverage` | Rust 1.86.0 and cargo-llvm-cov 0.8.7 | `bash scripts/coverage.sh` | `quality.coverage` | `.34` via `scripts/coverage.sh` |
-| 12 | `msrv-tests` | Rust 1.86.0 | `cargo test --workspace --all-targets --all-features --locked` | `quality.msrv-tests` | `canon/standards.md` |
-| 13 | `msrv-doctests` | Rust 1.86.0 | `cargo test --workspace --doc --all-features --locked` | `quality.msrv-doctests` | `canon/standards.md` |
+| 7 | `beads-validate` | Rust 1.95.0 | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- validate-decisions` | `quality.beads-validate` | `tools/omnirepo-dev/src/beads_validator.rs` |
+| 8 | `beads-validator-tests` | Rust 1.95.0 | `cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test beads_validator_contract` | `quality.beads-validator-tests` | `tools/omnirepo-dev/tests/beads_validator_contract.rs` |
+| 9 | `beads-plan` | Rust 1.95.0 | `cargo run --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml -- plan --repo-root . --json` | `quality.beads-plan` | `tools/omnirepo-dev/src/planner.rs` |
+| 10 | `beads-plan-tests` | Rust 1.95.0 | `cargo test --quiet --locked --manifest-path tools/omnirepo-dev/Cargo.toml --test planner_contract` | `quality.beads-plan-tests` | `tools/omnirepo-dev/tests/planner_contract.rs` |
+| 11 | `coverage` | Rust 1.95.0 and cargo-llvm-cov 0.8.7 | `bash scripts/coverage.sh` | `quality.coverage` | `.34` via `scripts/coverage.sh` |
+| 12 | `msrv-tests` | Rust 1.95.0 | `cargo test --workspace --all-targets --all-features --locked` | `quality.msrv-tests` | `canon/standards.md` |
+| 13 | `msrv-doctests` | Rust 1.95.0 | `cargo test --workspace --doc --all-features --locked` | `quality.msrv-doctests` | `canon/standards.md` |
 
-The stable-toolchain gates and the MSRV gates have different identities even
+The pinned Rust 1.95 gates and the MSRV gates have different identities even
 when their Cargo arguments are the same. They prove different toolchain
 contracts. The coverage gate is one delegation to `scripts/coverage.sh`; this
 manifest does not repeat its thresholds, report commands, or `cargo-llvm-cov`
@@ -58,8 +58,8 @@ omnirepo-dev quality --manifest PATH --repo-root PATH --profile msrv --json
 omnirepo-dev quality --manifest PATH --repo-root PATH --profile coverage --json
 ```
 
-CI uses `stable` for the stable Rust and Beads checks, `msrv` for the Rust
-1.86 checks, and `coverage` for the coverage-owned entry point. Local users can
+CI uses `stable` for the pinned Rust 1.95 and Beads checks, `msrv` for the Rust
+1.95 floor checks, and `coverage` for the coverage-owned entry point. Local users can
 run the same profile commands; no workflow-specific command list is required.
 
 The runner validates all profile definitions before it resolves the repository

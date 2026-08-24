@@ -29,7 +29,7 @@ and are not shipped.
 | `omnirepo-test-support` `0.0.0` | `publish = false` | library `tools/omnirepo-test-support/src/lib.rs`; private tests in `tools/omnirepo-test-support/tests/` | `tempfile` | Reusable process, network, Git, agent, lifecycle, and recovery fixtures |
 
 The workspace is declared in the root `Cargo.toml` with resolver `3`. All
-members use Rust edition `2024`, MSRV `1.86`, and the shared workspace lints.
+members use Rust edition `2024`, MSRV `1.95`, and the shared workspace lints.
 `Cargo.lock` is tracked in Git and is used for every locked validation command.
 
 ## Product boundary and dependency direction

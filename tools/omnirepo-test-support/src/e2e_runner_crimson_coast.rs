@@ -1123,10 +1123,10 @@ impl E2eRunner {
             Err(error) => {
                 let diagnostic = error.to_string();
                 let _ = step.harness_failure(&diagnostic);
-                if let Ok(bundle) = recorder.finalize() {
-                    if let Ok(store) = ArtifactStore::new(fixture.roots().artifacts()) {
-                        let _ = store.write_bundle(&evidence_file, &bundle);
-                    }
+                if let Ok(bundle) = recorder.finalize()
+                    && let Ok(store) = ArtifactStore::new(fixture.roots().artifacts())
+                {
+                    let _ = store.write_bundle(&evidence_file, &bundle);
                 }
                 Err(error)
             }
@@ -2019,10 +2019,9 @@ fn compare_snapshots(
                     entry.kind,
                     FilesystemEntryKind::Symlink | FilesystemEntryKind::NonRegular
                 )
-            }) {
-                if let Ok(path) = relative.to_path(&after.root) {
-                    nonregular.insert(path);
-                }
+            }) && let Ok(path) = relative.to_path(&after.root)
+            {
+                nonregular.insert(path);
             }
             if previous == current && before.exists == after.exists {
                 continue;
@@ -2032,15 +2031,14 @@ fn compare_snapshots(
             // permitted effect does not make its parent look like an
             // unauthorized write. A replacement directory still changes its
             // inode/device and is therefore reported.
-            if let (Some(previous), Some(current)) = (previous, current) {
-                if previous.kind == FilesystemEntryKind::Directory
-                    && current.kind == FilesystemEntryKind::Directory
-                    && previous.fingerprint == current.fingerprint
-                    && previous.device == current.device
-                    && previous.inode == current.inode
-                {
-                    continue;
-                }
+            if let (Some(previous), Some(current)) = (previous, current)
+                && previous.kind == FilesystemEntryKind::Directory
+                && current.kind == FilesystemEntryKind::Directory
+                && previous.fingerprint == current.fingerprint
+                && previous.device == current.device
+                && previous.inode == current.inode
+            {
+                continue;
             }
             let path = relative
                 .to_path(&after.root)
@@ -2238,14 +2236,13 @@ fn git_admin_delta(
             if previous == current {
                 return None;
             }
-            if let (Some(previous), Some(current)) = (previous, current) {
-                if previous.kind == FilesystemEntryKind::Directory
-                    && current.kind == FilesystemEntryKind::Directory
-                    && previous.device == current.device
-                    && previous.inode == current.inode
-                {
-                    return None;
-                }
+            if let (Some(previous), Some(current)) = (previous, current)
+                && previous.kind == FilesystemEntryKind::Directory
+                && current.kind == FilesystemEntryKind::Directory
+                && previous.device == current.device
+                && previous.inode == current.inode
+            {
+                return None;
             }
             let path = current
                 .or(previous)
@@ -2522,10 +2519,10 @@ fn supervisor_binary_path() -> io::Result<PathBuf> {
         "CARGO_BIN_EXE_omnirepo_e2e_supervisor",
         "CARGO_BIN_EXE_omnirepo-e2e-supervisor",
     ] {
-        if let Some(path) = std::env::var_os(variable).map(PathBuf::from) {
-            if path.is_file() {
-                return Ok(path);
-            }
+        if let Some(path) = std::env::var_os(variable).map(PathBuf::from)
+            && path.is_file()
+        {
+            return Ok(path);
         }
     }
     let current = std::env::current_exe()?;
@@ -2630,11 +2627,12 @@ fn run_command(
             }
         };
         if let Some(status) = polled {
-            if terminate_tree && process_group_exists(child_pid) {
-                if let Err(error) = terminate_process_group(child_pid, false) {
-                    let _ = child.wait();
-                    return Err(error);
-                }
+            if terminate_tree
+                && process_group_exists(child_pid)
+                && let Err(error) = terminate_process_group(child_pid, false)
+            {
+                let _ = child.wait();
+                return Err(error);
             }
             tree_terminated = true;
             break Some(status);
@@ -2818,10 +2816,10 @@ fn terminate_process_group(pid: u32, force: bool) -> io::Result<()> {
         return Ok(());
     };
     let signal = if force { Signal::KILL } else { Signal::TERM };
-    if let Err(error) = kill_process_group(pid, signal) {
-        if error.kind() != io::ErrorKind::NotFound {
-            return Err(error.into());
-        }
+    if let Err(error) = kill_process_group(pid, signal)
+        && error.kind() != io::ErrorKind::NotFound
+    {
+        return Err(error.into());
     }
     if !force {
         thread::sleep(PROCESS_TERMINATION_GRACE);
@@ -2999,31 +2997,31 @@ fn check_expectations(
     if process.timed_out {
         return Err("process timed out".to_owned());
     }
-    if let Some(code) = expected.exit_code {
-        if process.code != Some(code) || process.signal.is_some() {
-            return Err(format!(
-                "exit status expected code={code}, observed code={:?} signal={:?}",
-                process.code, process.signal
-            ));
-        }
+    if let Some(code) = expected.exit_code
+        && (process.code != Some(code) || process.signal.is_some())
+    {
+        return Err(format!(
+            "exit status expected code={code}, observed code={:?} signal={:?}",
+            process.code, process.signal
+        ));
     }
-    if let Some(stdout) = &expected.stdout {
-        if process.stdout.bytes != *stdout {
-            return Err(format!(
-                "stdout mismatch: expected {} bytes, observed {} bytes",
-                stdout.len(),
-                process.stdout.bytes.len()
-            ));
-        }
+    if let Some(stdout) = &expected.stdout
+        && process.stdout.bytes != *stdout
+    {
+        return Err(format!(
+            "stdout mismatch: expected {} bytes, observed {} bytes",
+            stdout.len(),
+            process.stdout.bytes.len()
+        ));
     }
-    if let Some(stderr) = &expected.stderr {
-        if process.stderr.bytes != *stderr {
-            return Err(format!(
-                "stderr mismatch: expected {} bytes, observed {} bytes",
-                stderr.len(),
-                process.stderr.bytes.len()
-            ));
-        }
+    if let Some(stderr) = &expected.stderr
+        && process.stderr.bytes != *stderr
+    {
+        return Err(format!(
+            "stderr mismatch: expected {} bytes, observed {} bytes",
+            stderr.len(),
+            process.stderr.bytes.len()
+        ));
     }
 
     let observed = effect_files(fixture, effects).map_err(|error| error.to_string())?;
@@ -3157,17 +3155,17 @@ fn check_expected_file(
         .roots()
         .confine(&path)
         .map_err(|error| error.to_string())?;
-    if let Some(contents) = &expected.contents {
-        if !file_matches(path.as_path(), contents).map_err(|error| error.to_string())? {
-            return Err(format!(
-                "effect bytes mismatch for {:?}: expected {} bytes, observed {} bytes",
-                expected.relative_path,
-                contents.len(),
-                fs::metadata(&path)
-                    .map_err(|error| error.to_string())?
-                    .len()
-            ));
-        }
+    if let Some(contents) = &expected.contents
+        && !file_matches(path.as_path(), contents).map_err(|error| error.to_string())?
+    {
+        return Err(format!(
+            "effect bytes mismatch for {:?}: expected {} bytes, observed {} bytes",
+            expected.relative_path,
+            contents.len(),
+            fs::metadata(&path)
+                .map_err(|error| error.to_string())?
+                .len()
+        ));
     }
     Ok(())
 }

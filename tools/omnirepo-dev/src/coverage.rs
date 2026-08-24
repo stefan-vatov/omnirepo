@@ -234,12 +234,11 @@ fn attribute_lcov_with_sources(
     let mut sources = Vec::new();
     let mut seen_product_paths = BTreeSet::new();
     for mut record in records {
-        if !is_product_source_path(&record.path) {
-            if let Some(repository_root) = repository_root {
-                if let Some(relative) = absolute_source_path(&record.path, repository_root)? {
-                    record.path = relative;
-                }
-            }
+        if !is_product_source_path(&record.path)
+            && let Some(repository_root) = repository_root
+            && let Some(relative) = absolute_source_path(&record.path, repository_root)?
+        {
+            record.path = relative;
         }
         if !is_product_source_path(&record.path) {
             continue;

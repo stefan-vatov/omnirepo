@@ -263,12 +263,12 @@ fn sanitize_transport(url: &str, remote: &str) -> Result<(), RemoteTargetError> 
         .unwrap_or_default();
     // A bare user (git@host) is the normal ssh form; credentials embed a
     // password or token, which the userinfo must never carry.
-    if let Some((userinfo, _host)) = authority_part.rsplit_once('@') {
-        if userinfo.contains(':') {
-            return Err(RemoteTargetError::TransportUnsanitized {
-                reason: format!("remote {remote} embeds credentials in its URL"),
-            });
-        }
+    if let Some((userinfo, _host)) = authority_part.rsplit_once('@')
+        && userinfo.contains(':')
+    {
+        return Err(RemoteTargetError::TransportUnsanitized {
+            reason: format!("remote {remote} embeds credentials in its URL"),
+        });
     }
     Ok(())
 }
